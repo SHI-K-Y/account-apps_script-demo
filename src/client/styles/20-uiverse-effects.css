@@ -941,3 +941,208 @@
     :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::after { display: none; }
   }
 }
+
+
+/* ==========================================================================
+   Uiverse「毛玻璃傾斜卡片」（Fcodingx）→ 記帳頁的交易明細 .recent-item
+   只改外觀：class、id、onclick 不變；範圍限定在 #pageBookkeeping（搜尋頁等其他地方不受影響）。
+
+   Uiverse 元件  →  本專案對應
+     .card          →  .recent-item 本身；傾斜的玻璃板畫在它的 ::before（文字不傾斜，才不會和 Motion 的進場動畫打架）
+     .align / .red / .yellow / .green（三顆圓點）→ .recent-day::before（卡片左上角），用三個 radial-gradient 畫，只在展開時出現
+     .card h1       →  .recent-main strong（項目名稱）
+     .card p        →  .recent-main small（類別｜支付｜狀態｜備註）
+   顏色全部改用既有變數（--lg-group-*、--accent-*、--exp/--warn/--inc、--hl、--shadow-tint、--title-color、--lg-focus），
+   深色模式隨變數自動切換；只有「邊緣亮度」與「陰影濃度」在深色另外調整。
+   收合：只顯示 日期／項目／金額。展開（桌機 :hover、手機點擊 .is-open、鍵盤焦點）：多顯示明細與修改／刪除。
+   展開狀態用 --uv-* 變數切換，所以三種觸發條件只需各設一次變數。
+   ========================================================================== */
+#pageBookkeeping .recent-list {
+  gap: 8px;
+}
+
+#pageBookkeeping .recent-item {
+  /* 收合與展開兩組數值（兩組結構必須一致，transition 才補得出中間值） */
+  --uv-shadow-ink: color-mix(in srgb, var(--shadow-tint) 28%, transparent);
+  --uv-edge-bottom: color-mix(in srgb, var(--hl) 44%, transparent);
+  --uv-edge-left: color-mix(in srgb, var(--hl) 55%, transparent);
+  --uv-plate-closed: var(--lg-group-bg);
+  --uv-plate-open: var(--lg-group-bg-hover);
+  --uv-shadow-closed: -8px 10px 14px -8px var(--uv-shadow-ink), 0 10px 26px -14px transparent, inset 0 0 0 100vmax transparent;
+  --uv-shadow-open: -12px 16px 22px -10px var(--uv-shadow-ink), 0 10px 26px -14px var(--accent-glow), inset 0 0 0 100vmax var(--accent-soft);
+  --uv-red: var(--exp);
+  --uv-yellow: var(--warn);
+  --uv-green: var(--inc);
+  --uv-move: var(--dur-slow) var(--lg-spring-tap);
+
+  /* 目前狀態：預設收合 */
+  --uv-rows: 0fr;
+  --uv-gap: 0px;
+  --uv-fade: 0;
+  --uv-skew: 10deg;
+  --uv-pad-top: 11px;
+  --uv-plate: var(--uv-plate-closed);
+  --uv-shadow: var(--uv-shadow-closed);
+
+  position: relative;
+  isolation: isolate;
+  align-items: start;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  column-gap: 12px;
+  padding: var(--uv-pad-top) 16px 11px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  transition: padding-top var(--uv-move);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:root[data-theme="dark"] #pageBookkeeping .recent-item,
+:root:not([data-theme="light"]) #pageBookkeeping .recent-item {
+  --uv-shadow-ink: color-mix(in srgb, var(--shadow-tint) 55%, transparent);
+  --uv-edge-bottom: color-mix(in srgb, var(--hl) 16%, transparent);
+  --uv-edge-left: color-mix(in srgb, var(--hl) 22%, transparent);
+}
+
+/* 玻璃板：傾斜 → 展開時回正、變高、帶上主題色光暈 */
+#pageBookkeeping .recent-item::before {
+  content: "";
+  position: absolute;
+  inset: 0 6px;
+  z-index: -1;
+  border-radius: 8px;
+  background-color: var(--uv-plate);
+  border-bottom: 3px solid var(--uv-edge-bottom);
+  border-left: 2px outset var(--uv-edge-left);
+  box-shadow: var(--uv-shadow);
+  transform: skewX(var(--uv-skew));
+  transition: transform var(--uv-move), background-color var(--uv-move), box-shadow var(--uv-move);
+  pointer-events: none;
+}
+
+/* 第一列：日期／項目／金額，固定 26px 高，展開後仍對齊 */
+#pageBookkeeping .recent-day,
+#pageBookkeeping .recent-main strong,
+#pageBookkeeping .recent-amount {
+  min-height: 26px;
+  line-height: 26px;
+}
+#pageBookkeeping .recent-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding-block: 0;
+}
+#pageBookkeeping .recent-main strong {
+  color: var(--title-color);
+  text-shadow: -1px 1px 2px color-mix(in srgb, var(--uv-shadow-ink) 45%, transparent);
+}
+
+/* 第二列：明細（左）與修改／刪除（右）。用 grid-template-rows 0fr → 1fr 做出高度展開 */
+#pageBookkeeping .recent-main,
+#pageBookkeeping .recent-right {
+  display: grid;
+  grid-template-rows: auto var(--uv-rows);
+  row-gap: var(--uv-gap);
+  transition: grid-template-rows var(--uv-move), row-gap var(--uv-move);
+}
+#pageBookkeeping .recent-main {
+  grid-template-columns: minmax(0, 1fr);
+}
+#pageBookkeeping .recent-right {
+  justify-items: end;
+}
+/* 內容只用裁切收起（沒有 visibility:hidden），讀屏軟體仍讀得到明細，鍵盤也能 Tab 到按鈕 */
+#pageBookkeeping .recent-main small,
+#pageBookkeeping .recent-actions {
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  opacity: var(--uv-fade);
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+
+/* Uiverse 的三顆圓點：放在卡片左上角（掛在 .recent-day 的 ::before，用絕對定位相對於 .recent-item），只在展開時淡入 */
+#pageBookkeeping .recent-day::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: 20px;
+  width: 40px;
+  height: 10px;
+  background:
+    radial-gradient(circle, var(--uv-red) 0 4.5px, transparent 5px) 0 0 / 10px 10px no-repeat,
+    radial-gradient(circle, var(--uv-yellow) 0 4.5px, transparent 5px) 15px 0 / 10px 10px no-repeat,
+    radial-gradient(circle, var(--uv-green) 0 4.5px, transparent 5px) 30px 0 / 10px 10px no-repeat;
+  filter: drop-shadow(-3px 3px 3px var(--uv-shadow-ink));
+  opacity: var(--uv-fade);
+  transition: opacity var(--dur-base) var(--ease-out);
+  pointer-events: none;
+}
+
+/* 修改／刪除按鈕在被裁切的小格子裡，焦點框改畫在按鈕內側才不會被切掉（仍保留 2px 焦點框） */
+#pageBookkeeping .recent-act-btn:focus-visible {
+  outline-offset: -2px;
+}
+
+/* 展開：① 手機點擊（.is-open，由 recent.js 切換）② 鍵盤焦點 ③ 桌機滑鼠移上去 */
+#pageBookkeeping .recent-item.is-open,
+#pageBookkeeping .recent-item:focus-visible {
+  --uv-rows: 1fr;
+  --uv-gap: 8px;
+  --uv-fade: 1;
+  --uv-skew: 0deg;
+  --uv-pad-top: 30px;
+  --uv-plate: var(--uv-plate-open);
+  --uv-shadow: var(--uv-shadow-open);
+}
+#pageBookkeeping .recent-item:has(:focus-visible) {
+  --uv-rows: 1fr;
+  --uv-gap: 8px;
+  --uv-fade: 1;
+  --uv-skew: 0deg;
+  --uv-pad-top: 30px;
+  --uv-plate: var(--uv-plate-open);
+  --uv-shadow: var(--uv-shadow-open);
+  /* 鍵盤焦點框：焦點在列內的按鈕時，整張卡片也標出焦點框（沿用既有的 --lg-focus） */
+  outline: 2px solid var(--lg-focus);
+  outline-offset: 0;
+}
+@media (hover: hover) {
+  #pageBookkeeping .recent-item:hover {
+    --uv-rows: 1fr;
+    --uv-gap: 8px;
+    --uv-fade: 1;
+    --uv-skew: 0deg;
+    --uv-pad-top: 30px;
+    --uv-plate: var(--uv-plate-open);
+    --uv-shadow: var(--uv-shadow-open);
+  }
+}
+
+/* 減少動態：關掉所有展開／傾斜過渡，直接切換狀態 */
+@media (prefers-reduced-motion: reduce) {
+  #pageBookkeeping .recent-item,
+  #pageBookkeeping .recent-item::before,
+  #pageBookkeeping .recent-day::before,
+  #pageBookkeeping .recent-main,
+  #pageBookkeeping .recent-right,
+  #pageBookkeeping .recent-main small,
+  #pageBookkeeping .recent-actions {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  #pageBookkeeping .recent-item::before {
+    border: 1px solid CanvasText;
+    background: Canvas;
+  }
+  #pageBookkeeping .recent-day::before {
+    display: none;
+  }
+}

@@ -532,9 +532,36 @@ function toggleFullRecords(type) {
     .getFullRecords(month, type);
 }
 
+// 手機（沒有 hover）點擊明細列 → 切換 .is-open 展開完整資訊；樣式在 20-uiverse-effects.css。
+// 桌機改由 CSS :hover 展開，這裡不處理。一次只展開一筆，點列表以外的地方會收合。
+let recentToggleDocBound = false;
+function bindRecentItemToggle(container) {
+  if (!container || container._recentToggleBound) return;
+  container._recentToggleBound = true;
+  container.addEventListener('click', e => {
+    if (window.matchMedia && window.matchMedia('(hover: hover)').matches) return;
+    const sel = window.getSelection && window.getSelection();
+    if (sel && String(sel).length) return;
+    const item = e.target.closest && e.target.closest('.recent-item');
+    if (!item || !container.contains(item)) return;
+    const willOpen = !item.classList.contains('is-open');
+    container.querySelectorAll('.recent-item.is-open').forEach(el => el.classList.remove('is-open'));
+    if (willOpen) item.classList.add('is-open');
+  });
+  if (!recentToggleDocBound) {
+    recentToggleDocBound = true;
+    document.addEventListener('click', e => {
+      if (e.target.closest && e.target.closest('.recent-item')) return;
+      document.querySelectorAll('#recentExpenses .recent-item.is-open, #recentIncomes .recent-item.is-open')
+        .forEach(el => el.classList.remove('is-open'));
+    });
+  }
+}
+
 function renderRecentList(containerId, records, type, isFiltered) {
   const container = document.getElementById(containerId);
   if (!container) return;
+  bindRecentItemToggle(container);
   const filterInput = document.getElementById(containerId === 'recentIncomes' ? 'incomeFilterDate' : 'expenseFilterDate');
   const recState = state.recentState && state.recentState[type];
   const listKey = [getMonth(), filterInput ? filterInput.value : '', recState && recState.isFull ? 'full' : 'top',
