@@ -9,6 +9,7 @@ import { DIST } from './helpers.mjs';
 import { createDemoBackend } from '../demo/sandbox.mjs';
 import { createDemoWorkbook, DEMO_MONTHS } from '../demo/demo-data.mjs';
 import { buildDemoSite } from '../demo/build-demo.mjs';
+import { REPO_URL } from '../demo/onboarding.mjs';
 
 const serverSource = fs.readFileSync(path.join(DIST, 'code.gs'), 'utf8');
 // 固定在 2026-11-13 12:00（台北時間）。
@@ -131,6 +132,8 @@ test('Demo 網站：單一靜態檔，範本標記都已展開，沙盒可在瀏
     assert.match(html, /<title>記帳簿 Demo/);
     assert.match(html, /window\.__INITIAL_DATA__ = \(window\.__DEMO_INITIAL_DATA__ \|\| null\);/);
     assert.ok(html.indexOf('id="demoSandbox"') < html.indexOf('</head>'), '沙盒在主程式之前載入');
+    assert.ok(html.includes(REPO_URL), 'Demo 網站含有歡迎資訊卡與 GitHub 連結');
+    assert.match(html, /demo-ob-card/);
 
     // 用最小的瀏覽器替身執行沙盒：確認它會清掉舊快取、提供 google.script.run 與啟動資料。
     const sandboxJs = html.match(/<script id="demoSandbox">\n([\s\S]*?)\n {2}<\/script>/)[1];
@@ -163,4 +166,11 @@ test('Demo 網站：單一靜態檔，範本標記都已展開，沙盒可在瀏
   } finally {
     fs.rmSync(outDir, { recursive: true, force: true });
   }
+});
+
+test('歡迎資訊卡與導覽只出現在 Demo，正式版的建置結果裡沒有', () => {
+  ['Index.html', 'app.html', 'style.html', 'code.gs'].forEach(name => {
+    const text = fs.readFileSync(path.join(DIST, name), 'utf8');
+    assert.ok(!text.includes('demo-ob') && !text.includes(REPO_URL), name + ' 不含 Demo 導覽');
+  });
 });

@@ -5,7 +5,9 @@
 //   2. 在記憶體裡啟動後端（真正的 dist/code.gs ＋ 虛構的範例活頁簿）。
 //   3. 提供 google.script.run 的替身：前端的 Api 層完全不用改，呼叫會直接進到記憶體裡的後端。
 //   4. 顯示「Demo 模式」提示，並攔下通往 Google 試算表的連結（Demo 沒有真實的試算表）。
+//   5. 第一次開啟時跳出歡迎資訊卡與使用導覽（onboarding.mjs，只存在 Demo）。
 import { createDemoBackend } from './sandbox.mjs';
+import { mountOnboarding } from './onboarding.mjs';
 import SERVER_SOURCE from 'demo:server-source';
 
 const STORAGE_PREFIX = 'FAST_BOOKKEEPING_';
@@ -67,12 +69,12 @@ html[data-theme="dark"] .demo-badge button{background:rgba(28,28,30,.1)}
 html[data-theme="dark"] .demo-badge .demo-tag{background:#c93a2c}
 .demo-badge .demo-text{min-width:0}
 .demo-badge.is-collapsed{padding:0;background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
-.demo-badge.is-collapsed .demo-text,.demo-badge.is-collapsed .demo-reset{display:none}
+.demo-badge.is-collapsed .demo-text,.demo-badge.is-collapsed .demo-reset,.demo-badge.is-collapsed .demo-guide{display:none}
 .demo-badge.is-collapsed .demo-tag{min-height:26px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
 @media (min-width:900px){.demo-badge{bottom:16px}}
 `;
 
-function mountBadge() {
+function mountBadge(onGuide) {
   const DEFAULT_TEXT = '範例資料，重新整理即還原';
   const COLLAPSE_MS = 7000;
   const style = document.createElement('style');
@@ -83,6 +85,7 @@ function mountBadge() {
   badge.className = 'demo-badge';
   badge.innerHTML = '<button type="button" class="demo-tag" aria-expanded="true" title="這是線上試用版：資料只存在這個分頁">DEMO</button>' +
     '<span class="demo-text" role="status"></span>' +
+    '<button type="button" class="demo-guide" title="再看一次介紹與使用導覽">導覽</button>' +
     '<button type="button" class="demo-reset" title="清除你在這個分頁做的所有修改">還原</button>';
   const tag = badge.querySelector('.demo-tag');
   const label = badge.querySelector('.demo-text');
@@ -105,6 +108,7 @@ function mountBadge() {
     if (badge.classList.contains('is-collapsed')) expand();
     else { clearTimeout(timer); setCollapsed(true); }
   });
+  badge.querySelector('.demo-guide').addEventListener('click', () => { if (onGuide) onGuide(); });
   badge.querySelector('.demo-reset').addEventListener('click', () => location.reload());
   document.body.appendChild(badge);
   expand();
@@ -136,6 +140,11 @@ window.google = {
 window.__DEMO__ = { backend, today: backend.today };
 window.__DEMO_INITIAL_DATA__ = backend.initialData();
 
-const onReady = () => interceptSheetLinks(mountBadge());
+const onReady = () => {
+  let onboarding = null;
+  const flash = mountBadge(() => onboarding && onboarding.open());
+  interceptSheetLinks(flash);
+  onboarding = mountOnboarding({ expandBadge: () => flash() });
+};
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', onReady, { once: true });
 else onReady();
