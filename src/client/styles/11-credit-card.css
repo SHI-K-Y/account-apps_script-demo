@@ -1,0 +1,813 @@
+.cc-entry-wrap {
+  margin: 0 14px 16px;
+}
+
+.cc-entry-btn {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.cc-entry-btn::before {
+  background: linear-gradient(to bottom, var(--accent), color-mix(in srgb, var(--accent) 70%, var(--lg-tint-deepen)));
+}
+
+.cc-entry-icon-box {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.cc-entry-pill {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+}
+
+.cc-entry-btn:hover {
+  border-color: var(--accent-border);
+  box-shadow: 0 8px 24px var(--accent-soft), var(--shadow-card);
+}
+
+.cc-entry-btn:hover .cc-entry-icon-box {
+  background: var(--accent-soft);
+}
+
+.cc-entry-btn:hover .cc-entry-pill {
+  background: color-mix(in srgb, var(--accent) var(--lg-tint-mix), var(--lg-tint-deepen));
+  color: var(--on);
+  border-color: transparent;
+}
+
+:root[data-theme="dark"] .cc-entry-icon-box,
+:root:not([data-theme="light"]) .cc-entry-icon-box {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+:root[data-theme="dark"] .cc-entry-pill,
+:root:not([data-theme="light"]) .cc-entry-pill {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+
+.overview-head.cc-head .topbar.cc-topbar {
+  margin-bottom: 10px;
+  gap: 10px;
+}
+
+.cc-topbar h1 {
+  flex: 1;
+  min-width: 0;
+  font-size: 19px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cc-subbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--glass-divider);
+}
+
+.cc-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px 7px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-chip);
+  backdrop-filter: var(--blur-sm);
+  -webkit-backdrop-filter: var(--blur-sm);
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 800;
+  min-height: 38px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--shadow-tint-cool) 4%, transparent), var(--glass-shine);
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.cc-back-btn:hover {
+  background: var(--glass-surface-hover);
+  color: var(--accent);
+  border-color: var(--accent);
+  transform: translateX(-2px);
+}
+
+.cc-back-btn:active {
+  transform: scale(0.95);
+}
+
+.cc-month-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cc-month-label {
+  font-size: 12.5px;
+  font-weight: 750;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.cc-month-select {
+  min-height: 38px;
+  padding: 7px 32px 7px 14px;
+  font-size: 14px;
+}
+
+.cc-content {
+  padding: 0 0 16px;
+}
+
+.cc-card-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 14px 14px;
+}
+
+.cc-card-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border-radius: 14px;
+  border: 1.5px solid var(--glass-border-subtle);
+  background: var(--glass-surface);
+  backdrop-filter: var(--blur-sm);
+  -webkit-backdrop-filter: var(--blur-sm);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+  box-shadow: var(--shadow-card);
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.cc-card-tab:hover {
+  transform: translateY(-1px);
+  border-color: var(--glass-border);
+  background: var(--glass-surface-hover);
+}
+
+.cc-card-tab.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 850;
+  box-shadow: 0 4px 14px -2px var(--accent-glow), inset 0 0 0 1px var(--accent);
+}
+
+:root[data-theme="dark"] .cc-card-tab.active,
+:root:not([data-theme="light"]) .cc-card-tab.active {
+  border-color: var(--title-color);
+  background: color-mix(in srgb, var(--title-color) 16%, transparent);
+  color: var(--title-color);
+  box-shadow: 0 4px 14px -2px color-mix(in srgb, var(--title-color) 25%, transparent), inset 0 0 0 1px var(--title-color);
+}
+
+.cc-tab-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--inc);
+  flex-shrink: 0;
+}
+
+.cc-tab-dot.has-unpaid {
+  background: var(--exp);
+  box-shadow: 0 0 6px var(--exp-glow);
+}
+
+.cc-tab-card-img {
+  width: 24px;
+  height: 15px;
+  object-fit: cover;
+  border-radius: 3px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-tint) 18%, transparent);
+}
+
+.cc-summary-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 0 14px 14px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: var(--glass-surface);
+  backdrop-filter: var(--blur-md);
+  -webkit-backdrop-filter: var(--blur-md);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-card);
+}
+
+.cc-stat-box {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cc-stat-box + .cc-stat-box {
+  padding-left: 12px;
+  border-left: 1px solid var(--glass-divider);
+}
+
+.cc-stat-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.cc-stat-val {
+  font-size: 20px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cc-stat-val.unpaid {
+  color: var(--exp);
+}
+
+.cc-stat-val.paid {
+  color: var(--inc);
+}
+
+.cc-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 14px 12px;
+  flex-wrap: wrap;
+}
+
+.cc-status-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: var(--glass-chip);
+  border: 1px solid var(--glass-border-subtle);
+  border-radius: 13px;
+}
+
+.cc-filter-btn {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  white-space: nowrap;
+}
+
+.cc-filter-btn:hover:not(.active) {
+  color: var(--ink);
+}
+
+.cc-filter-btn.active {
+  background: var(--glass-surface-hover);
+  color: var(--title-color);
+  font-weight: 800;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--primary-2) 8%, transparent);
+}
+
+:root[data-theme="dark"] .cc-filter-btn.active,
+:root:not([data-theme="light"]) .cc-filter-btn.active {
+  background: color-mix(in srgb, var(--title-color) 18%, transparent);
+  color: var(--title-color);
+}
+
+.cc-batch-paid-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--inc-border);
+  background: var(--inc-gradient);
+  color: var(--on);
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 4px 12px -2px var(--inc-glow);
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.cc-batch-paid-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.cc-batch-paid-btn:disabled {
+  background: var(--surface-2);
+  color: var(--subtle);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.cc-tx-card {
+  margin: 0 14px 18px;
+  padding: 14px 16px;
+}
+
+.cc-tx-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.cc-tx-item {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 4px;
+  border-top: 1px solid var(--glass-divider);
+  transition: background-color 0.15s ease;
+}
+
+.cc-tx-item:first-child {
+  border-top: 0;
+}
+
+.cc-tx-item.is-paid {
+  opacity: 0.72;
+}
+
+.cc-tx-day {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  background: var(--glass-chip);
+  border: 1px solid var(--glass-border-subtle);
+  border-radius: 10px;
+  padding: 5px 2px;
+  line-height: 1.2;
+}
+
+.cc-tx-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cc-tx-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cc-tx-item-name {
+  font-size: 15px;
+  font-weight: 850;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.cc-tx-note-inline {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cc-tx-sub {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cc-tx-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.cc-tx-amount {
+  font-size: 16.5px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--exp);
+  white-space: nowrap;
+}
+
+.cc-tx-item.is-paid .cc-tx-amount {
+  color: var(--inc);
+}
+
+/* ══════════════════════════════════════════════════
+   信用卡對帳：已繳費確認按鈕（Uiverse 展開懸浮元件）
+   From Uiverse.io by vinodjangid07 (已適配主題變數與無障礙)
+   ══════════════════════════════════════════════════ */
+.cc-paid-btn,
+.uv-paid-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  max-height: 42px;
+  padding: 0;
+  border: none;
+  border-radius: var(--lg-radius-capsule, 999px);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  background-color: var(--accent);
+  background-image: var(--accent-gradient, none);
+  color: var(--on, #ffffff);
+  box-shadow: 0 3px 12px -2px var(--accent-glow), var(--lg-rim, none);
+  user-select: none;
+  white-space: nowrap;
+  vertical-align: middle;
+  flex-shrink: 0;
+  transition:
+    width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    border-radius 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.25s var(--ease-out),
+    box-shadow 0.25s var(--ease-out),
+    transform 0.15s var(--ease-out),
+    filter 0.2s var(--ease-out);
+}
+
+/* 圖示容器：未展開前置中 (100% 寬度) */
+.cc-paid-btn :is(.uv-btn-sign, .uv-sign, .sign) {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  transition:
+    width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    padding 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cc-paid-btn :is(.uv-btn-sign, .uv-sign, .sign) svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+/* 填色型 SVG（如 Uiverse 向量圖標） */
+.cc-paid-btn :is(.uv-btn-sign, .uv-sign, .sign) svg:not([fill="none"]) path {
+  fill: currentColor;
+}
+
+/* 線條型 SVG（如已繳打勾圖標 stroke="currentColor" fill="none"） */
+.cc-paid-btn :is(.uv-btn-sign, .uv-sign, .sign) svg[fill="none"] path {
+  stroke: currentColor;
+}
+
+.cc-paid-btn :is(.uv-btn-sign, .uv-sign, .sign) i.ph {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* 文字容器：預設在右側隱藏 */
+.cc-paid-btn :is(.uv-btn-text, .uv-text, .text) {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  opacity: 0;
+  color: var(--on, #ffffff);
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+  box-sizing: border-box;
+  pointer-events: none;
+  transition:
+    opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+    width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    padding 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 懸浮 (Hover) 與鍵盤焦點 (Focus-visible) 展開效果 */
+.cc-paid-btn:is(:hover, :focus-visible):not(:disabled) {
+  width: 118px;
+  border-radius: var(--lg-radius-capsule, 999px);
+  filter: brightness(1.05);
+  box-shadow: 0 4px 16px -2px var(--accent-glow), var(--lg-rim, none);
+}
+
+.cc-paid-btn:is(:hover, :focus-visible):not(:disabled) :is(.uv-btn-sign, .uv-sign, .sign) {
+  width: 34%;
+  padding-left: 14px;
+}
+
+.cc-paid-btn:is(:hover, :focus-visible):not(:disabled) :is(.uv-btn-text, .uv-text, .text) {
+  opacity: 1;
+  width: 66%;
+  padding-right: 12px;
+}
+
+/* 按鈕點擊效果 */
+.cc-paid-btn:active:not(:disabled) {
+  transform: translate(1.5px, 1.5px);
+  filter: brightness(0.96);
+}
+
+/* 已繳費狀態（O） */
+.cc-paid-btn.already-paid {
+  background-color: var(--inc);
+  background-image: var(--inc-gradient, none);
+  color: var(--on, #ffffff);
+  box-shadow: 0 3px 12px -2px var(--inc-glow), var(--lg-rim, none);
+}
+
+.cc-paid-btn.already-paid:is(:hover, :focus-visible):not(:disabled) {
+  box-shadow: 0 4px 16px -2px var(--inc-glow), var(--lg-rim, none);
+  filter: brightness(1.08);
+}
+
+/* 處理中狀態 */
+.cc-paid-btn:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  filter: grayscale(0.25);
+  transform: none;
+  box-shadow: none;
+}
+
+.cc-paid-btn:disabled :is(.uv-btn-sign, .uv-sign, .sign) svg {
+  animation: uv-paid-spin 0.9s linear infinite;
+}
+
+@keyframes uv-paid-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* 鍵盤焦點輪廓（保留並適配） */
+.cc-paid-btn:focus-visible {
+  outline: 2px solid var(--lg-focus, var(--accent));
+  outline-offset: 2px;
+  z-index: 2;
+}
+
+/* 深色模式外觀 */
+:root[data-theme="dark"] .cc-paid-btn,
+:root:not([data-theme="light"]) .cc-paid-btn {
+  box-shadow: 0 4px 14px -2px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+:root[data-theme="dark"] .cc-paid-btn.already-paid,
+:root:not([data-theme="light"]) .cc-paid-btn.already-paid {
+  box-shadow: 0 4px 14px -2px var(--inc-glow), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+/* prefers-reduced-motion 與 data-motion 關閉動畫 */
+@media (prefers-reduced-motion: reduce) {
+  .cc-paid-btn,
+  .cc-paid-btn :is(.uv-btn-sign, .uv-sign, .sign),
+  .cc-paid-btn :is(.uv-btn-text, .uv-text, .text),
+  .cc-paid-btn:disabled :is(.uv-btn-sign, .uv-sign, .sign) svg {
+    transition: none !important;
+    animation: none !important;
+  }
+  .cc-paid-btn:active:not(:disabled) {
+    transform: none !important;
+  }
+}
+
+:root[data-motion="off"] .cc-paid-btn,
+:root[data-motion="off"] .cc-paid-btn :is(.uv-btn-sign, .uv-sign, .sign),
+:root[data-motion="off"] .cc-paid-btn :is(.uv-btn-text, .uv-text, .text),
+:root[data-motion="off"] .cc-paid-btn:disabled :is(.uv-btn-sign, .uv-sign, .sign) svg,
+:root[data-motion="lite"] .cc-paid-btn,
+:root[data-motion="lite"] .cc-paid-btn :is(.uv-btn-sign, .uv-sign, .sign),
+:root[data-motion="lite"] .cc-paid-btn :is(.uv-btn-text, .uv-text, .text),
+:root[data-motion="lite"] .cc-paid-btn:disabled :is(.uv-btn-sign, .uv-sign, .sign) svg {
+  transition: none !important;
+  animation: none !important;
+}
+
+:root[data-motion="off"] .cc-paid-btn:active:not(:disabled),
+:root[data-motion="lite"] .cc-paid-btn:active:not(:disabled) {
+  transform: none !important;
+}
+
+@media (max-width: 767px) {
+  .cc-entry-wrap {
+    margin: 0 10px 14px;
+  }
+
+  .overview-head.cc-head {
+    padding: calc(10px + env(safe-area-inset-top)) 14px 12px;
+  }
+
+  .cc-topbar h1 {
+    font-size: 18px;
+  }
+
+  .cc-subbar {
+    padding-top: 9px;
+    gap: 8px;
+  }
+
+  .cc-back-btn {
+    padding: 6px 12px 6px 8px;
+    font-size: 13px;
+    min-height: 36px;
+  }
+
+  .cc-month-select {
+    min-height: 36px;
+    padding: 6px 28px 6px 12px;
+    font-size: 13.5px;
+  }
+
+  .cc-card-tabs {
+    margin: 0 10px 12px;
+    gap: 6px;
+  }
+
+  .cc-card-tab {
+    padding: 8px 12px;
+    font-size: 13px;
+    border-radius: 12px;
+  }
+
+  .cc-summary-bar {
+    margin: 0 10px 12px;
+    padding: 12px 12px;
+    gap: 6px;
+  }
+
+  .cc-stat-box + .cc-stat-box {
+    padding-left: 8px;
+  }
+
+  .cc-stat-label {
+    font-size: 11px;
+  }
+
+  .cc-stat-val {
+    font-size: 16.5px;
+  }
+
+  .cc-toolbar {
+    margin: 0 10px 10px;
+  }
+
+  .cc-status-filters {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .cc-filter-btn {
+    text-align: center;
+    padding: 6px 4px;
+    font-size: 12.5px;
+  }
+
+  .cc-batch-paid-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 9px 12px;
+  }
+
+  .cc-tx-card {
+    margin: 0 10px 16px;
+    padding: 10px 12px;
+  }
+
+  .cc-tx-item {
+    grid-template-columns: 38px 1fr auto;
+    gap: 8px;
+    padding: 10px 2px;
+  }
+
+  .cc-tx-right {
+    gap: 8px;
+  }
+
+  .cc-tx-amount {
+    font-size: 15.5px;
+  }
+
+  .cc-paid-btn {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    max-height: 38px;
+    padding: 0;
+  }
+
+  .cc-paid-btn:is(:hover, :focus-visible):not(:disabled) {
+    width: 108px;
+  }
+
+  .cc-paid-btn :is(.uv-btn-text, .uv-text, .text) {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .cc-month-label {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  #pageCreditCard .app {
+    width: min(980px, 92%);
+  }
+
+  .cc-entry-wrap {
+    margin: 4px 20px 22px;
+  }
+
+  .cc-card-tabs {
+    margin: 0 20px 16px;
+    gap: 10px;
+  }
+
+  .cc-card-tab {
+    padding: 10px 18px;
+    font-size: 14.5px;
+  }
+
+  .cc-summary-bar {
+    margin: 0 20px 16px;
+    padding: 18px 24px;
+  }
+
+  .cc-stat-val {
+    font-size: 24px;
+  }
+
+  .cc-toolbar {
+    margin: 0 20px 14px;
+  }
+
+  .cc-tx-card {
+    margin: 0 20px 24px;
+    padding: 18px 24px;
+  }
+
+  .cc-tx-item {
+    grid-template-columns: 52px 1fr auto;
+    gap: 16px;
+    padding: 12px 8px;
+  }
+
+  .cc-tx-right {
+    gap: 16px;
+  }
+
+  .cc-tx-amount {
+    font-size: 18px;
+  }
+}
+
+
+#pageSettings .app {
+  width: min(880px, 100%);
+}

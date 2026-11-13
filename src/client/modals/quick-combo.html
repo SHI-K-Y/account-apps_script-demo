@@ -1,0 +1,70 @@
+  <div id="quickComboModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="quickComboModalTitle" data-type="expense">
+    <div class="modal-card quick-combo-modal-card">
+      <button id="quickComboModalCloseIconBtn" class="modal-icon-close" type="button" aria-label="關閉視窗"><i class="ph ph-x" aria-hidden="true" data-icon="x"></i></button>
+      <div class="modal-header">
+        <div id="quickComboModalIcon" class="modal-icon expense">
+          <i class="ph ph-lightning ic-24" aria-hidden="true" data-icon="lightning"></i>
+        </div>
+        <div class="modal-header-text">
+          <h2 id="quickComboModalTitle" class="modal-title">新增常用組合</h2>
+          <div class="modal-subtitle">記帳時點一下就能帶入，不會自動送出</div>
+        </div>
+      </div>
+
+      <div class="edit-modal-form">
+        <div class="tabs quick-combo-type-tabs" role="group" aria-label="組合類型">
+          <button class="tab active" type="button" data-combo-type="expense">支出</button>
+          <button class="tab" type="button" data-combo-type="income">收入</button>
+        </div>
+
+        <div class="edit-field" id="quickComboTitleField">
+          <label class="edit-label" for="quickComboTitleInput">組合標題</label>
+          <input type="text" id="quickComboTitleInput" class="text-input edit-input" maxlength="20" placeholder="例如：房租、停車月費">
+          <div class="quick-combo-field-hint">套用時會自動填入備註欄</div>
+          <div class="quick-combo-field-hint quick-combo-dup-hint" id="quickComboDupHint" hidden>已有同名組合</div>
+        </div>
+
+        <div class="edit-field" id="quickComboItemField">
+          <span class="edit-label">項目</span>
+          <div id="comboItemChoices" class="choices edit-choices"></div>
+        </div>
+
+        <div class="edit-field" id="quickComboCategoryField">
+          <span class="edit-label">總類</span>
+          <div id="comboCategoryChoices" class="choices edit-choices"></div>
+        </div>
+
+        <div class="edit-field" id="quickComboPaymentField">
+          <span class="edit-label">支付方式</span>
+          <div id="comboPaymentChoices" class="choices edit-choices"></div>
+        </div>
+
+        <div class="edit-field quick-combo-paid-field paid-collapsible is-collapsed" id="quickComboPaidField" hidden inert>
+          <div class="paid-collapsible-inner">
+            <span class="edit-label">是否已繳（信用卡）</span>
+            <div id="comboPaidChoices" class="choices edit-choices"></div>
+          </div>
+        </div>
+
+        <div class="edit-field" id="quickComboAmountField">
+          <div class="quick-combo-amount-head">
+            <span class="edit-label">金額（選填）</span>
+            <button id="quickComboNoAmountBtn" class="quick-combo-no-amount-btn" type="button">不設定金額</button>
+          </div>
+          <div id="comboLiveBox" class="amount-preview" aria-live="polite">
+            <span class="amount-preview-label" id="quickComboAmountHint"></span>
+            <div class="amount-preview-val">
+              <span class="amount-preview-cur">$</span>
+              <span id="comboLiveAmount" class="amount-preview-num">0</span>
+            </div>
+          </div>
+          <div id="comboKeypad" class="keypad"></div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="quickComboModalCancelBtn" class="modal-btn modal-cancel-btn" type="button">取消</button>
+        <button id="quickComboModalSubmitBtn" class="modal-btn modal-submit-btn" type="button">儲存組合</button>
+      </div>
+    </div>
+  </div>

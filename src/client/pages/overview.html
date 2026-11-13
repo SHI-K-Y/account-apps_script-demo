@@ -1,0 +1,50 @@
+  <div class="page-container" id="pageOverview">
+    <div class="app">
+      <header class="overview-head">
+        <div class="topbar">
+          <h1>資產總覽</h1>
+          <button id="overviewSearchOpenBtn" class="icon-btn search-open-btn" type="button" data-open-search title="搜尋交易" aria-label="搜尋交易">
+            <i class="ph ph-magnifying-glass ic-18" aria-hidden="true" data-icon="magnifying-glass"></i>
+          </button>
+          <button id="overviewThemeToggleBtn" class="icon-btn theme-toggle-btn" type="button" title="切換深/淺色模式" aria-label="切換深/淺色模式">
+            <i class="ph ph-moon ic-18 theme-icon-moon" aria-hidden="true" data-icon="moon"></i>
+            <i class="ph ph-sun ic-18 theme-icon-sun" aria-hidden="true" data-icon="sun"></i>
+          </button>
+          <button id="overviewRefreshBtn" class="icon-btn" type="button" title="重新讀取" aria-label="重新讀取"><i class="ph ph-arrow-clockwise" aria-hidden="true" data-icon="arrow-clockwise"></i></button>
+        </div>
+      </header>
+
+      <div class="sheet-action-wrap">
+        <a href="https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit" target="_blank" rel="noopener noreferrer" class="sheet-link-btn" title="在新分頁開啟 Google 試算表完整帳簿">
+          <div class="sheet-link-left">
+            <span class="sheet-icon-box" aria-hidden="true">
+              <i class="ph ph-file-text ic-20 sheet-icon-svg" aria-hidden="true" data-icon="file-text"></i>
+            </span>
+            <div class="sheet-link-info">
+              <span class="sheet-link-title">前往完整帳簿</span>
+              <span class="sheet-link-sub">開啟 Google 試算表檢視全部紀錄</span>
+            </div>
+          </div>
+          <div class="sheet-link-right">
+            <span class="sheet-link-pill">
+              Google Sheet
+              <i class="ph ph-arrow-square-out ic-12" aria-hidden="true" data-icon="arrow-square-out"></i>
+            </span>
+          </div>
+        </a>
+      </div>
+
+      <div id="overviewContent" class="overview-content">
+        <div class="overview-skeleton">
+          <div class="skel-block skel-hero"></div>
+          <div class="skel-block skel-row"></div>
+          <div class="skel-block skel-row"></div>
+          <div class="skel-block skel-row"></div>
+        </div>
+      </div>
+
+      <footer class="footer">
+        Copyright © 2026 SHI-K-Y.
+      </footer>
+    </div>
+  </div>

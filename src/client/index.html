@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <!-- @include partials/head.html -->
+</head>
+<body data-mode="expense" data-page="bookkeeping">
+  <!-- @include partials/boot-loader.html -->
+  <?!= include('style') ?>
+  <script>window.__boot && __boot.step(0.25, '正在建立畫面…', 0.39);</script>
+  <!-- @include partials/glass-filters.html -->
+
+  <!-- @include partials/nav.html -->
+  <!-- @include pages/bookkeeping.html -->
+
+  <!-- @include pages/overview.html -->
+
+  <!-- @include pages/settlement.html -->
+
+  <!-- @include pages/credit-card.html -->
+
+  <!-- @include pages/search.html -->
+
+  <!-- @include pages/foreign.html -->
+
+  <!-- @include pages/settings.html -->
+
+  <!-- @include partials/toast.html -->
+
+  <!-- @include modals/record.html -->
+  <!-- @include modals/settings-payment.html -->
+
+  <!-- @include modals/settings-items.html -->
+
+  <!-- @include modals/quick-combo.html -->
+
+  <!-- @include modals/settings-delete.html -->
+
+  <!-- @include modals/add-month.html -->
+
+  <!-- @include modals/foreign.html -->
+
+  <script>window.__boot && __boot.step(0.40, '正在讀取記帳資料…', 0.49);</script>
+  <script>
+    window.__INITIAL_DATA__ = <?!= typeof initialDataJson !== 'undefined' ? initialDataJson : 'null' ?>;
+  </script>
+  <script>window.__boot && __boot.step(0.50, '正在載入圖示與預設設定…', 0.61);</script>
+  <?!= include('assets') ?>
+  <script>window.__boot && __boot.step(0.62, '正在載入主程式…', 0.84);</script>
+  <?!= include('app') ?>
+  <!-- @include partials/boot-finish.html -->
+</body>
+</html>

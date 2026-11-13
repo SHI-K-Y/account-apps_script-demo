@@ -1,0 +1,33 @@
+/* UX 強化（對應 scripts/app/ux.js）。沿用既有的設計變數，不新增顏色。 */
+
+/* 用實體鍵盤輸入金額時，對應的數字鍵給出與點擊相同的按壓回饋 */
+.key.is-kbd-active {
+  transform: scale(0.94) translateY(1px);
+  background: var(--accent-soft);
+  color: var(--accent);
+  box-shadow: none;
+}
+
+/* 鍵盤操作提示：只在有實體鍵盤與滑鼠的寬螢幕裝置顯示 */
+.kbd-hint {
+  display: none;
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.kbd-hint kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 0.45em;
+  border: 1px solid var(--glass-divider);
+  border-radius: 6px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-secondary);
+  background: var(--accent-soft);
+}
+@media (hover: hover) and (pointer: fine) and (min-width: 900px) {
+  .kbd-hint { display: block; }
+}

@@ -1,0 +1,98 @@
+  <div id="editRecordModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+    <div class="modal-card edit-modal-card">
+      <button id="editModalCloseIconBtn" class="modal-icon-close" type="button" aria-label="關閉視窗"><i class="ph ph-x" aria-hidden="true" data-icon="x"></i></button>
+      <div class="modal-header">
+        <div id="editModalIcon" class="modal-icon expense">
+          <i class="ph ph-note-pencil ic-24" aria-hidden="true" data-icon="note-pencil"></i>
+        </div>
+        <div class="modal-header-text">
+          <h2 id="editModalTitle" class="modal-title">修改交易紀錄</h2>
+          <div id="editModalSubtitle" class="modal-subtitle">正在編輯第 5 列</div>
+        </div>
+      </div>
+
+      <div class="edit-modal-form">
+        <div class="edit-form-row edit-form-row-top">
+          <div class="edit-field edit-field-date" id="editDateField">
+            <label class="edit-label" for="editRecordDay">日期 (日)</label>
+            <div class="edit-date-wrap">
+              <input type="number" id="editRecordDay" class="text-input edit-input edit-day-input" min="1" max="31" placeholder="例如：15">
+              <span id="editRecordMonthBadge" class="edit-month-badge">2026.10</span>
+            </div>
+          </div>
+
+          <div class="edit-field edit-field-amount" id="editAmountField">
+            <label class="edit-label" for="editRecordAmount">金額 (NTD)</label>
+            <div class="edit-amount-wrap">
+              <span class="edit-amount-prefix">$</span>
+              <input type="number" id="editRecordAmount" class="text-input edit-input edit-amount-input" min="1" step="1" placeholder="金額">
+            </div>
+          </div>
+
+          <div class="edit-field edit-field-paid paid-collapsible is-collapsed" id="editPaidField" hidden inert>
+            <div class="paid-collapsible-inner">
+              <label class="edit-label">是否已繳（信用卡）</label>
+              <div id="editPaidChoices" class="choices edit-choices"></div>
+            </div>
+          </div>
+
+          <div class="edit-field edit-field-note" id="editNoteField">
+            <label class="edit-label" for="editRecordNote">備註 (選填)</label>
+            <input type="text" id="editRecordNote" class="text-input edit-input" maxlength="200" placeholder="例如：早餐、咖啡...">
+          </div>
+        </div>
+
+        <div class="edit-form-row edit-form-row-choices">
+          <div class="edit-field edit-field-item" id="editItemField">
+            <label class="edit-label">項目</label>
+            <div id="editItemChoices" class="choices edit-choices"></div>
+          </div>
+
+          <div class="edit-field edit-field-category" id="editCategoryField">
+            <label class="edit-label">總類</label>
+            <div id="editCategoryChoices" class="choices edit-choices"></div>
+          </div>
+
+          <div class="edit-field edit-field-payment" id="editPaymentField">
+            <label class="edit-label">支付方式</label>
+            <div id="editPaymentChoices" class="choices edit-choices"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="editModalCancelBtn" class="modal-btn modal-cancel-btn" type="button">取消</button>
+        <button id="editModalSubmitBtn" class="modal-btn modal-submit-btn" type="button">儲存修改</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="deleteConfirmModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+    <div class="modal-card delete-modal-card">
+      <button id="deleteModalCloseIconBtn" class="modal-icon-close" type="button" aria-label="關閉視窗"><i class="ph ph-x" aria-hidden="true" data-icon="x"></i></button>
+      <div class="modal-header">
+        <div class="modal-icon delete-icon">
+          <i class="ph ph-trash ic-28" aria-hidden="true" data-icon="trash"></i>
+        </div>
+        <h2 id="deleteModalTitle" class="modal-title">確定刪除此筆紀錄？</h2>
+        <div class="modal-subtitle delete-warning">刪除後將無法復原</div>
+      </div>
+      <div class="delete-preview-well">
+        <div class="delete-preview-top">
+          <span id="deletePreviewBadge" class="delete-type-badge expense">支出</span>
+          <span id="deletePreviewDate" class="delete-preview-date">2026.10.15</span>
+        </div>
+        <div class="delete-preview-main">
+          <div id="deletePreviewItem" class="delete-preview-item">早餐</div>
+          <div id="deletePreviewAmount" class="delete-preview-amount expense">$85</div>
+        </div>
+        <div id="deletePreviewDetails" class="delete-preview-details">生活費｜現金</div>
+      </div>
+      <div class="modal-actions">
+        <button id="deleteModalCancelBtn" class="modal-btn modal-cancel-btn" type="button">取消</button>
+        <button id="deleteModalConfirmBtn" class="modal-btn modal-delete-btn" type="button">
+          <i class="ph ph-trash ic-18" aria-hidden="true" data-icon="trash"></i>確認刪除
+        </button>
+      </div>
+    </div>
+  </div>

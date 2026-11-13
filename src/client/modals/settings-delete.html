@@ -1,0 +1,24 @@
+  <div id="settingsDeleteModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="settingsDeleteModalTitle">
+    <div class="modal-card delete-modal-card">
+      <button id="settingsDeleteModalCloseIconBtn" class="modal-icon-close" type="button" aria-label="關閉視窗"><i class="ph ph-x" aria-hidden="true" data-icon="x"></i></button>
+      <div class="modal-header">
+        <div class="modal-icon delete-icon">
+          <i class="ph ph-trash ic-28" aria-hidden="true" data-icon="trash"></i>
+        </div>
+        <h2 id="settingsDeleteModalTitle" class="modal-title">確定要刪除？</h2>
+        <div id="settingsDeleteModalSubtitle" class="modal-subtitle delete-warning">刪除後將從選單中移除此項目</div>
+      </div>
+
+      <div class="delete-preview-well">
+        <div class="delete-preview-main">
+          <div id="settingsDeleteTargetName" class="delete-preview-item">選項名稱</div>
+        </div>
+        <div id="settingsDeleteTargetInfo" class="delete-preview-details">所屬分類：支出項目</div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="settingsDeleteCancelBtn" class="modal-btn modal-cancel-btn" type="button">取消</button>
+        <button id="settingsDeleteConfirmBtn" class="modal-btn modal-delete-btn" type="button">確認刪除</button>
+      </div>
+    </div>
+  </div>

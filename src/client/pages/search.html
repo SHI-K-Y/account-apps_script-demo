@@ -1,0 +1,120 @@
+  <div class="page-container" id="pageSearch">
+    <div class="app sr-app">
+      <div class="sr-topline">
+        <button id="srBackBtn" class="cc-back-btn sr-back-btn" type="button" title="返回" aria-label="返回上一頁">
+          <i class="ph ph-caret-left ic-16" aria-hidden="true" data-icon="caret-left"></i>
+          <span>返回</span>
+        </button>
+        <h1 class="sr-title">搜尋交易</h1>
+      </div>
+
+      <header class="sr-head" id="srHead">
+        <form class="sr-bar" id="srForm" role="search" autocomplete="off" novalidate>
+          <div class="sr-input-wrap">
+            <i class="ph ph-magnifying-glass ic-18 sr-input-icon" aria-hidden="true" data-icon="magnifying-glass"></i>
+            <input id="srInput" class="sr-input" type="search" enterkeyhint="search" inputmode="search" maxlength="50" placeholder="搜尋備註、項目、總類、支付方式" aria-label="搜尋關鍵字（多個關鍵字用空白分隔）" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+            <button id="srClearBtn" class="sr-clear-btn" type="button" title="清除關鍵字" aria-label="清除關鍵字" hidden>
+              <i class="ph ph-x ic-14" aria-hidden="true" data-icon="x"></i>
+            </button>
+          </div>
+          <button id="srSubmitBtn" class="sr-submit-btn" type="submit">搜尋</button>
+        </form>
+      </header>
+
+      <main class="sr-body">
+        <section class="sr-recent" id="srRecentWrap" aria-label="最近搜尋" hidden>
+          <div class="sr-recent-head">
+            <span>最近搜尋</span>
+            <button id="srRecentClearAll" class="sr-link-btn" type="button">全部清除</button>
+          </div>
+          <div class="sr-recent-chips" id="srRecentChips"></div>
+        </section>
+
+        <section class="sr-filters card" aria-label="篩選條件">
+          <div class="sr-filter-row">
+            <span class="sr-filter-label" id="srTypeLabel">類型</span>
+            <div class="sr-chip-row" role="group" aria-labelledby="srTypeLabel">
+              <button class="sr-chip" type="button" data-sr-type="all" aria-pressed="true">全部</button>
+              <button class="sr-chip" type="button" data-sr-type="expense" aria-pressed="false">支出</button>
+              <button class="sr-chip" type="button" data-sr-type="income" aria-pressed="false">收入</button>
+            </div>
+          </div>
+
+          <div class="sr-filter-row">
+            <span class="sr-filter-label" id="srRangeLabel">範圍</span>
+            <div class="sr-chip-row" role="group" aria-labelledby="srRangeLabel">
+              <button class="sr-chip" type="button" data-sr-range="month" aria-pressed="false">本月</button>
+              <button class="sr-chip" type="button" data-sr-range="recent3" aria-pressed="true">近 3 個月</button>
+              <button class="sr-chip" type="button" data-sr-range="year" aria-pressed="false">今年</button>
+              <button class="sr-chip" type="button" data-sr-range="all" aria-pressed="false">全部月份</button>
+              <button class="sr-chip" type="button" data-sr-range="custom" aria-pressed="false">自訂</button>
+            </div>
+          </div>
+
+          <div class="sr-custom-range" id="srCustomRange" hidden>
+            <select id="srFromMonth" class="month-select sr-month-select" aria-label="起始月份"></select>
+            <span class="sr-range-sep" aria-hidden="true">～</span>
+            <select id="srToMonth" class="month-select sr-month-select" aria-label="結束月份"></select>
+          </div>
+
+          <div class="sr-more-bar">
+            <button id="srMoreToggle" class="sr-more-toggle" type="button" aria-expanded="false" aria-controls="srMorePanel">
+              <span>更多篩選</span>
+              <span id="srMoreBadge" class="sr-badge" hidden>0</span>
+              <i class="ph ph-caret-down ic-14 sr-more-caret" aria-hidden="true" data-icon="caret-down"></i>
+            </button>
+            <button id="srClearAll" class="sr-link-btn" type="button" hidden>清除所有條件</button>
+          </div>
+
+          <div class="sr-more-panel" id="srMorePanel" hidden>
+            <div class="sr-field">
+              <h2 class="sr-field-title">項目 <small>可複選</small></h2>
+              <div id="srItemChoices" class="sr-choices"></div>
+            </div>
+            <div class="sr-field">
+              <h2 class="sr-field-title">總類 <small>可複選</small></h2>
+              <div id="srCategoryChoices" class="sr-choices"></div>
+            </div>
+            <div class="sr-field" id="srPaymentField">
+              <h2 class="sr-field-title">支付方式 <small>可複選，僅支出</small></h2>
+              <div id="srPaymentChoices" class="sr-choices sr-payment-choices"></div>
+              <p class="sr-field-hint" id="srPayHint" hidden>選了支付方式或繳款狀態時，收入不會列入結果。</p>
+            </div>
+            <div class="sr-field" id="srPaidField">
+              <h2 class="sr-field-title">是否已繳 <small>僅支出</small></h2>
+              <div class="sr-chip-row" role="group" aria-label="是否已繳">
+                <button class="sr-chip" type="button" data-sr-paid="" aria-pressed="true">不限</button>
+                <button class="sr-chip" type="button" data-sr-paid="O" aria-pressed="false">已繳</button>
+                <button class="sr-chip" type="button" data-sr-paid="X" aria-pressed="false">未繳</button>
+              </div>
+            </div>
+            <div class="sr-field">
+              <h2 class="sr-field-title">金額範圍</h2>
+              <div class="sr-amount-row">
+                <input id="srMinAmount" class="text-input sr-amount-input" type="number" inputmode="decimal" min="0" step="any" placeholder="最小" aria-label="最小金額">
+                <span class="sr-range-sep" aria-hidden="true">～</span>
+                <input id="srMaxAmount" class="text-input sr-amount-input" type="number" inputmode="decimal" min="0" step="any" placeholder="最大" aria-label="最大金額">
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div id="srProgress" class="sr-progress" hidden>
+          <div class="sr-progress-row">
+            <span id="srProgressText" class="sr-progress-text" role="status" aria-live="polite"></span>
+            <button id="srStopBtn" class="sr-stop-btn" type="button">停止</button>
+          </div>
+          <div class="sr-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="srProgressTrack"><i id="srProgressFill"></i></div>
+        </div>
+
+        <div id="srNotices" class="sr-notices"></div>
+        <section id="srSummary" class="sr-summary" aria-label="搜尋結果摘要" hidden></section>
+        <div id="srResults" class="sr-results"></div>
+        <div id="srEmpty" class="sr-empty"></div>
+      </main>
+
+      <footer class="footer">
+        Copyright © 2026 SHI-K-Y.
+      </footer>
+    </div>
+  </div>

@@ -1,0 +1,146 @@
+  <div id="fxLedgerModal" class="modal-backdrop fx-modal" role="dialog" aria-modal="true" aria-labelledby="fxLedgerModalTitle">
+    <div class="modal-card fx-ledger-modal-card">
+      <button id="fxLedgerModalCloseBtn" class="modal-icon-close" type="button" aria-label="關閉視窗"><i class="ph ph-x" aria-hidden="true" data-icon="x"></i></button>
+      <div class="modal-header">
+        <div class="modal-icon fx-modal-icon"><i class="ph ph-airplane-tilt ic-26" aria-hidden="true" data-icon="airplane-tilt"></i></div>
+        <h2 id="fxLedgerModalTitle" class="modal-title">新增國外帳簿</h2>
+        <div id="fxLedgerModalSubtitle" class="modal-subtitle">將複製「國外交易記帳簿-空白頁」建立新的工作表</div>
+      </div>
+      <div class="modal-form fx-modal-form">
+        <div class="card-form-group">
+          <span class="card-form-label" id="fxCountryLabel">國家</span>
+          <div id="fxCountryChoices" class="choices fx-country-choices" role="group" aria-labelledby="fxCountryLabel"></div>
+          <div class="fx-field-hint" id="fxCountryHint"></div>
+        </div>
+        <div class="card-form-group">
+          <label class="card-form-label" for="fxLedgerNameInput">帳簿名稱</label>
+          <input type="text" id="fxLedgerNameInput" class="text-input card-form-input" maxlength="30" autocomplete="off" placeholder="例如：韓國、中國深圳、韓國 2026 春">
+          <div class="fx-field-hint" id="fxLedgerNameHint"></div>
+        </div>
+        <div class="card-form-group">
+          <span class="card-form-label" id="fxPeriodLabel">旅行期間</span>
+          <div class="fx-period-row" role="group" aria-labelledby="fxPeriodLabel">
+            <input type="date" id="fxStartInput" class="text-input card-form-input" aria-label="開始日">
+            <span class="fx-period-sep" aria-hidden="true">～</span>
+            <input type="date" id="fxEndInput" class="text-input card-form-input" aria-label="結束日">
+          </div>
+          <div class="fx-field-hint" id="fxPeriodHint"></div>
+        </div>
+        <div class="fx-ledger-manage" id="fxLedgerManage" hidden>
+          <button id="fxArchiveBtn" class="fx-manage-btn" type="button">封存帳簿</button>
+          <button id="fxDeleteLedgerBtn" class="fx-manage-btn is-danger" type="button">刪除帳簿</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="fxLedgerCancelBtn" class="modal-btn modal-cancel-btn" type="button">取消</button>
+        <button id="fxLedgerSubmitBtn" class="modal-btn modal-submit-btn" type="button">建立帳簿</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="fxDeleteLedgerModal" class="modal-backdrop fx-modal" role="dialog" aria-modal="true" aria-labelledby="fxDeleteLedgerTitle">
+    <div class="modal-card delete-modal-card">
+      <button id="fxDeleteLedgerCloseBtn" class="modal-icon-close" type="button" aria-label="關閉視窗"><i class="ph ph-x" aria-hidden="true" data-icon="x"></i></button>
+      <div class="modal-header">
+        <div class="modal-icon delete-icon"><i class="ph ph-trash ic-28" aria-hidden="true" data-icon="trash"></i></div>
+        <h2 id="fxDeleteLedgerTitle" class="modal-title">永久刪除這本帳簿？</h2>
+        <div class="modal-subtitle delete-warning">會刪除試算表中的工作表，無法復原</div>
+      </div>
+      <div class="delete-preview-well">
+        <div class="delete-preview-main">
+          <div id="fxDeleteLedgerName" class="delete-preview-item">帳簿</div>
+          <div id="fxDeleteLedgerTotal" class="delete-preview-amount">NT$0</div>
+        </div>
+        <div id="fxDeleteLedgerInfo" class="delete-preview-details"></div>
+      </div>
+      <div class="modal-form">
+        <div class="card-form-group">
+          <label class="card-form-label" for="fxDeleteLedgerInput">請輸入帳簿名稱「<span id="fxDeleteLedgerExpect"></span>」以確認</label>
+          <input type="text" id="fxDeleteLedgerInput" class="text-input card-form-input" autocomplete="off" maxlength="30">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="fxDeleteLedgerCancelBtn" class="modal-btn modal-cancel-btn" type="button">取消</button>
+        <button id="fxDeleteLedgerConfirmBtn" class="modal-btn modal-delete-btn" type="button" disabled>永久刪除</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="fxRecordModal" class="modal-backdrop fx-modal" role="dialog" aria-modal="true" aria-labelledby="fxRecordModalTitle">
+    <div class="modal-card edit-modal-card fx-record-modal-card">
+      <button id="fxRecordCloseBtn" class="modal-icon-close" type="button" aria-label="關閉視窗"><i class="ph ph-x" aria-hidden="true" data-icon="x"></i></button>
+      <div class="modal-header">
+        <div class="modal-icon fx-modal-icon">
+          <i class="ph ph-note-pencil ic-24" aria-hidden="true" data-icon="note-pencil"></i>
+        </div>
+        <div class="modal-header-text">
+          <h2 id="fxRecordModalTitle" class="modal-title">修改國外交易</h2>
+          <div id="fxRecordModalSubtitle" class="modal-subtitle"></div>
+        </div>
+      </div>
+      <div class="fx-record-form">
+        <div class="fx-record-grid">
+          <div class="edit-field">
+            <label class="edit-label" for="fxEditDate">日期</label>
+            <input type="date" id="fxEditDate" class="text-input edit-input">
+          </div>
+          <div class="edit-field">
+            <label class="edit-label" for="fxEditAmount">金額（<span id="fxEditAmountCur">當地幣別</span>）</label>
+            <input type="text" id="fxEditAmount" class="text-input edit-input" inputmode="decimal" autocomplete="off" placeholder="金額">
+          </div>
+          <div class="edit-field">
+            <label class="edit-label" for="fxEditRate">匯率（1 <span id="fxEditRateCur">外幣</span> = ? NTD）</label>
+            <input type="text" id="fxEditRate" class="text-input edit-input" inputmode="decimal" autocomplete="off" placeholder="匯率">
+          </div>
+          <div class="edit-field">
+            <label class="edit-label" for="fxEditNote">備註（選填）</label>
+            <input type="text" id="fxEditNote" class="text-input edit-input" maxlength="200" placeholder="例如：午餐 拉麵">
+          </div>
+        </div>
+        <div class="fx-edit-convert" id="fxEditConvert"></div>
+        <div class="edit-field">
+          <span class="edit-label">幣別</span>
+          <div id="fxEditCurrencyChoices" class="fx-currency-row is-compact" role="group" aria-label="幣別"></div>
+        </div>
+        <div class="edit-field">
+          <span class="edit-label">交易項目</span>
+          <div id="fxEditItemChoices" class="choices edit-choices"></div>
+        </div>
+        <div class="edit-field">
+          <span class="edit-label">交易方式</span>
+          <div id="fxEditPaymentChoices" class="choices edit-choices"></div>
+        </div>
+      </div>
+      <div class="modal-actions fx-record-actions">
+        <button id="fxRecordDeleteBtn" class="modal-btn fx-record-delete-btn" type="button">刪除</button>
+        <button id="fxRecordCancelBtn" class="modal-btn modal-cancel-btn" type="button">取消</button>
+        <button id="fxRecordSubmitBtn" class="modal-btn modal-submit-btn" type="button">儲存修改</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="fxDeleteRecordModal" class="modal-backdrop fx-modal" role="dialog" aria-modal="true" aria-labelledby="fxDeleteRecordTitle">
+    <div class="modal-card delete-modal-card">
+      <button id="fxDeleteRecordCloseBtn" class="modal-icon-close" type="button" aria-label="關閉視窗"><i class="ph ph-x" aria-hidden="true" data-icon="x"></i></button>
+      <div class="modal-header">
+        <div class="modal-icon delete-icon"><i class="ph ph-trash ic-28" aria-hidden="true" data-icon="trash"></i></div>
+        <h2 id="fxDeleteRecordTitle" class="modal-title">確定刪除此筆國外交易？</h2>
+        <div class="modal-subtitle delete-warning">刪除後將無法復原</div>
+      </div>
+      <div class="delete-preview-well">
+        <div class="delete-preview-top">
+          <span class="delete-type-badge fx-type-badge">國外帳簿</span>
+          <span id="fxDeleteRecordDate" class="delete-preview-date"></span>
+        </div>
+        <div class="delete-preview-main">
+          <div id="fxDeleteRecordItem" class="delete-preview-item"></div>
+          <div id="fxDeleteRecordAmount" class="delete-preview-amount"></div>
+        </div>
+        <div id="fxDeleteRecordDetails" class="delete-preview-details"></div>
+      </div>
+      <div class="modal-actions">
+        <button id="fxDeleteRecordCancelBtn" class="modal-btn modal-cancel-btn" type="button">取消</button>
+        <button id="fxDeleteRecordConfirmBtn" class="modal-btn modal-delete-btn" type="button">確認刪除</button>
+      </div>
+    </div>
+  </div>

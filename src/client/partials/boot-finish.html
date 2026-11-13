@@ -1,0 +1,19 @@
+  <script>
+    (function () {
+      if (!window.__boot) return;
+      __boot.step(0.86, '正在初始化畫面…', 0.9);
+      function afterInit() {
+        if (__boot.finished || __boot.hadError) return;
+        var body = document.body;
+        if (!body.classList.contains('busy')) { __boot.done(); return; }
+        __boot.step(0.9, '正在從 Google 試算表同步最新資料…', 0.97);
+        var mo = new MutationObserver(function () {
+          if (!body.classList.contains('busy')) { mo.disconnect(); __boot.done(); }
+        });
+        mo.observe(body, { attributes: true, attributeFilter: ['class'] });
+        setTimeout(function () { mo.disconnect(); __boot.done(); }, 15000);
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', afterInit, { once: true });
+      else afterInit();
+    })();
+  </script>

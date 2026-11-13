@@ -1,0 +1,46 @@
+  <div id="itemEditModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="itemEditModalTitle">
+    <div class="modal-card item-edit-modal-card">
+      <button id="itemEditModalCloseIconBtn" class="modal-icon-close" type="button" aria-label="關閉視窗"><i class="ph ph-x" aria-hidden="true" data-icon="x"></i></button>
+      <div class="modal-header">
+        <div class="modal-icon item-modal-icon" id="itemEditModalIconWrap">
+          <span id="itemEditModalCurrentEmoji" class="item-modal-emoji-preview" aria-hidden="true"><i class="ph ph-egg" aria-hidden="true" data-icon="egg"></i></span>
+        </div>
+        <div class="modal-header-text">
+          <h2 id="itemEditModalTitle" class="modal-title">修改項目</h2>
+          <div class="modal-subtitle">設定專屬圖示與項目名稱</div>
+        </div>
+      </div>
+
+      <div class="item-edit-modal-body">
+        <div class="card-form-group">
+          <label class="card-form-label">圖示 (點擊選擇更換)</label>
+          <div class="item-edit-emoji-row">
+            <button id="itemEditEmojiBtn" class="settings-emoji-pick-btn item-modal-pick-btn" type="button">
+              <span id="itemEditEmojiChar" aria-hidden="true"><i class="ph ph-egg" aria-hidden="true" data-icon="egg"></i></span>
+              <span class="emoji-pick-caret">更換圖示<i class="ph ph-caret-down" aria-hidden="true" data-icon="caret-down"></i></span>
+            </button>
+            <span class="item-emoji-hint">選擇適合的圖示，讓記帳按鈕更直覺好找</span>
+          </div>
+        </div>
+
+        <div class="card-form-group">
+          <label class="card-form-label" for="itemEditNameInput">項目名稱</label>
+          <input type="text" id="itemEditNameInput" class="text-input card-form-input" maxlength="40" placeholder="例如：早餐、咖啡、火車票…">
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="itemEditModalCancelBtn" class="modal-btn modal-cancel-btn" type="button">取消</button>
+        <button id="itemEditModalSubmitBtn" class="modal-btn modal-submit-btn" type="button">儲存修改</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="emojiPickerPopover" class="emoji-picker-popover" role="dialog" aria-label="圖示選擇面板" hidden>
+    <div class="emoji-popover-header">
+      <span class="emoji-popover-title">選擇圖示</span>
+      <button id="emojiPopoverCloseBtn" class="emoji-popover-close" type="button" aria-label="關閉"><i class="ph ph-x" aria-hidden="true" data-icon="x"></i></button>
+    </div>
+    <div class="emoji-popover-tabs" id="emojiPopoverTabs"></div>
+    <div class="emoji-popover-grid" id="emojiPopoverGrid"></div>
+  </div>

@@ -1,0 +1,256 @@
+  <div class="page-container active" id="pageBookkeeping">
+    <div class="app">
+      <header class="head">
+        <div class="topbar">
+          <h1>我的帳簿</h1>
+          <div class="topbar-actions">
+            <select id="monthSelect" class="month-select" aria-label="月份"></select>
+            <div class="topbar-btn-group">
+              <button id="searchOpenBtn" class="icon-btn search-open-btn" type="button" data-open-search title="搜尋交易" aria-label="搜尋交易">
+                <i class="ph ph-magnifying-glass ic-18" aria-hidden="true" data-icon="magnifying-glass"></i>
+              </button>
+              <button id="fxOpenBtn" class="icon-btn fx-open-btn" type="button" title="國外交易帳簿" aria-label="國外交易帳簿">
+                <i class="ph ph-airplane-tilt ic-18" aria-hidden="true" data-icon="airplane-tilt"></i>
+              </button>
+              <button id="addMonthSheetBtn" class="icon-btn add-month-btn" type="button" title="新增月份工作表" aria-label="新增月份工作表">＋</button>
+              <button id="refreshBtn" class="icon-btn" type="button" title="重新讀取" aria-label="重新讀取"><i class="ph ph-arrow-clockwise" aria-hidden="true" data-icon="arrow-clockwise"></i></button>
+            </div>
+          </div>
+          <button id="themeToggleBtn" class="icon-btn theme-toggle-btn" type="button" title="切換深/淺色模式" aria-label="切換深/淺色模式">
+            <i class="ph ph-moon ic-18 theme-icon-moon" aria-hidden="true" data-icon="moon"></i>
+            <i class="ph ph-sun ic-18 theme-icon-sun" aria-hidden="true" data-icon="sun"></i>
+          </button>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="tab active" type="button" data-tab="expense">支出</button>
+          <button class="tab" type="button" data-tab="income">收入</button>
+        </div>
+      </header>
+
+      <div id="fxTripHint" class="fx-trip-hint" hidden>
+        <button id="fxTripHintGo" class="fx-trip-hint-main" type="button">
+          <span class="fx-trip-hint-text" id="fxTripHintText"></span>
+          <span class="fx-trip-hint-go">前往記帳<i class="ph ph-caret-right" aria-hidden="true" data-icon="caret-right"></i></span>
+        </button>
+        <button id="fxTripHintClose" class="fx-trip-hint-close" type="button" title="今天不再顯示" aria-label="今天不再顯示旅行提示"><i class="ph ph-x" aria-hidden="true" data-icon="x"></i></button>
+      </div>
+
+      <section id="expensePanel" class="panel active">
+        <div class="entry card">
+          <div class="sec">
+            <h2>日期</h2>
+            <div class="date-row">
+              <div class="date-picker-wrap">
+                <input id="expenseDate" class="text-input date-input" type="date">
+                <button class="date-cal-btn" type="button" id="expenseCalBtn" title="選擇日期" aria-label="選擇日期">
+                  <i class="ph ph-calendar-blank ic-20" aria-hidden="true" data-icon="calendar-blank"></i>
+                </button>
+                <div id="expenseCalendar" class="calendar-popover" role="dialog" aria-label="支出日曆選擇器" hidden></div>
+              </div>
+              <div class="date-quick-btns">
+                <button class="choice" type="button" id="expenseTodayBtn">今天</button>
+                <button class="choice" type="button" id="expenseYesterdayBtn">昨天</button>
+              </div>
+            </div>
+          </div>
+          <div class="sec quick-combo-sec" id="expenseComboSec">
+            <h2>
+              <button class="quick-combo-toggle" type="button" id="expenseComboToggle" aria-expanded="false" aria-controls="expenseComboBody">
+                <span>常用組合</span>
+                <span class="quick-combo-toggle-meta" id="expenseComboMeta"></span>
+                <i class="ph ph-caret-down ic-14 quick-combo-toggle-caret" aria-hidden="true" data-icon="caret-down"></i>
+              </button>
+            </h2>
+            <div class="quick-combo-body paid-collapsible is-collapsed" id="expenseComboBody" hidden inert>
+              <div class="paid-collapsible-inner"><div id="expenseComboChips" class="quick-combo-chips"></div></div>
+            </div>
+          </div>
+          <div class="sec" data-step="item"><h2>項目</h2><div id="expenseItemChoices" class="choices"></div></div>
+          <div class="sec" data-step="category"><h2>總類</h2><div id="expenseCategoryChoices" class="choices"></div></div>
+          <div class="sec" data-step="payment"><h2>支付方式</h2><div id="paymentChoices" class="choices"></div></div>
+          <div class="sec paid-collapsible is-collapsed" id="paidSection" data-step="paid" hidden inert>
+            <div class="paid-collapsible-inner"><h2>是否已繳（信用卡）</h2><div id="paidChoices" class="choices"></div></div>
+          </div>
+          <div class="sec" data-step="amount">
+            <h2>金額</h2>
+            <div id="expenseLiveBox" class="amount-preview" aria-live="polite">
+              <span class="amount-preview-label"></span>
+              <div class="amount-preview-val">
+                <span class="amount-preview-cur">$</span>
+                <span id="expenseLiveAmount" class="amount-preview-num">0</span>
+              </div>
+            </div>
+            <div id="expenseKeypad" class="keypad"></div>
+            <p class="kbd-hint" aria-hidden="true">鍵盤 <kbd>0</kbd>–<kbd>9</kbd> 輸入金額　<kbd>Enter</kbd> 送出</p>
+          </div>
+          <div class="sec" data-step="note">
+            <h2>備註</h2>
+            <textarea id="expenseNote" class="note-input" maxlength="200" placeholder="例如：早餐、網購、清潔用品……"></textarea>
+          </div>
+          <div class="bar">
+            <div class="bar-amount">
+              <div class="bar-amount-head">
+                <div class="amount-label">支出金額 NTD</div>
+                <div class="step-dots" id="expenseStepDots" role="group" aria-label="填寫進度"></div>
+              </div>
+              <div id="expenseAmount" class="amount">0</div>
+            </div>
+            <button id="expenseSubmit" class="submit-btn" type="button">＋ 確認記帳</button>
+          </div>
+        </div>
+
+        <div class="side-col">
+          <div class="today-expense card" id="todayExpenseCard">
+            <div class="today-expense-header">
+              <div class="today-expense-title-wrap">
+                <div class="today-expense-icon-box" aria-hidden="true">
+                  <i class="ph ph-currency-dollar ic-18 today-expense-icon-svg" aria-hidden="true" data-icon="currency-dollar"></i>
+                </div>
+                <h2 id="todayExpenseTitle" class="today-expense-title">今日總花費</h2>
+                <span id="todayExpenseDateBadge" class="today-expense-date-badge">載入中…</span>
+              </div>
+              <div class="today-expense-meta">
+                <span id="todayExpenseCountBadge" class="today-expense-count-badge">共 0 筆</span>
+                <button id="todayExpenseBackTodayBtn" class="today-expense-back-btn" type="button" style="display: none;" title="切換回今日">回今日</button>
+              </div>
+            </div>
+            <div class="today-expense-body">
+              <div class="today-expense-amount-wrap">
+                <span class="today-expense-cur">NT$</span>
+                <span id="todayExpenseAmount" class="today-expense-amount">0</span>
+              </div>
+              <div id="todayExpenseSubInfo" class="today-expense-sub">今日累計支出金額</div>
+            </div>
+          </div>
+
+          <div class="recent card">
+            <h2>最近支出<small id="recentExpenseCount">最後 8 筆</small></h2>
+            <div id="expenseFilterWrap" class="recent-date-filter-wrap">
+              <div class="recent-date-filter-bar">
+                <div class="recent-date-chips" role="tablist" aria-label="支出紀錄日期篩選">
+                  <button type="button" class="recent-date-chip active" data-filter="all" id="expenseFilterAllBtn">全部</button>
+                  <button type="button" class="recent-date-chip" data-filter="today" id="expenseFilterTodayBtn">今天</button>
+                  <button type="button" class="recent-date-chip" data-filter="yesterday" id="expenseFilterYesterdayBtn">昨天</button>
+                  <button type="button" class="recent-date-chip recent-date-picker-chip" data-filter="custom" id="expenseFilterCalBtn" title="選擇特定日期篩選" aria-label="選擇特定日期篩選">
+                    <i class="ph ph-calendar-blank ic-13 recent-cal-icon" aria-hidden="true" data-icon="calendar-blank"></i>
+                    <span id="expenseFilterCustomLabel">選擇日期</span>
+                  </button>
+                  <button type="button" id="expenseFilterClearBtn" class="recent-filter-clear" style="display: none;" title="清除日期篩選" aria-label="清除日期篩選"><i class="ph ph-x" aria-hidden="true" data-icon="x"></i></button>
+                </div>
+                <input type="date" id="expenseFilterDate" class="recent-date-hidden-input" aria-hidden="true" tabindex="-1">
+                <div id="expenseFilterCalendar" class="calendar-popover recent-calendar-popover" role="dialog" aria-label="支出篩選日曆選擇器" hidden></div>
+              </div>
+              <div id="expenseFilterSummary" class="recent-filter-summary" style="display: none;">
+                <span class="filter-summary-date" id="expenseFilteredDateLabel"></span>
+                <span class="filter-summary-count">共 <b id="expenseFilteredCount">0</b> 筆</span>
+                <span class="filter-summary-total">小計 <b id="expenseFilteredTotal">$0</b></span>
+              </div>
+            </div>
+            <div id="recentExpenses" class="recent-list"></div>
+            <div class="recent-footer">
+              <button id="loadFullExpensesBtn" class="load-full-btn" type="button" title="載入當月完整支出紀錄">
+                <i class="ph ph-file-text ic-15 load-full-icon" aria-hidden="true" data-icon="file-text"></i>
+                <span class="load-full-text">載入完整交易紀錄</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="incomePanel" class="panel">
+        <div class="entry card">
+          <div class="sec">
+            <h2>日期</h2>
+            <div class="date-row">
+              <div class="date-picker-wrap">
+                <input id="incomeDate" class="text-input date-input" type="date">
+                <button class="date-cal-btn" type="button" id="incomeCalBtn" title="選擇日期" aria-label="選擇日期">
+                  <i class="ph ph-calendar-blank ic-20" aria-hidden="true" data-icon="calendar-blank"></i>
+                </button>
+                <div id="incomeCalendar" class="calendar-popover" role="dialog" aria-label="收入日曆選擇器" hidden></div>
+              </div>
+              <div class="date-quick-btns">
+                <button class="choice" type="button" id="incomeTodayBtn">今天</button>
+                <button class="choice" type="button" id="incomeYesterdayBtn">昨天</button>
+              </div>
+            </div>
+          </div>
+          <div class="sec quick-combo-sec" id="incomeComboSec">
+            <h2>
+              <button class="quick-combo-toggle" type="button" id="incomeComboToggle" aria-expanded="false" aria-controls="incomeComboBody">
+                <span>常用組合</span>
+                <span class="quick-combo-toggle-meta" id="incomeComboMeta"></span>
+                <i class="ph ph-caret-down ic-14 quick-combo-toggle-caret" aria-hidden="true" data-icon="caret-down"></i>
+              </button>
+            </h2>
+            <div class="quick-combo-body paid-collapsible is-collapsed" id="incomeComboBody" hidden inert>
+              <div class="paid-collapsible-inner"><div id="incomeComboChips" class="quick-combo-chips"></div></div>
+            </div>
+          </div>
+          <div class="sec" data-step="item"><h2>項目</h2><div id="incomeItemChoices" class="choices"></div></div>
+          <div class="sec" data-step="category"><h2>總類</h2><div id="incomeCategoryChoices" class="choices"></div></div>
+          <div class="sec" data-step="amount">
+            <h2>金額</h2>
+            <div id="incomeLiveBox" class="amount-preview" aria-live="polite">
+              <span class="amount-preview-label"></span>
+              <div class="amount-preview-val">
+                <span class="amount-preview-cur">$</span>
+                <span id="incomeLiveAmount" class="amount-preview-num">0</span>
+              </div>
+            </div>
+            <div id="incomeKeypad" class="keypad"></div>
+            <p class="kbd-hint" aria-hidden="true">鍵盤 <kbd>0</kbd>–<kbd>9</kbd> 輸入金額　<kbd>Enter</kbd> 送出</p>
+          </div>
+          <div class="sec" data-step="note">
+            <h2>備註</h2>
+            <textarea id="incomeNote" class="note-input" maxlength="200" placeholder="例如：租補、打工薪資、家裡……"></textarea>
+          </div>
+          <div class="bar">
+            <div class="bar-amount">
+              <div class="bar-amount-head">
+                <div class="amount-label">收入金額 NTD</div>
+                <div class="step-dots" id="incomeStepDots" role="group" aria-label="填寫進度"></div>
+              </div>
+              <div id="incomeAmount" class="amount">0</div>
+            </div>
+            <button id="incomeSubmit" class="submit-btn" type="button">＋ 確認收入</button>
+          </div>
+        </div>
+        <div class="recent card income-rec">
+          <h2>最近收入<small id="recentIncomeCount">最後 8 筆</small></h2>
+          <div id="incomeFilterWrap" class="recent-date-filter-wrap">
+            <div class="recent-date-filter-bar">
+              <div class="recent-date-chips" role="tablist" aria-label="收入紀錄日期篩選">
+                <button type="button" class="recent-date-chip active" data-filter="all" id="incomeFilterAllBtn">全部</button>
+                <button type="button" class="recent-date-chip" data-filter="today" id="incomeFilterTodayBtn">今天</button>
+                <button type="button" class="recent-date-chip" data-filter="yesterday" id="incomeFilterYesterdayBtn">昨天</button>
+                <button type="button" class="recent-date-chip recent-date-picker-chip" data-filter="custom" id="incomeFilterCalBtn" title="選擇特定日期篩選" aria-label="選擇特定日期篩選">
+                  <i class="ph ph-calendar-blank ic-13 recent-cal-icon" aria-hidden="true" data-icon="calendar-blank"></i>
+                  <span id="incomeFilterCustomLabel">選擇日期</span>
+                </button>
+                <button type="button" id="incomeFilterClearBtn" class="recent-filter-clear" style="display: none;" title="清除日期篩選" aria-label="清除日期篩選"><i class="ph ph-x" aria-hidden="true" data-icon="x"></i></button>
+              </div>
+              <input type="date" id="incomeFilterDate" class="recent-date-hidden-input" aria-hidden="true" tabindex="-1">
+              <div id="incomeFilterCalendar" class="calendar-popover recent-calendar-popover" role="dialog" aria-label="收入篩選日曆選擇器" hidden></div>
+            </div>
+            <div id="incomeFilterSummary" class="recent-filter-summary" style="display: none;">
+              <span class="filter-summary-date" id="incomeFilteredDateLabel"></span>
+              <span class="filter-summary-count">共 <b id="incomeFilteredCount">0</b> 筆</span>
+              <span class="filter-summary-total">小計 <b id="incomeFilteredTotal">$0</b></span>
+            </div>
+          </div>
+          <div id="recentIncomes" class="recent-list"></div>
+          <div class="recent-footer">
+            <button id="loadFullIncomesBtn" class="load-full-btn" type="button" title="載入當月完整收入紀錄">
+              <i class="ph ph-file-text ic-15 load-full-icon" aria-hidden="true" data-icon="file-text"></i>
+              <span class="load-full-text">載入完整交易紀錄</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        Copyright © 2026 SHI-K-Y.
+      </footer>
+    </div>
+  </div>

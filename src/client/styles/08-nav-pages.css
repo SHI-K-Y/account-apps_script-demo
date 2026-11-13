@@ -1,0 +1,124 @@
+.nav-item {
+  flex: 1;
+  max-width: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 10px;
+  border-radius: 14px;
+  margin: 0 6px;
+  transition: color 0.18s ease, background-color 0.18s ease;
+  position: relative;
+}
+
+.nav-item:hover:not(.active) {
+  color: var(--nav-active-color);
+}
+
+.nav-item::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 32px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--nav-active-color);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-item.active {
+  color: var(--nav-active-color);
+  background: var(--nav-active-bg);
+}
+
+.nav-item.active::after {
+  transform: translateX(-50%) scaleX(1);
+}
+
+.nav-icon {
+  display: block;
+  width: 22px;
+  height: 22px;
+  transition: transform 0.18s ease;
+}
+
+.nav-item.active .nav-icon {
+  transform: scale(1.1);
+}
+
+.nav-label {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.overview-head {
+  position: sticky;
+  top: 10px;
+  z-index: 30;
+  margin: 10px 12px 16px;
+  padding: calc(12px + env(safe-area-inset-top)) 18px 14px;
+  background: var(--glass-header);
+  backdrop-filter: var(--blur-lg);
+  -webkit-backdrop-filter: var(--blur-lg);
+  border: 1px solid var(--glass-border);
+  border-radius: 22px;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  will-change: transform, opacity;
+}
+
+.overview-head .topbar {
+  margin-bottom: 0;
+}
+
+.overview-content {
+  padding: 0 0 12px;
+}
+
+.overview-skeleton {
+  padding: 0 14px;
+}
+
+.skel-block {
+  background: linear-gradient(110deg, var(--glass-chip) 25%, color-mix(in srgb, var(--hl) 45%, transparent) 50%, var(--glass-chip) 75%);
+  background-size: 250% 100%;
+  border-radius: 20px;
+}
+
+.page-container.active .skel-block {
+  animation: skelShimmer calc(var(--dur-slow) * 4) var(--ease-in-out) infinite;
+}
+
+.skel-hero { height: 160px; margin-bottom: 14px; }
+.skel-row { height: 110px; margin-bottom: 12px; }
+
+@keyframes skelShimmer {
+  0% { background-position: 250% 0; }
+  100% { background-position: -250% 0; }
+}
+
+.overview-month-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 16px;
+  margin: 0 14px 14px;
+  background: var(--glass-chip);
+  backdrop-filter: var(--blur-sm);
+  -webkit-backdrop-filter: var(--blur-sm);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--shadow-tint-cool) 3%, transparent);
+}

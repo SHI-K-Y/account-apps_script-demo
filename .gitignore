@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.clasp.json
+.DS_Store
+
+# 試算表匯出檔含有真實帳務，絕對不要放進這個公開 Repo
+*.xlsx
+*.xls
+*.csv

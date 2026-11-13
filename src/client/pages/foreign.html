@@ -1,0 +1,136 @@
+  <div class="page-container" id="pageForeign" data-view="list">
+    <div class="app fx-app">
+
+      <section class="fx-view fx-view-list" id="fxListView" aria-labelledby="fxListTitle">
+        <header class="fx-head" id="fxListHead">
+          <div class="fx-head-row">
+            <button id="fxListBackBtn" class="cc-back-btn fx-back-btn" type="button" title="返回記帳頁" aria-label="返回記帳頁">
+              <i class="ph ph-caret-left ic-16" aria-hidden="true" data-icon="caret-left"></i>
+              <span>返回</span>
+            </button>
+            <h1 class="fx-title" id="fxListTitle">國外交易帳簿</h1>
+            <div class="fx-head-actions">
+              <button id="fxAddLedgerBtn" class="fx-add-btn" type="button">＋ 新增帳簿</button>
+              <button id="fxListRefreshBtn" class="icon-btn" type="button" title="重新讀取" aria-label="重新讀取帳簿列表"><i class="ph ph-arrow-clockwise" aria-hidden="true" data-icon="arrow-clockwise"></i></button>
+            </div>
+          </div>
+        </header>
+        <main id="fxListBody" class="fx-list-body" aria-live="polite"></main>
+      </section>
+
+      <section class="fx-view fx-view-ledger" id="fxLedgerView" aria-labelledby="fxLedgerTitle">
+        <header class="fx-head fx-ledger-head" id="fxLedgerHead">
+          <div class="fx-head-row">
+            <button id="fxLedgerBackBtn" class="cc-back-btn fx-back-btn" type="button" title="回到帳簿列表" aria-label="回到帳簿列表">
+              <i class="ph ph-caret-left ic-16" aria-hidden="true" data-icon="caret-left"></i>
+              <span>帳簿列表</span>
+            </button>
+            <div class="fx-head-titles">
+              <h1 class="fx-title" id="fxLedgerTitle">國外帳簿</h1>
+              <div class="fx-subtitle" id="fxLedgerSubtitle"></div>
+            </div>
+            <div class="fx-menu-wrap">
+              <button id="fxLedgerMenuBtn" class="icon-btn fx-menu-btn" type="button" title="更多操作" aria-label="更多操作" aria-haspopup="menu" aria-expanded="false" aria-controls="fxLedgerMenu">⋯</button>
+              <div id="fxLedgerMenu" class="fx-menu" role="menu" hidden>
+                <button class="fx-menu-item" type="button" role="menuitem" data-fx-menu="edit"><i class="ph ph-pencil-simple" aria-hidden="true" data-icon="pencil-simple"></i>編輯帳簿</button>
+                <a class="fx-menu-item" id="fxLedgerSheetLink" role="menuitem" href="#" target="_blank" rel="noopener"><i class="ph ph-table" aria-hidden="true" data-icon="table"></i>在 Google 試算表開啟</a>
+                <button class="fx-menu-item" type="button" role="menuitem" data-fx-menu="refresh"><i class="ph ph-arrow-clockwise" aria-hidden="true" data-icon="arrow-clockwise"></i>重新讀取</button>
+              </div>
+            </div>
+          </div>
+          <div class="fx-summary" id="fxSummary">
+            <div class="fx-summary-cell">
+              <span class="fx-summary-label">總花費</span>
+              <span class="fx-summary-val" id="fxSumTotal">NT$0</span>
+            </div>
+            <div class="fx-summary-cell">
+              <span class="fx-summary-label">今日</span>
+              <span class="fx-summary-val" id="fxSumToday">NT$0</span>
+            </div>
+            <div class="fx-summary-cell">
+              <span class="fx-summary-label">日均</span>
+              <span class="fx-summary-val" id="fxSumAvg">無資料</span>
+            </div>
+          </div>
+          <div class="tabs fx-tabs" role="tablist" id="fxTabs" data-active="0" aria-label="帳簿分頁">
+            <button class="tab active" type="button" role="tab" id="fxTabEntry" data-fx-tab="entry" aria-selected="true" aria-controls="fxPaneEntry">記帳</button>
+            <button class="tab" type="button" role="tab" id="fxTabDetail" data-fx-tab="detail" aria-selected="false" aria-controls="fxPaneDetail">明細</button>
+            <button class="tab" type="button" role="tab" id="fxTabStats" data-fx-tab="stats" aria-selected="false" aria-controls="fxPaneStats">統計</button>
+          </div>
+        </header>
+
+        <section class="fx-pane" id="fxPaneEntry" role="tabpanel" aria-labelledby="fxTabEntry">
+          <div class="entry card fx-entry">
+            <div class="sec" data-fx-step="date">
+              <h2>日期</h2>
+              <div class="date-row">
+                <div class="date-picker-wrap fx-date-wrap">
+                  <input id="fxDate" class="text-input date-input" type="date" aria-label="交易日期">
+                  <button class="date-cal-btn" type="button" id="fxCalBtn" title="選擇日期" aria-label="選擇日期"><i class="ph ph-calendar-blank ic-20" aria-hidden="true" data-icon="calendar-blank"></i></button>
+                  <div id="fxCalendar" class="calendar-popover" role="dialog" aria-label="國外交易日曆選擇器" hidden></div>
+                </div>
+                <div class="date-quick-btns">
+                  <button class="choice" type="button" id="fxTodayBtn">今天</button>
+                  <button class="choice" type="button" id="fxYesterdayBtn">昨天</button>
+                </div>
+              </div>
+              <div class="fx-date-hint" id="fxDateHint"></div>
+            </div>
+            <div class="sec" data-fx-step="item"><h2>交易項目</h2><div id="fxItemChoices" class="choices"></div></div>
+            <div class="sec" data-fx-step="payment"><h2>交易方式</h2><div id="fxPaymentChoices" class="choices"></div></div>
+            <div class="sec" data-fx-step="currency"><h2>幣別</h2><div id="fxCurrencyChoices" class="fx-currency-row" role="group" aria-label="幣別"></div></div>
+            <div class="sec" data-fx-step="amount">
+              <h2>金額</h2>
+              <div id="fxLiveBox" class="amount-preview fx-amount-preview" aria-live="polite">
+                <span class="amount-preview-label" id="fxLiveLabel"></span>
+                <div class="amount-preview-val">
+                  <span class="amount-preview-cur" id="fxLiveCur">₩</span>
+                  <span id="fxLiveAmount" class="amount-preview-num">0</span>
+                </div>
+              </div>
+              <div class="fx-convert-hint" id="fxConvertHint"></div>
+              <div id="fxKeypad" class="keypad"></div>
+            </div>
+            <div class="sec" data-fx-step="rate">
+              <h2>匯率</h2>
+              <div class="fx-rate-box" id="fxRateBox"></div>
+            </div>
+            <div class="sec" data-fx-step="note">
+              <h2>備註</h2>
+              <textarea id="fxNote" class="note-input" maxlength="200" placeholder="例如：午餐 拉麵、交通卡加值"></textarea>
+            </div>
+            <div class="bar">
+              <div class="bar-amount">
+                <div class="bar-amount-head">
+                  <div class="amount-label" id="fxBarLocal">無資料</div>
+                  <div class="step-dots" id="fxStepDots" role="group" aria-label="填寫進度"></div>
+                </div>
+                <div id="fxBarTwd" class="amount fx-bar-twd">≈ NT$0</div>
+              </div>
+              <button id="fxSubmit" class="submit-btn" type="button">＋ 確認記帳</button>
+            </div>
+          </div>
+          <div class="recent card fx-recent">
+            <h2>最近 5 筆<small id="fxRecentMeta"></small></h2>
+            <div id="fxRecentList" class="recent-list fx-rec-list"></div>
+          </div>
+        </section>
+
+        <section class="fx-pane" id="fxPaneDetail" role="tabpanel" aria-labelledby="fxTabDetail" hidden>
+          <div class="card fx-detail-card">
+            <div class="fx-filter-chips" id="fxFilterChips" role="group" aria-label="明細篩選"></div>
+            <div id="fxDetailList" class="fx-detail-list"></div>
+            <div id="fxDetailSentinel" class="fx-detail-sentinel" aria-hidden="true"></div>
+          </div>
+        </section>
+
+        <section class="fx-pane" id="fxPaneStats" role="tabpanel" aria-labelledby="fxTabStats" hidden>
+          <div id="fxStats" class="fx-stats"></div>
+        </section>
+      </section>
+
+      <footer class="footer">
+        Copyright © 2026 SHI-K-Y.
+      </footer>
+    </div>
+  </div>

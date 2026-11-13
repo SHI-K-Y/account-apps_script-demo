@@ -1,0 +1,27 @@
+  <div id="addMonthModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="addMonthModalTitle">
+    <div class="modal-card add-month-modal-card">
+      <button id="addMonthCloseIconBtn" class="modal-icon-close" type="button" aria-label="關閉視窗"><i class="ph ph-x" aria-hidden="true" data-icon="x"></i></button>
+      <div class="modal-header">
+        <div class="modal-icon add-month-icon">
+          <i class="ph ph-calendar-plus ic-28" aria-hidden="true" data-icon="calendar-plus"></i>
+        </div>
+        <h2 id="addMonthModalTitle" class="modal-title">新增月份工作表</h2>
+        <div id="addMonthModalSubtitle" class="modal-subtitle">將自動複製「新版記帳簿空白頁」並設定 A1:O1 日期</div>
+      </div>
+
+      <div class="modal-form">
+        <div class="card-form-group">
+          <label class="card-form-label" for="addMonthInput">目標月份</label>
+          <div class="add-month-input-wrap">
+            <input type="text" id="addMonthInput" class="text-input card-form-input" maxlength="7" placeholder="例如：2026.11" pattern="\d{4}\.\d{2}">
+          </div>
+          <div class="add-month-hint" id="addMonthHint"><i class="ph ph-lightbulb" aria-hidden="true" data-icon="lightbulb"></i>推薦下一個月份：<span id="addMonthSuggestedText">2026.11</span></div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="addMonthCancelBtn" class="modal-btn modal-cancel-btn" type="button">取消</button>
+        <button id="addMonthSubmitBtn" class="modal-btn modal-submit-btn" type="button">確認建立</button>
+      </div>
+    </div>
+  </div>

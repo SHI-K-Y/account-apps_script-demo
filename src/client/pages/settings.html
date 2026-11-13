@@ -1,0 +1,89 @@
+  <div class="page-container" id="pageSettings">
+    <div class="app">
+      <header class="overview-head settings-head">
+        <div class="topbar">
+          <h1>選項設定</h1>
+          <button id="settingsThemeToggleBtn" class="icon-btn theme-toggle-btn" type="button" title="切換深/淺色模式" aria-label="切換深/淺色模式">
+            <i class="ph ph-moon ic-18 theme-icon-moon" aria-hidden="true" data-icon="moon"></i>
+            <i class="ph ph-sun ic-18 theme-icon-sun" aria-hidden="true" data-icon="sun"></i>
+          </button>
+          <button id="settingsRefreshBtn" class="icon-btn" type="button" title="重新讀取" aria-label="重新讀取"><i class="ph ph-arrow-clockwise" aria-hidden="true" data-icon="arrow-clockwise"></i></button>
+        </div>
+        <div class="cc-subbar settings-subbar" id="settingsSubbar" hidden>
+          <button id="settingsBackBtn" class="cc-back-btn" type="button" title="返回選項設定" aria-label="返回選項設定">
+            <i class="ph ph-caret-left ic-16" aria-hidden="true" data-icon="caret-left"></i>
+            <span>返回選項設定</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="settings-tabs" role="tablist">
+        <button class="settings-tab" type="button" data-stab="expenseItems"><span class="uv-tab-icon" aria-hidden="true"><i class="ph ph-shopping-bag" aria-hidden="true" data-icon="shopping-bag"></i></span><span class="uv-tab-label">支出項目</span><span class="uv-tab-chevron" aria-hidden="true"><i class="ph ph-caret-right" aria-hidden="true" data-icon="caret-right"></i></span></button>
+        <button class="settings-tab" type="button" data-stab="incomeItems"><span class="uv-tab-icon" aria-hidden="true"><i class="ph ph-coins" aria-hidden="true" data-icon="coins"></i></span><span class="uv-tab-label">收入項目</span><span class="uv-tab-chevron" aria-hidden="true"><i class="ph ph-caret-right" aria-hidden="true" data-icon="caret-right"></i></span></button>
+        <button class="settings-tab" type="button" data-stab="expenseCategories"><span class="uv-tab-icon" aria-hidden="true"><i class="ph ph-squares-four" aria-hidden="true" data-icon="squares-four"></i></span><span class="uv-tab-label">支出總類</span><span class="uv-tab-chevron" aria-hidden="true"><i class="ph ph-caret-right" aria-hidden="true" data-icon="caret-right"></i></span></button>
+        <button class="settings-tab" type="button" data-stab="incomeCategories"><span class="uv-tab-icon" aria-hidden="true"><i class="ph ph-stack" aria-hidden="true" data-icon="stack"></i></span><span class="uv-tab-label">收入總類</span><span class="uv-tab-chevron" aria-hidden="true"><i class="ph ph-caret-right" aria-hidden="true" data-icon="caret-right"></i></span></button>
+        <button class="settings-tab" type="button" data-stab="paymentMethods"><span class="uv-tab-icon" aria-hidden="true"><i class="ph ph-credit-card" aria-hidden="true" data-icon="credit-card"></i></span><span class="uv-tab-label">支出方式</span><span class="uv-tab-chevron" aria-hidden="true"><i class="ph ph-caret-right" aria-hidden="true" data-icon="caret-right"></i></span></button>
+        <button class="settings-tab" type="button" data-stab="quickCombos"><span class="uv-tab-icon" aria-hidden="true"><i class="ph ph-lightning" aria-hidden="true" data-icon="lightning"></i></span><span class="uv-tab-label">常用組合</span><span class="uv-tab-chevron" aria-hidden="true"><i class="ph ph-caret-right" aria-hidden="true" data-icon="caret-right"></i></span></button>
+        <button class="settings-tab" type="button" data-stab="preferences"><span class="uv-tab-icon" aria-hidden="true"><i class="ph ph-sliders-horizontal" aria-hidden="true" data-icon="sliders-horizontal"></i></span><span class="uv-tab-label">偏好設定</span><span class="uv-tab-chevron" aria-hidden="true"><i class="ph ph-caret-right" aria-hidden="true" data-icon="caret-right"></i></span></button>
+      </div>
+
+      <div class="settings-pay-subnav" id="settingsPaySubnav" style="display: none;">
+        <button class="settings-subtab active" type="button" data-subtab="cards">
+          <span class="subtab-icon" aria-hidden="true"><i class="ph ph-credit-card" aria-hidden="true" data-icon="credit-card"></i></span>
+          <span>卡別管理</span>
+        </button>
+        <button class="settings-subtab" type="button" data-subtab="channels">
+          <span class="subtab-icon" aria-hidden="true"><i class="ph ph-tag" aria-hidden="true" data-icon="tag"></i></span>
+          <span>支付通路</span>
+        </button>
+        <button class="settings-subtab" type="button" data-subtab="banks">
+          <span class="subtab-icon" aria-hidden="true"><i class="ph ph-bank" aria-hidden="true" data-icon="bank"></i></span>
+          <span>轉帳銀行</span>
+        </button>
+      </div>
+
+      <div class="settings-top-action-bar" id="settingsTopActionBar">
+        <button id="settingsToggleAddBtn" class="settings-top-add-btn" type="button" aria-expanded="false" aria-controls="settingsAddBar">
+          <i class="ph ph-plus ic-18 toggle-add-icon" aria-hidden="true" data-icon="plus"></i>
+          <span id="settingsToggleAddBtnText">新增項目</span>
+        </button>
+      </div>
+
+      <div class="settings-add-bar card" id="settingsAddBar" style="display: none;">
+        <div class="settings-add-inner">
+          <button id="settingsEmojiPickBtn" class="settings-emoji-pick-btn" type="button" title="選擇圖示" aria-label="選擇圖示">
+            <span id="settingsCurrentEmoji"><i class="ph ph-egg" aria-hidden="true" data-icon="egg"></i></span>
+            <span class="emoji-pick-caret" aria-hidden="true"><i class="ph ph-caret-down" aria-hidden="true" data-icon="caret-down"></i></span>
+          </button>
+          <input id="settingsNewInput" class="text-input settings-add-input" type="text" maxlength="50" placeholder="輸入新支出項目名稱…">
+          <button id="settingsAddBtn" class="settings-add-btn" type="button">
+            <i class="ph ph-plus ic-18" aria-hidden="true" data-icon="plus"></i>
+            新增
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-pay-action-bar card" id="settingsPayActionBar" style="display: none;">
+        <div class="pay-action-left">
+          <div class="pay-action-title" id="payActionTitle">卡別管理清單</div>
+          <div class="pay-action-desc" id="payActionDesc">新增或修改信用卡/簽帳卡，自訂卡面圖片並綁定支援通路</div>
+        </div>
+        <button id="settingsPayAddBtn" class="settings-add-btn pay-special-add-btn" type="button">
+          <i class="ph ph-plus ic-18" aria-hidden="true" data-icon="plus"></i>
+          <span id="payAddBtnText">新增卡別</span>
+        </button>
+      </div>
+
+      <div id="settingsListContainer" class="settings-list-container card">
+        <div class="overview-skeleton">
+          <div class="skel-block skel-row"></div>
+          <div class="skel-block skel-row"></div>
+          <div class="skel-block skel-row"></div>
+        </div>
+      </div>
+
+      <footer class="footer">
+        Copyright © 2026 SHI-K-Y.
+      </footer>
+    </div>
+  </div>

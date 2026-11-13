@@ -1,0 +1,187 @@
+  <div id="cardEditModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="cardModalTitle">
+    <div class="modal-card card-settings-modal">
+      <button id="cardModalCloseIconBtn" class="modal-icon-close" type="button" aria-label="關閉視窗"><i class="ph ph-x" aria-hidden="true" data-icon="x"></i></button>
+      <div class="modal-header">
+        <div class="modal-icon card-modal-icon">
+          <i class="ph ph-credit-card ic-24" aria-hidden="true" data-icon="credit-card"></i>
+        </div>
+        <div class="modal-header-text">
+          <h2 id="cardModalTitle" class="modal-title">新增卡別</h2>
+          <div class="modal-subtitle">設定信用卡 / 簽帳卡名稱、卡面圖片與支援支付通路</div>
+        </div>
+      </div>
+
+      <div class="card-modal-body">
+        <div class="card-mockup-wrap">
+          <div class="card-mockup-preview" id="cardMockupPreview">
+            <div class="card-mockup-bg" id="cardMockupBg"></div>
+            <div class="card-mockup-chip" aria-hidden="true"></div>
+            <div class="card-mockup-content">
+              <span class="card-mockup-type" id="cardMockupType">Credit card</span>
+              <span class="card-mockup-name" id="cardMockupName">卡片名稱</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-form-group">
+          <label class="card-form-label" for="cardFormName">卡片名稱 <span class="req-star">*</span></label>
+          <input type="text" id="cardFormName" class="text-input card-form-input" maxlength="40" placeholder="例如：青禾 evercard 信用卡、海悅 wave 卡…">
+        </div>
+
+        <div class="card-form-group">
+          <label class="card-form-label">卡別類型</label>
+          <div class="card-type-radios">
+            <label class="card-type-radio-label active" id="cardTypeCreditLabel">
+              <input type="radio" name="cardFormType" value="credit" checked>
+              <span class="radio-icon" aria-hidden="true"><i class="ph ph-credit-card" aria-hidden="true" data-icon="credit-card"></i></span>
+              <span>信用卡 (Credit)</span>
+            </label>
+            <label class="card-type-radio-label" id="cardTypeDebitLabel">
+              <input type="radio" name="cardFormType" value="debit">
+              <span class="radio-icon" aria-hidden="true"><i class="ph ph-contactless-payment" aria-hidden="true" data-icon="contactless-payment"></i></span>
+              <span>簽帳金融卡 (Debit)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="card-form-group">
+          <label class="card-form-label">卡片圖片</label>
+          <div class="card-image-picker-wrap">
+            <div class="card-preset-thumbs" id="cardPresetThumbs"></div>
+            <div class="card-upload-box">
+              <label class="card-upload-btn" for="cardImageFileInput">
+                <i class="ph ph-upload-simple ic-16" aria-hidden="true" data-icon="upload-simple"></i>
+                <span>上傳自訂卡面圖片</span>
+              </label>
+              <input type="file" id="cardImageFileInput" accept="image/*" style="display: none;">
+              <span class="card-upload-hint">可選擇預設卡面或從相簿上傳圖片</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-form-group">
+          <label class="card-form-label">支援支付通路（可複選） <span class="req-star">*</span></label>
+          <div class="card-channel-pills" id="cardChannelPills"></div>
+          <span class="card-upload-hint">勾選此卡片可使用的支付通路，記帳頁將自動歸類顯示</span>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="cardModalCancelBtn" class="modal-btn modal-cancel-btn" type="button">取消</button>
+        <button id="cardModalSubmitBtn" class="modal-btn modal-submit-btn" type="button">儲存卡別</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="channelEditModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="channelModalTitle">
+    <div class="modal-card channel-settings-modal">
+      <button id="channelModalCloseIconBtn" class="modal-icon-close" type="button" aria-label="關閉視窗"><i class="ph ph-x" aria-hidden="true" data-icon="x"></i></button>
+      <div class="modal-header">
+        <div class="modal-icon channel-modal-icon">
+          <i class="ph ph-tag ic-24" aria-hidden="true" data-icon="tag"></i>
+        </div>
+        <div class="modal-header-text">
+          <h2 id="channelModalTitle" class="modal-title">新增支付通路</h2>
+          <div class="modal-subtitle">自訂通路名稱、主題色彩與勾選綁定卡別</div>
+        </div>
+      </div>
+
+      <div class="channel-modal-body">
+        <div class="card-form-group">
+          <label class="card-form-label" for="channelFormName">通路名稱 <span class="req-star">*</span></label>
+          <input type="text" id="channelFormName" class="text-input card-form-input" maxlength="25" placeholder="例如：Apple Pay、街口支付、台灣 Pay…">
+        </div>
+
+        <div class="card-form-group">
+          <label class="card-form-label">群組主題顏色</label>
+          <div class="color-picker-container">
+            <div class="color-preset-swatches" id="colorPresetSwatches"></div>
+            <div class="custom-color-row">
+              <label class="custom-color-label" for="channelNativeColorPicker">
+                <input type="color" id="channelNativeColorPicker" value="#288465" class="native-color-picker">
+                <span>自訂色盤選色：</span>
+                <span id="channelColorHexText" class="color-hex-text">#288465</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-form-group">
+          <div class="channel-cards-header">
+            <label class="card-form-label">綁定已啟用卡別（可複選）</label>
+            <div class="channel-cards-quick-btns">
+              <button type="button" class="channel-quick-select-btn" id="channelSelectAllCardsBtn">全選</button>
+              <button type="button" class="channel-quick-select-btn" id="channelDeselectAllCardsBtn">全部取消</button>
+            </div>
+          </div>
+          <div class="card-channel-pills" id="channelBoundCardPills"></div>
+          <span class="card-upload-hint">勾選要支援此通路的卡片，儲存後自動同步綁定，無需至卡片管理逐張設定</span>
+        </div>
+
+        <div class="channel-preview-box">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span class="channel-preview-label">記帳頁面群組標籤預覽：</span>
+            <span class="channel-preview-cards-count" id="channelPreviewCardsCount"></span>
+          </div>
+          <div class="channel-preview-badge" id="channelPreviewBadge">
+            <span class="preview-dot" id="channelPreviewDot"></span>
+            <span id="channelPreviewText">Line Pay</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="channelModalCancelBtn" class="modal-btn modal-cancel-btn" type="button">取消</button>
+        <button id="channelModalSubmitBtn" class="modal-btn modal-submit-btn" type="button">儲存通路</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bankEditModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="bankModalTitle">
+    <div class="modal-card bank-settings-modal">
+      <button id="bankModalCloseIconBtn" class="modal-icon-close" type="button" aria-label="關閉視窗"><i class="ph ph-x" aria-hidden="true" data-icon="x"></i></button>
+      <div class="modal-header">
+        <div class="modal-icon bank-modal-icon">
+          <i class="ph ph-bank ic-24" aria-hidden="true" data-icon="bank"></i>
+        </div>
+        <div class="modal-header-text">
+          <h2 id="bankModalTitle" class="modal-title">新增轉帳銀行</h2>
+          <div class="modal-subtitle">設定銀行名稱與專屬圖示 (Icon)</div>
+        </div>
+      </div>
+
+      <div class="bank-modal-body">
+        <div class="card-form-group">
+          <label class="card-form-label" for="bankFormName">銀行名稱 <span class="req-star">*</span></label>
+          <input type="text" id="bankFormName" class="text-input card-form-input" maxlength="25" placeholder="例如：晨光銀行、永豐銀行、將來銀行…">
+        </div>
+
+        <div class="card-form-group">
+          <label class="card-form-label">銀行圖示 (Icon)</label>
+          <div class="bank-logo-picker-wrap">
+            <div class="bank-preset-logos" id="bankPresetLogos"></div>
+            <div class="bank-upload-box">
+              <label class="card-upload-btn" for="bankLogoFileInput">
+                <i class="ph ph-upload-simple ic-15" aria-hidden="true" data-icon="upload-simple"></i>
+                <span>上傳自訂銀行圖示</span>
+              </label>
+              <input type="file" id="bankLogoFileInput" accept="image/*" style="display: none;">
+            </div>
+          </div>
+        </div>
+
+        <div class="channel-preview-box">
+          <span class="channel-preview-label">按鈕外觀預覽：</span>
+          <div class="bank-preview-btn-mock" id="bankPreviewBtnMock">
+            <img id="bankPreviewLogo" class="bank-preview-logo-img" alt="" style="display: none;">
+            <span id="bankPreviewName">轉帳-山嵐銀行</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="bankModalCancelBtn" class="modal-btn modal-cancel-btn" type="button">取消</button>
+        <button id="bankModalSubmitBtn" class="modal-btn modal-submit-btn" type="button">儲存銀行</button>
+      </div>
+    </div>
+  </div>

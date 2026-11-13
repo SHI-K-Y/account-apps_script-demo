@@ -1,0 +1,943 @@
+:root:root:root .icon-btn.theme-toggle-btn {
+  --uv-size: 14px;
+  --uv-w: 5.625em;
+  --uv-h: 2.5em;
+  --uv-r: 6.25em;
+  --uv-halo-d: 3.375em;
+  --uv-knob-d: 2.125em;
+  --uv-halo-off: calc((var(--uv-halo-d) - var(--uv-h)) / 2 * -1);
+  --uv-knob-off: calc((var(--uv-h) - var(--uv-knob-d)) / 2);
+  --uv-nudge: 0.187em;
+
+  --uv-track: color-mix(in srgb, var(--fx) 94%, var(--hl));   
+  --uv-glint: color-mix(in srgb, var(--hl) 94%, transparent);
+  --uv-edge-shadow: color-mix(in srgb, var(--shadow-tint) 25%, transparent);
+  --uv-halo: color-mix(in srgb, var(--hl) 10%, transparent);
+  --uv-stars: var(--hl);
+  --uv-cloud: var(--on);
+  --uv-cloud-back: color-mix(in srgb, var(--fx) 38%, var(--on));
+  --uv-sun: var(--sun);
+  --uv-sun-shade: color-mix(in srgb, var(--sun) 55%, var(--shadow-tint));
+  --uv-moon: var(--slate-light);
+  --uv-moon-shade: color-mix(in srgb, var(--slate) 70%, var(--shadow-tint));
+  --uv-spot: var(--slate);
+  --uv-shine: color-mix(in srgb, var(--hl) 61%, transparent);
+
+  --uv-t-move: var(--lg-dur-tap) var(--lg-spring-tap);
+  --uv-t-scene: var(--lg-dur-snappy) var(--lg-spring-snappy);
+  --uv-t-fill: var(--lg-dur-tap) var(--ease-out);
+
+  position: relative;
+  isolation: isolate;
+  display: block;
+  flex: none;
+  box-sizing: border-box;
+  width: var(--uv-w);
+  min-width: 0;
+  height: var(--uv-h);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--uv-r);
+  overflow: hidden;
+  cursor: pointer;
+  font-size: var(--uv-size);
+  line-height: 1;
+  color: var(--uv-stars);
+  -webkit-tap-highlight-color: transparent;
+
+  background: var(--uv-track);
+  background-image: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  text-shadow: none;
+  box-shadow:
+    0 -0.062em 0.062em var(--uv-edge-shadow),
+    0 0.062em 0.125em var(--uv-glint),
+    inset 0 0.05em 0.187em var(--uv-edge-shadow),
+    inset 0 0.05em 0.187em var(--uv-edge-shadow);
+  transform: none;
+  transition: background-color var(--uv-t-fill), box-shadow var(--uv-t-fill), transform var(--lg-dur-tap) var(--lg-spring-tap);
+}
+
+:root:root:root .icon-btn.theme-toggle-btn::before {
+  content: "";
+  position: absolute;
+  inset: var(--uv-halo-off) auto auto var(--uv-halo-off);
+  z-index: 1;
+  box-sizing: border-box;
+  width: var(--uv-halo-d);
+  height: var(--uv-halo-d);
+  padding: 0;
+  border-radius: var(--uv-r);
+  background: var(--uv-halo);
+  -webkit-mask: none;
+  mask: none;
+  box-shadow:
+    inset 0 0 0 3.375em var(--uv-halo),
+    inset 0 0 0 3.375em var(--uv-halo),
+    0 0 0 0.625em var(--uv-halo),
+    0 0 0 1.25em var(--uv-halo);
+  pointer-events: none;
+  transition: left var(--uv-t-move);
+}
+
+:root:root:root .icon-btn.theme-toggle-btn::after {
+  content: "";
+  position: absolute;
+  inset: auto;
+  z-index: 0;
+  top: -100%;
+  left: 0.312em;
+  width: 2.75em;
+  height: auto;
+  aspect-ratio: 144 / 55;
+  border-radius: 0;
+  background: var(--uv-stars);
+  opacity: 1;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 144 55'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M135.831 3.00688C135.055 3.85027 134.111 4.29946 133 4.35447C134.111 4.40947 135.055 4.85867 135.831 5.71123C136.607 6.55462 136.996 7.56303 136.996 8.72727C136.996 7.95722 137.172 7.25134 137.525 6.59129C137.886 5.93124 138.372 5.39954 138.98 5.00535C139.598 4.60199 140.268 4.39114 141 4.35447C139.88 4.2903 138.936 3.85027 138.16 3.00688C137.384 2.16348 136.996 1.16425 136.996 0C136.996 1.16425 136.607 2.16348 135.831 3.00688ZM31 23.3545C32.1114 23.2995 33.0551 22.8503 33.8313 22.0069C34.6075 21.1635 34.9956 20.1642 34.9956 19C34.9956 20.1642 35.3837 21.1635 36.1599 22.0069C36.9361 22.8503 37.8798 23.2903 39 23.3545C38.2679 23.3911 37.5976 23.602 36.9802 24.0053C36.3716 24.3995 35.8864 24.9312 35.5248 25.5913C35.172 26.2513 34.9956 26.9572 34.9956 27.7273C34.9956 26.563 34.6075 25.5546 33.8313 24.7112C33.0551 23.8587 32.1114 23.4095 31 23.3545ZM0 36.3545C1.11136 36.2995 2.05513 35.8503 2.83131 35.0069C3.6075 34.1635 3.99559 33.1642 3.99559 32C3.99559 33.1642 4.38368 34.1635 5.15987 35.0069C5.93605 35.8503 6.87982 36.2903 8 36.3545C7.26792 36.3911 6.59757 36.602 5.98015 37.0053C5.37155 37.3995 4.88644 37.9312 4.52481 38.5913C4.172 39.2513 3.99559 39.9572 3.99559 40.7273C3.99559 39.563 3.6075 38.5546 2.83131 37.7112C2.05513 36.8587 1.11136 36.4095 0 36.3545ZM56.8313 24.0069C56.0551 24.8503 55.1114 25.2995 54 25.3545C55.1114 25.4095 56.0551 25.8587 56.8313 26.7112C57.6075 27.5546 57.9956 28.563 57.9956 29.7273C57.9956 28.9572 58.172 28.2513 58.5248 27.5913C58.8864 26.9312 59.3716 26.3995 59.9802 26.0053C60.5976 25.602 61.2679 25.3911 62 25.3545C60.8798 25.2903 59.9361 24.8503 59.1599 24.0069C58.3837 23.1635 57.9956 22.1642 57.9956 21C57.9956 22.1642 57.6075 23.1635 56.8313 24.0069ZM81 25.3545C82.1114 25.2995 83.0551 24.8503 83.8313 24.0069C84.6075 23.1635 84.9956 22.1642 84.9956 21C84.9956 22.1642 85.3837 23.1635 86.1599 24.0069C86.9361 24.8503 87.8798 25.2903 89 25.3545C88.2679 25.3911 87.5976 25.602 86.9802 26.0053C86.3716 26.3995 85.8864 26.9312 85.5248 27.5913C85.172 28.2513 84.9956 28.9572 84.9956 29.7273C84.9956 28.563 84.6075 27.5546 83.8313 26.7112C83.0551 25.8587 82.1114 25.4095 81 25.3545ZM136 36.3545C137.111 36.2995 138.055 35.8503 138.831 35.0069C139.607 34.1635 139.996 33.1642 139.996 32C139.996 33.1642 140.384 34.1635 141.16 35.0069C141.936 35.8503 142.88 36.2903 144 36.3545C143.268 36.3911 142.598 36.602 141.98 37.0053C141.372 37.3995 140.886 37.9312 140.525 38.5913C140.172 39.2513 139.996 39.9572 139.996 40.7273C139.996 39.563 139.607 38.5546 138.831 37.7112C138.055 36.8587 137.111 36.4095 136 36.3545ZM101.831 49.0069C101.055 49.8503 100.111 50.2995 99 50.3545C100.111 50.4095 101.055 50.8587 101.831 51.7112C102.607 52.5546 102.996 53.563 102.996 54.7273C102.996 53.9572 103.172 53.2513 103.525 52.5913C103.886 51.9312 104.372 51.3995 104.98 51.0053C105.598 50.602 106.268 50.3911 107 50.3545C105.88 50.2903 104.936 49.8503 104.16 49.0069C103.384 48.1635 102.996 47.1642 102.996 46C102.996 47.1642 102.607 48.1635 101.831 49.0069Z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 144 55'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M135.831 3.00688C135.055 3.85027 134.111 4.29946 133 4.35447C134.111 4.40947 135.055 4.85867 135.831 5.71123C136.607 6.55462 136.996 7.56303 136.996 8.72727C136.996 7.95722 137.172 7.25134 137.525 6.59129C137.886 5.93124 138.372 5.39954 138.98 5.00535C139.598 4.60199 140.268 4.39114 141 4.35447C139.88 4.2903 138.936 3.85027 138.16 3.00688C137.384 2.16348 136.996 1.16425 136.996 0C136.996 1.16425 136.607 2.16348 135.831 3.00688ZM31 23.3545C32.1114 23.2995 33.0551 22.8503 33.8313 22.0069C34.6075 21.1635 34.9956 20.1642 34.9956 19C34.9956 20.1642 35.3837 21.1635 36.1599 22.0069C36.9361 22.8503 37.8798 23.2903 39 23.3545C38.2679 23.3911 37.5976 23.602 36.9802 24.0053C36.3716 24.3995 35.8864 24.9312 35.5248 25.5913C35.172 26.2513 34.9956 26.9572 34.9956 27.7273C34.9956 26.563 34.6075 25.5546 33.8313 24.7112C33.0551 23.8587 32.1114 23.4095 31 23.3545ZM0 36.3545C1.11136 36.2995 2.05513 35.8503 2.83131 35.0069C3.6075 34.1635 3.99559 33.1642 3.99559 32C3.99559 33.1642 4.38368 34.1635 5.15987 35.0069C5.93605 35.8503 6.87982 36.2903 8 36.3545C7.26792 36.3911 6.59757 36.602 5.98015 37.0053C5.37155 37.3995 4.88644 37.9312 4.52481 38.5913C4.172 39.2513 3.99559 39.9572 3.99559 40.7273C3.99559 39.563 3.6075 38.5546 2.83131 37.7112C2.05513 36.8587 1.11136 36.4095 0 36.3545ZM56.8313 24.0069C56.0551 24.8503 55.1114 25.2995 54 25.3545C55.1114 25.4095 56.0551 25.8587 56.8313 26.7112C57.6075 27.5546 57.9956 28.563 57.9956 29.7273C57.9956 28.9572 58.172 28.2513 58.5248 27.5913C58.8864 26.9312 59.3716 26.3995 59.9802 26.0053C60.5976 25.602 61.2679 25.3911 62 25.3545C60.8798 25.2903 59.9361 24.8503 59.1599 24.0069C58.3837 23.1635 57.9956 22.1642 57.9956 21C57.9956 22.1642 57.6075 23.1635 56.8313 24.0069ZM81 25.3545C82.1114 25.2995 83.0551 24.8503 83.8313 24.0069C84.6075 23.1635 84.9956 22.1642 84.9956 21C84.9956 22.1642 85.3837 23.1635 86.1599 24.0069C86.9361 24.8503 87.8798 25.2903 89 25.3545C88.2679 25.3911 87.5976 25.602 86.9802 26.0053C86.3716 26.3995 85.8864 26.9312 85.5248 27.5913C85.172 28.2513 84.9956 28.9572 84.9956 29.7273C84.9956 28.563 84.6075 27.5546 83.8313 26.7112C83.0551 25.8587 82.1114 25.4095 81 25.3545ZM136 36.3545C137.111 36.2995 138.055 35.8503 138.831 35.0069C139.607 34.1635 139.996 33.1642 139.996 32C139.996 33.1642 140.384 34.1635 141.16 35.0069C141.936 35.8503 142.88 36.2903 144 36.3545C143.268 36.3911 142.598 36.602 141.98 37.0053C141.372 37.3995 140.886 37.9312 140.525 38.5913C140.172 39.2513 139.996 39.9572 139.996 40.7273C139.996 39.563 139.607 38.5546 138.831 37.7112C138.055 36.8587 137.111 36.4095 136 36.3545ZM101.831 49.0069C101.055 49.8503 100.111 50.2995 99 50.3545C100.111 50.4095 101.055 50.8587 101.831 51.7112C102.607 52.5546 102.996 53.563 102.996 54.7273C102.996 53.9572 103.172 53.2513 103.525 52.5913C103.886 51.9312 104.372 51.3995 104.98 51.0053C105.598 50.602 106.268 50.3911 107 50.3545C105.88 50.2903 104.936 49.8503 104.16 49.0069C103.384 48.1635 102.996 47.1642 102.996 46C102.996 47.1642 102.607 48.1635 101.831 49.0069Z'/%3E%3C/svg%3E");
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  box-shadow: none;
+  pointer-events: none;
+  transition: top var(--uv-t-scene);
+}
+
+:root:root:root .icon-btn.theme-toggle-btn .theme-icon-moon {
+  position: absolute;
+  z-index: 0;
+  top: auto;
+  right: auto;
+  bottom: -0.625em;
+  left: 0.312em;
+  display: block;
+  width: 1.25em;
+  height: 1.25em;
+  margin: 0;
+  padding: 0;
+  border-radius: var(--uv-r);
+  background: var(--uv-cloud);
+  font-size: var(--uv-size);
+  line-height: 1;
+  opacity: 1;
+  transform: none;
+  filter: none;
+  pointer-events: none;
+  box-shadow:
+    0.937em 0.312em var(--uv-cloud),
+    -0.312em -0.312em var(--uv-cloud-back),
+    1.437em 0.375em var(--uv-cloud),
+    0.5em -0.125em var(--uv-cloud-back),
+    2.187em 0 var(--uv-cloud),
+    1.25em -0.062em var(--uv-cloud-back),
+    2.937em 0.312em var(--uv-cloud),
+    2em -0.312em var(--uv-cloud-back),
+    3.625em -0.062em var(--uv-cloud),
+    2.625em 0 var(--uv-cloud-back),
+    4.5em -0.312em var(--uv-cloud),
+    3.375em -0.437em var(--uv-cloud-back),
+    4.625em -1.75em 0 0.437em var(--uv-cloud),
+    4em -0.625em var(--uv-cloud-back),
+    4.125em -2.125em 0 0.437em var(--uv-cloud-back);
+  transition: bottom var(--uv-t-scene) !important;
+}
+:root:root:root .icon-btn.theme-toggle-btn .theme-icon-moon::before,
+:root:root:root .icon-btn.theme-toggle-btn .theme-icon-moon::after {
+  content: none;
+}
+
+:root:root:root .icon-btn.theme-toggle-btn .theme-icon-sun {
+  position: absolute;
+  z-index: 2;
+  top: var(--uv-knob-off);
+  right: auto;
+  bottom: auto;
+  left: var(--uv-knob-off);
+  display: block;
+  width: var(--uv-knob-d);
+  height: var(--uv-knob-d);
+  margin: 0;
+  padding: 0;
+  border-radius: var(--uv-r);
+  background: var(--uv-sun);
+  font-size: var(--uv-size);
+  line-height: 1;
+  opacity: 1;
+  transform: none;
+  overflow: hidden;
+  pointer-events: none;
+  box-shadow:
+    inset 0.062em 0.062em 0.062em 0 var(--uv-shine),
+    inset 0 -0.062em 0.062em 0 var(--uv-sun-shade);
+  filter:
+    drop-shadow(0.062em 0.125em 0.125em var(--uv-edge-shadow))
+    drop-shadow(0 0.062em 0.125em var(--uv-edge-shadow));
+  transition: left var(--uv-t-move) !important;
+}
+:root:root:root .icon-btn.theme-toggle-btn .theme-icon-sun::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle 0.125em at 0.937em 0.437em, var(--uv-spot) calc(100% - 1px), transparent 100%),
+    radial-gradient(circle 0.1875em at 1.5625em 1.1245em, var(--uv-spot) calc(100% - 1px), transparent 100%),
+    radial-gradient(circle 0.375em at 0.6875em 1.125em, var(--uv-spot) calc(100% - 1px), transparent 100%),
+    var(--uv-moon);
+  box-shadow:
+    inset 0.062em 0.062em 0.062em 0 var(--uv-shine),
+    inset 0 -0.062em 0.062em 0 var(--uv-moon-shade);
+  transform: translateX(100%);
+  transition: transform var(--uv-t-scene);
+}
+:root:root:root .icon-btn.theme-toggle-btn .theme-icon-sun::after {
+  content: none;
+}
+
+@media (hover: hover) {
+  :root:root:root .icon-btn.theme-toggle-btn:hover {
+    transform: none;
+    background: var(--uv-track);
+    border-color: transparent;
+    color: var(--uv-stars);
+  }
+  :root:root:root .icon-btn.theme-toggle-btn:hover::before {
+    left: calc(var(--uv-halo-off) + var(--uv-nudge));
+  }
+  :root:root:root .icon-btn.theme-toggle-btn:hover .theme-icon-sun {
+    left: calc(var(--uv-knob-off) + var(--uv-nudge));
+  }
+}
+:root:root:root .icon-btn.theme-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+:root:root:root .icon-btn.theme-toggle-btn:focus-visible {
+  outline: 2px solid var(--lg-focus);
+  outline-offset: 3px;
+}
+
+:root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn {
+  --uv-track: color-mix(in srgb, var(--accent) 22%, var(--primary-2));
+  --uv-glint: color-mix(in srgb, var(--hl) 14%, transparent);
+  --uv-edge-shadow: color-mix(in srgb, var(--shadow-tint) 55%, transparent);
+}
+:root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn::before {
+  left: calc(100% - var(--uv-halo-off) - var(--uv-halo-d));
+}
+:root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn::after {
+  top: calc(50% - 0.525em);
+}
+:root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn .theme-icon-moon {
+  bottom: -4.062em;
+}
+:root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn .theme-icon-sun {
+  left: calc(100% - var(--uv-knob-off) - var(--uv-knob-d));
+}
+:root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn .theme-icon-sun::before {
+  transform: translateX(0);
+}
+@media (hover: hover) {
+  :root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn:hover::before {
+    left: calc(100% - var(--uv-halo-off) - var(--uv-halo-d) - var(--uv-nudge));
+  }
+  :root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn:hover .theme-icon-sun {
+    left: calc(100% - var(--uv-knob-off) - var(--uv-knob-d) - var(--uv-nudge));
+  }
+}
+
+::view-transition-old(theme-toggle) {
+  animation: none;
+  display: none;
+}
+::view-transition-new(theme-toggle) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+.head > .topbar > .theme-toggle-btn {
+  flex: none;
+}
+
+@media (max-width: 767px) {
+  .head > .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: 1fr auto auto 1fr;
+    column-gap: 8px;
+    row-gap: 0;
+    align-items: center;
+  }
+  .head > .topbar > h1 {
+    grid-column: 1;
+    grid-row: 2;
+    flex: none;
+  }
+  .head > .topbar > .topbar-actions {
+    grid-column: 2;
+    grid-row: 1 / -1;
+  }
+  .head > .topbar > .theme-toggle-btn {
+    grid-column: 1;
+    grid-row: 3;
+    justify-self: start;
+  }
+  /* 需與 :root:root:root .icon-btn.theme-toggle-btn { margin: 0 } 同權重才能生效 */
+  :root:root:root .head > .topbar > .icon-btn.theme-toggle-btn {
+    margin-top: 14px;
+  }
+}
+@media (max-width: 599px) {
+  :root:root:root .icon-btn.theme-toggle-btn {
+    --uv-size: 13px;
+  }
+}
+
+:root:root:root[data-motion="lite"] .icon-btn.theme-toggle-btn {
+  --uv-t-move: var(--lg-dur-reduced) var(--lg-ease-reduced);
+  --uv-t-scene: var(--lg-dur-reduced) var(--lg-ease-reduced);
+  --uv-t-fill: var(--lg-dur-reduced) var(--lg-ease-reduced);
+}
+:root:root:root[data-motion="off"] .icon-btn.theme-toggle-btn,
+:root:root:root[data-motion="off"] .icon-btn.theme-toggle-btn::before,
+:root:root:root[data-motion="off"] .icon-btn.theme-toggle-btn::after,
+:root:root:root[data-motion="off"] .icon-btn.theme-toggle-btn .theme-icon-moon,
+:root:root:root[data-motion="off"] .icon-btn.theme-toggle-btn .theme-icon-sun,
+:root:root:root[data-motion="off"] .icon-btn.theme-toggle-btn .theme-icon-sun::before {
+  transition: none !important;
+}
+:root:root:root[data-motion="off"] .icon-btn.theme-toggle-btn:active,
+:root:root:root[data-motion="lite"] .icon-btn.theme-toggle-btn:active {
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:root:root .icon-btn.theme-toggle-btn,
+  :root:root:root .icon-btn.theme-toggle-btn::before,
+  :root:root:root .icon-btn.theme-toggle-btn::after,
+  :root:root:root .icon-btn.theme-toggle-btn .theme-icon-moon,
+  :root:root:root .icon-btn.theme-toggle-btn .theme-icon-sun,
+  :root:root:root .icon-btn.theme-toggle-btn .theme-icon-sun::before {
+    transition: none !important;
+  }
+  :root:root:root .icon-btn.theme-toggle-btn:active {
+    transform: none;
+  }
+}
+
+#pageSettings:has(.settings-tab.active) .settings-tabs {
+  display: none;
+}
+#pageSettings:not(:has(.settings-tab.active)) :is(
+  #settingsPaySubnav,
+  #settingsTopActionBar,
+  #settingsAddBar,
+  #settingsPayActionBar,
+  #settingsListContainer
+) {
+  display: none !important;
+}
+#pageSettings .settings-subbar[hidden] {
+  display: none;
+}
+#pageSettings .settings-subbar {
+  justify-content: flex-start;
+}
+
+#pageSettings .settings-tabs {
+  --uv-card-r: 14px;     
+  --uv-gap: 8px;
+  --uv-dur: 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--uv-gap);
+  padding: 12px 10px;
+  overflow: visible;
+  position: relative;
+  -webkit-backdrop-filter: var(--lg-blur);
+  backdrop-filter: var(--lg-blur);
+}
+
+#pageSettings .settings-tabs::before,
+#pageSettings .settings-tabs.lg-seg::before,
+#pageSettings .settings-tabs.lg-seg.lg-seg-on::before {
+  content: none;
+  display: none;
+}
+
+#pageSettings .settings-tabs .settings-tab {
+  flex: none;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--uv-card-r);
+  text-align: left;
+  color: var(--lg-ink-secondary);
+  background: transparent;
+  box-shadow: none;
+  text-shadow: var(--lg-text-halo);
+  transform: none;
+  transition:
+    background-color var(--uv-dur) ease-out,
+    color var(--uv-dur) ease-out,
+    box-shadow var(--uv-dur) ease-out,
+    transform var(--uv-dur) ease-out;
+}
+#pageSettings .settings-tabs .uv-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  font-size: 22px;
+  line-height: 1;
+}
+#pageSettings .settings-tabs .uv-tab-icon i.ph {
+  font-size: 22px;
+}
+#pageSettings .settings-tabs .uv-tab-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#pageSettings .settings-tabs .uv-tab-chevron {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0.55;
+  transition: transform var(--uv-dur) ease-out, opacity var(--uv-dur) ease-out;
+}
+#pageSettings .settings-tabs .uv-tab-chevron i.ph {
+  font-size: 16px;
+}
+
+#pageSettings .settings-tabs .settings-tab:hover {
+  color: var(--on);
+  background: var(--lg-tint);
+  box-shadow: var(--lg-rim), 0 6px 14px -6px var(--accent-glow);
+  text-shadow: 0 1px 1px color-mix(in srgb, var(--shadow-tint) 18%, transparent);
+  transform: translate(1px, -1px);
+}
+#pageSettings .settings-tabs .settings-tab:hover .uv-tab-chevron {
+  opacity: 1;
+  transform: translateX(2px);
+}
+#pageSettings .settings-tabs .settings-tab:focus-visible {
+  z-index: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #pageSettings .settings-tabs .settings-tab,
+  #pageSettings .settings-tabs .uv-tab-chevron {
+    transition: none !important;
+    animation: none !important;
+  }
+  #pageSettings .settings-tabs .settings-tab:hover,
+  #pageSettings .settings-tabs .settings-tab:hover .uv-tab-chevron {
+    transform: none;
+  }
+}
+:root[data-motion="off"] #pageSettings .settings-tabs .settings-tab,
+:root[data-motion="off"] #pageSettings .settings-tabs .uv-tab-chevron,
+:root[data-motion="lite"] #pageSettings .settings-tabs .settings-tab,
+:root[data-motion="lite"] #pageSettings .settings-tabs .uv-tab-chevron {
+  transition-duration: 0.01ms !important;
+  animation: none !important;
+}
+:root[data-motion="off"] #pageSettings .settings-tabs .settings-tab:hover,
+:root[data-motion="off"] #pageSettings .settings-tabs .settings-tab:hover,
+:root[data-motion="off"] #pageSettings .settings-tabs .settings-tab:hover .uv-tab-chevron,
+:root[data-motion="lite"] #pageSettings .settings-tabs .settings-tab:hover,
+:root[data-motion="lite"] #pageSettings .settings-tabs .settings-tab:hover .uv-tab-chevron {
+  transform: none;
+}
+
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .submit-btn {
+    --uv-fill: var(--lg-tint);
+    --uv-fill-hover: color-mix(in srgb, var(--lg-tint) 70%, var(--lg-tint-deepen));
+    --uv-star: color-mix(in srgb, var(--hl) 92%, transparent);
+    --uv-glow-a: color-mix(in srgb, color-mix(in srgb, var(--accent) 45%, var(--hl)) 70%, transparent);
+    --uv-glow-b: color-mix(in srgb, var(--border-main) 65%, transparent);
+    --uv-ring: linear-gradient(
+      137.48deg,
+      var(--border-main) 10%,
+      color-mix(in srgb, var(--accent) 55%, var(--hl)) 45%,
+      var(--accent) 67%,
+      color-mix(in srgb, var(--accent) 70%, var(--lg-tint-deepen)) 87%
+    );
+
+    position: relative;
+    isolation: isolate;           
+    overflow: hidden;
+    border: 2px solid transparent; 
+    padding-inline: 22px;          
+    background-color: transparent;
+    background-image: linear-gradient(var(--uv-fill), var(--uv-fill)), var(--uv-ring);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    background-size: 100% 100%, 300% 300%;
+    animation: uv-btn-ring 5s ease infinite;
+  }
+  .fx-empty .submit-btn { padding-inline: 20px; }   
+  .submit-btn::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(100% + 24px);
+    pointer-events: none;
+    background-color: transparent;
+    background-image:
+      radial-gradient(circle at 4px 4px, var(--uv-star) 0 1px, transparent 1.7px),
+      radial-gradient(circle at 4px 4px, var(--uv-star) 0 0.75px, transparent 1.4px),
+      radial-gradient(circle at 4px 4px, var(--uv-star) 0 0.6px, transparent 1.2px);
+    background-size: 24px 24px;
+    background-position: 0 0, 13px 7px, 5px 16px;
+    opacity: 0.5;
+    animation: uv-btn-stars 6s linear infinite;
+    transition: opacity 0.5s var(--ease-out), background-color 0.5s var(--ease-out);
+  }
+
+  .submit-btn::after {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0 70%, #000 92%);
+    mask-image: linear-gradient(to bottom, transparent 0 70%, #000 92%);
+    content: "";
+    position: absolute;
+    z-index: -1;
+    left: 0;
+    right: 0;
+    bottom: -35%;
+    height: 70%;
+    pointer-events: none;
+    background:
+      linear-gradient(var(--uv-glow-a), var(--uv-glow-a)) left / 50% 100% no-repeat,
+      linear-gradient(var(--uv-glow-b), var(--uv-glow-b)) right / 50% 100% no-repeat;
+    filter: blur(14px);
+    animation: uv-btn-pulse 4s infinite;
+    transition: opacity 0.5s var(--ease-out);
+  }
+
+  @media (hover: hover) {
+    .submit-btn:hover:not(:disabled) {
+      transform: translateY(-2px) scale(1.03);
+      box-shadow: var(--lg-rim), 0 8px 22px -6px var(--accent-glow), 0 0 0 4px var(--accent-soft);
+    }
+    .submit-btn:hover:not(:disabled)::before {
+      opacity: 1;
+      background-color: var(--uv-fill-hover);
+    }
+    .submit-btn:hover:not(:disabled)::after { opacity: 0; }
+  }
+  .submit-btn:focus-visible::before {
+    opacity: 1;
+    background-color: var(--uv-fill-hover);
+  }
+  .submit-btn:focus-visible::after { opacity: 0; }
+  .submit-btn:focus-visible {
+    outline: 2px solid var(--lg-focus);
+    outline-offset: 2px;
+  }
+
+  .submit-btn:active:not(:disabled) {
+    --uv-ring: linear-gradient(var(--accent), var(--accent));
+    --uv-glow-a: var(--accent-glow);
+    --uv-glow-b: var(--accent-glow);
+    animation: none;
+    box-shadow: var(--lg-rim), 0 2px 8px var(--accent-glow), 0 0 0 3px var(--accent-soft);
+  }
+
+  .submit-btn:disabled { animation: none; }
+  .submit-btn:disabled::before,
+  .submit-btn:disabled::after { display: none; }
+
+  @keyframes uv-btn-ring {
+    0%, 100% { background-position: 0 0, 0% 50%; }
+    50%      { background-position: 0 0, 100% 50%; }
+  }
+  @keyframes uv-btn-stars {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-24px); }
+  }
+  @keyframes uv-btn-pulse {
+    0%, 100% { transform: scale(0.75); }
+    70%      { transform: scale(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .submit-btn,
+    .submit-btn::before,
+    .submit-btn::after {
+      animation: none !important;
+      transition-duration: 0.01ms !important;
+    }
+    .submit-btn:hover:not(:disabled) { transform: none; }
+  }
+  :root[data-motion="off"] .submit-btn,
+  :root[data-motion="off"] .submit-btn::before,
+  :root[data-motion="off"] .submit-btn::after,
+  :root[data-motion="lite"] .submit-btn,
+  :root[data-motion="lite"] .submit-btn::before,
+  :root[data-motion="lite"] .submit-btn::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+  :root[data-motion="off"] .submit-btn:hover:not(:disabled),
+  :root[data-motion="lite"] .submit-btn:hover:not(:disabled) { transform: none; }
+
+  @media (forced-colors: active) {
+    .submit-btn { border-color: ButtonText; }
+    .submit-btn::before,
+    .submit-btn::after { display: none; }
+  }
+}
+
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .head .tabs {
+    --uv-flow: uv-tab-stars-ltr;
+    --uv-star: color-mix(in srgb, var(--hl) 92%, transparent);
+    --uv-glow-a: color-mix(in srgb, color-mix(in srgb, var(--accent) 45%, var(--hl)) 70%, transparent);
+    --uv-glow-b: color-mix(in srgb, var(--border-main) 65%, transparent);
+  }
+  body[data-mode="income"] .head .tabs { --uv-flow: uv-tab-stars-rtl; }
+
+  .head .tabs::before {
+    background-image:
+      radial-gradient(circle at 4px 4px, var(--uv-star) 0 1px, transparent 1.7px),
+      radial-gradient(circle at 4px 4px, var(--uv-star) 0 0.75px, transparent 1.4px),
+      radial-gradient(circle at 4px 4px, var(--uv-star) 0 0.6px, transparent 1.2px),
+      radial-gradient(closest-side, var(--uv-glow-a), transparent),
+      radial-gradient(closest-side, var(--uv-glow-b), transparent);
+    background-repeat: repeat, repeat, repeat, no-repeat, no-repeat;
+    background-size: 24px 24px, 24px 24px, 24px 24px, 46% 50%, 46% 50%;
+    background-position: 0 0, 13px 7px, 5px 16px, 0% calc(100% + 14px), 100% calc(100% + 14px);
+    animation: var(--uv-flow) 4s linear infinite, uv-tab-glow 4s ease-in-out infinite;
+    will-change: transform; /* 效能：星點流動只重繪指示器本身，不連帶重繪整個毛玻璃分頁列 */
+  }
+  .head .tabs.is-lg-moving::before {
+    animation: lgIndicatorStretch var(--lg-dur-snappy) both, var(--uv-flow) 4s linear infinite, uv-tab-glow 4s ease-in-out infinite;
+  }
+
+  @keyframes uv-tab-stars-ltr {
+    from { background-position: 0 0, 13px 7px, 5px 16px, 0% calc(100% + 14px), 100% calc(100% + 14px); }
+    to   { background-position: 24px 0, 61px 7px, 29px 16px, 0% calc(100% + 14px), 100% calc(100% + 14px); }
+  }
+  @keyframes uv-tab-stars-rtl {
+    from { background-position: 0 0, 13px 7px, 5px 16px, 0% calc(100% + 14px), 100% calc(100% + 14px); }
+    to   { background-position: -24px 0, -35px 7px, -19px 16px, 0% calc(100% + 14px), 100% calc(100% + 14px); }
+  }
+  @keyframes uv-tab-glow {
+    0%, 100% { background-size: 24px 24px, 24px 24px, 24px 24px, 46% 50%, 46% 50%; }
+    70%      { background-size: 24px 24px, 24px 24px, 24px 24px, 60% 62%, 60% 62%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .head .tabs::before { animation: none !important; }
+  }
+  :root[data-motion="off"] .head .tabs:not(.is-lg-moving)::before,
+  :root[data-motion="lite"] .head .tabs:not(.is-lg-moving)::before { animation: none; }
+
+  @media (forced-colors: active) {
+    .head .tabs::before { background-image: none; }
+  }
+}
+
+@property --uv-card-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+@property --uv-card-float {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@keyframes uv-card-spin {
+  to { --uv-card-angle: 360deg; }
+}
+@keyframes uv-card-float {
+  0%, 100% { --uv-card-float: 0; }
+  50%      { --uv-card-float: 1; }
+}
+
+:is(
+  #todayExpenseCard,
+  #pageOverview .ov-hero,
+  #pageOverview .ov-card:not(.oc-error),
+  #pageForeign .fx-stat-card
+) {
+  position: relative;           
+  isolation: isolate;          
+
+  --uv-card-ring: var(--accent);                 
+  --uv-card-ring-base: var(--accent-soft);       
+  --uv-card-ring-w: 1.5px;
+  --uv-card-spin: 6s;
+  --uv-card-halo: 0 0 16px -8px var(--accent-glow);                 
+  --uv-card-halo-hover: 0 0 22px -4px var(--accent-glow);
+
+  box-shadow: var(--lg-content-lens), var(--lg-content-shadow), var(--uv-card-halo);
+}
+
+:is(
+  #todayExpenseCard,
+  #pageOverview .ov-hero,
+  #pageOverview .ov-card:not(.oc-error),
+  #pageForeign .fx-stat-card
+)::before {
+  display: none;
+}
+
+:is(
+  #todayExpenseCard,
+  #pageOverview .ov-hero,
+  #pageOverview .ov-card:not(.oc-error),
+  #pageForeign .fx-stat-card
+)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  z-index: -1;
+  box-sizing: border-box;
+  padding: var(--uv-card-ring-w);
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    conic-gradient(from var(--uv-card-angle), transparent 0turn, var(--uv-card-ring) 0.12turn, transparent 0.3turn),
+    linear-gradient(var(--uv-card-ring-base), var(--uv-card-ring-base));
+  -webkit-mask: linear-gradient(currentColor 0 0) content-box, linear-gradient(currentColor 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(currentColor 0 0) content-box, linear-gradient(currentColor 0 0);
+  mask-composite: exclude;
+  will-change: transform; /* 效能：光環每幀重繪時只重繪這一層，不連帶重繪整張卡片內容 */
+  animation: uv-card-spin var(--uv-card-spin) linear infinite;
+}
+
+/* 效能：捲出畫面暫停已改由 app.html 的 Perf 統一調度（對所有 ambient 動畫生效）；
+ * 這條 .uv-offscreen 規則保留作相容，沒有程式再加這個 class 也不影響。 */
+:is(
+  #todayExpenseCard,
+  #pageOverview .ov-hero,
+  #pageOverview .ov-card,
+  #pageForeign .fx-stat-card
+).uv-offscreen::after,
+.submit-btn.uv-offscreen,
+.submit-btn.uv-offscreen::before,
+.submit-btn.uv-offscreen::after {
+  animation-play-state: paused;
+}
+
+:is(
+  #todayExpenseCard,
+  #pageOverview .ov-hero,
+  #pageOverview .ov-card:not(.oc-error),
+  #pageForeign .fx-stat-card
+):is(:hover, :has(:focus-visible)) {
+  --uv-card-ring-base: var(--accent-border);
+  box-shadow: var(--lg-content-lens), var(--lg-content-shadow), var(--uv-card-halo-hover);
+}
+
+:root[data-theme="dark"] :is(
+  #todayExpenseCard,
+  #pageOverview .ov-hero,
+  #pageOverview .ov-card:not(.oc-error),
+  #pageForeign .fx-stat-card
+),
+:root:not([data-theme="light"]) :is(
+  #todayExpenseCard,
+  #pageOverview .ov-hero,
+  #pageOverview .ov-card:not(.oc-error),
+  #pageForeign .fx-stat-card
+) {
+  --uv-card-ring: color-mix(in srgb, var(--accent) 62%, var(--hl));   
+  --uv-card-halo: 0 0 18px -6px var(--accent-glow);
+  --uv-card-halo-hover: 0 0 26px -4px var(--accent-glow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #todayExpenseCard::before,
+  #todayExpenseCard::after,
+  #todayExpenseCard:is(:hover, :has(:focus-visible))::before,
+  #pageOverview .ov-hero::before,
+  #pageOverview .ov-hero::after,
+  #pageOverview .ov-hero:is(:hover, :has(:focus-visible))::before,
+  #pageOverview .ov-card:not(.oc-error)::before,
+  #pageOverview .ov-card:not(.oc-error)::after,
+  #pageOverview .ov-card:not(.oc-error):is(:hover, :has(:focus-visible))::before,
+  #pageForeign .fx-stat-card::before,
+  #pageForeign .fx-stat-card::after,
+  #pageForeign .fx-stat-card:is(:hover, :has(:focus-visible))::before {
+    animation: none !important;   
+  }
+}
+:root[data-motion="lite"] #todayExpenseCard::before,
+:root[data-motion="lite"] #todayExpenseCard::after,
+:root[data-motion="lite"] #todayExpenseCard:is(:hover, :has(:focus-visible))::before,
+:root[data-motion="lite"] #pageOverview .ov-hero::before,
+:root[data-motion="lite"] #pageOverview .ov-hero::after,
+:root[data-motion="lite"] #pageOverview .ov-hero:is(:hover, :has(:focus-visible))::before,
+:root[data-motion="lite"] #pageOverview .ov-card:not(.oc-error)::before,
+:root[data-motion="lite"] #pageOverview .ov-card:not(.oc-error)::after,
+:root[data-motion="lite"] #pageOverview .ov-card:not(.oc-error):is(:hover, :has(:focus-visible))::before,
+:root[data-motion="lite"] #pageForeign .fx-stat-card::before,
+:root[data-motion="lite"] #pageForeign .fx-stat-card::after,
+:root[data-motion="lite"] #pageForeign .fx-stat-card:is(:hover, :has(:focus-visible))::before {
+  animation: none !important;
+}
+:root[data-motion="off"] #todayExpenseCard::before,
+:root[data-motion="off"] #todayExpenseCard::after,
+:root[data-motion="off"] #todayExpenseCard:is(:hover, :has(:focus-visible))::before,
+:root[data-motion="off"] #pageOverview .ov-hero::before,
+:root[data-motion="off"] #pageOverview .ov-hero::after,
+:root[data-motion="off"] #pageOverview .ov-hero:is(:hover, :has(:focus-visible))::before,
+:root[data-motion="off"] #pageOverview .ov-card:not(.oc-error)::before,
+:root[data-motion="off"] #pageOverview .ov-card:not(.oc-error)::after,
+:root[data-motion="off"] #pageOverview .ov-card:not(.oc-error):is(:hover, :has(:focus-visible))::before,
+:root[data-motion="off"] #pageForeign .fx-stat-card::before,
+:root[data-motion="off"] #pageForeign .fx-stat-card::after,
+:root[data-motion="off"] #pageForeign .fx-stat-card:is(:hover, :has(:focus-visible))::before {
+  animation: none !important;
+}
+
+
+:root[data-theme="dark"],
+:root:not([data-theme="light"]) {
+  --uv-bg-scrim: 68%;
+  /* 深色模式下六角骨架改為半透明黑色，避免白框在深色漸層上過亮 */
+  --uv-hex-frame: rgba(0, 0, 0, 0.32);
+}
+:root[data-theme="dark"] .uv-glow-bg::after,
+:root:not([data-theme="light"]) .uv-glow-bg::after {
+  /* 暗化遮罩疊在六角網格上方（與原本 ::after 位於整個背景之上的順序一致） */
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--uv-bg-base) var(--uv-bg-scrim), transparent), color-mix(in srgb, var(--uv-bg-base) var(--uv-bg-scrim), transparent)),
+    var(--uv-hex-img);
+  background-size: 100% 100%, 12px 20.7846097px, 12px 20.7846097px;
+  background-position: 0 0, 0px 0px, 6px 10.39230485px;
+}
+
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+
+  :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry) {
+    --uv-glow: var(--accent-glow);
+    --uv-lift: 7px;
+    --uv-lift-press: 1px;
+    --uv-dur: 0.3s;
+  }
+  :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry)[data-custom-color="true"] {
+    --uv-glow: var(--custom-ch-glow, var(--accent-glow));
+  }
+
+
+  :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill) {
+    position: relative;
+    isolation: isolate;
+    translate: 0 0;
+    transition:
+      background-color var(--lg-dur-press) var(--ease-out),
+      box-shadow var(--lg-dur-press) var(--ease-out),
+      color var(--lg-dur-press) var(--ease-out),
+      border-color var(--lg-dur-press) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out),
+      translate var(--uv-dur) ease;
+  }
+  :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow: 0 15px 20px var(--uv-glow);
+    opacity: 0;
+    transition: opacity var(--uv-dur) ease;
+  }
+
+ 
+  @media (hover: hover) {
+    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled) {
+      translate: 0 calc(var(--uv-lift) * -1);
+      z-index: 2;                          
+    }
+    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled)::before { opacity: 1; }
+    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      height: var(--uv-lift);
+      pointer-events: none;
+    }
+    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled)::after { pointer-events: auto; }
+  }
+  :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled) {
+    translate: 0 calc(var(--uv-lift-press) * -1);
+  }
+  :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled)::before { opacity: 1; }
+
+  :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):focus-visible { z-index: 2; }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill),
+    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled),
+    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled) {
+      translate: 0 0 !important;
+    }
+    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill),
+    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::before {
+      transition-duration: 0.01ms !important;
+    }
+    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled)::before,
+    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled)::before { opacity: 0; }
+  }
+  :root[data-motion="off"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill),
+  :root[data-motion="off"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled),
+  :root[data-motion="off"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled),
+  :root[data-motion="lite"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill),
+  :root[data-motion="lite"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled),
+  :root[data-motion="lite"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled) {
+    translate: 0 0 !important;
+  }
+  :root[data-motion="off"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill),
+  :root[data-motion="off"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::before,
+  :root[data-motion="lite"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill),
+  :root[data-motion="lite"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::before {
+    transition-duration: 0.01ms !important;
+  }
+  :root[data-motion="off"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled)::before,
+  :root[data-motion="off"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled)::before,
+  :root[data-motion="lite"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled)::before,
+  :root[data-motion="lite"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled)::before { opacity: 0; }
+
+  @media (forced-colors: active) {
+    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::before,
+    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::after { display: none; }
+  }
+}

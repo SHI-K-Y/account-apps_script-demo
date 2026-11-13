@@ -1,0 +1,135 @@
+  <div class="uv-glow-bg" aria-hidden="true"></div>
+  <div class="boot-loader" id="bootLoader" role="progressbar" aria-label="記帳簿載入中" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+    <div class="boot-card">
+      <div class="boot-ring" aria-hidden="true">
+        <svg viewBox="0 0 104 104" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="bootGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" style="stop-color: var(--boot-accent-2)"/><stop offset="1" style="stop-color: var(--boot-accent)"/>
+            </linearGradient>
+          </defs>
+          <circle class="boot-trk" cx="52" cy="52" r="44"/>
+          <circle class="boot-val" id="bootRing" cx="52" cy="52" r="44" stroke-dasharray="276.46" stroke-dashoffset="276.46"/>
+        </svg>
+        <div class="boot-pct"><span id="bootPct">0</span><small>%</small></div>
+      </div>
+      <div class="boot-title">記帳簿</div>
+      <div class="boot-stage" id="bootStage" aria-live="polite">正在連線…</div>
+      <div class="boot-meta"><span id="bootNet"></span><span id="bootTime"></span></div>
+      <div class="boot-hint" id="bootHint" hidden>
+        <p id="bootHintText">網路似乎比較慢，仍在努力載入中…</p>
+        <div class="boot-actions">
+          <a class="boot-btn" id="bootReload" href="<?!= (function(){ try { return ScriptApp.getService().getUrl() || '#'; } catch (e) { return '#'; } })() ?>" target="_top">重新載入</a>
+          <button class="boot-btn is-ghost" id="bootSkip" type="button" hidden>先進入</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var root = document.getElementById('bootLoader');
+      if (!root) return;
+      var $ = function (id) { return document.getElementById(id); };
+      var ring = $('bootRing'), pct = $('bootPct'), stage = $('bootStage');
+      var netEl = $('bootNet'), timeEl = $('bootTime');
+      var hint = $('bootHint'), hintText = $('bootHintText'), skipBtn = $('bootSkip'), reloadBtn = $('bootReload');
+      var CIRC = 2 * Math.PI * 44;
+      var shown = 0, target = 0, cap = 0.04;
+      var lastStepAt = now(), finished = false, hadError = false, timer = null;
+      var STALL_MS = 10000;
+
+      function now() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
+
+      function render() {
+        var p = Math.min(100, Math.round(shown * 100));
+        ring.style.strokeDashoffset = String(CIRC * (1 - Math.min(1, shown)));
+        pct.textContent = p;
+        root.setAttribute('aria-valuenow', p);
+      }
+
+      function netLabel() {
+        if (navigator.onLine === false) return { text: '目前沒有網路連線', off: true };
+        var c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (!c) return { text: '', off: false };
+        var t = c.effectiveType ? String(c.effectiveType).toUpperCase() : '';
+        var d = (typeof c.downlink === 'number' && c.downlink > 0) ? ('約 ' + c.downlink + ' Mbps') : '';
+        return { text: ['網路', t, d].filter(Boolean).join(' '), off: false };
+      }
+
+      function updateMeta() {
+        var n = netLabel();
+        netEl.textContent = n.text;
+        netEl.className = n.off ? 'is-off' : '';
+        timeEl.textContent = '已等待 ' + (now() / 1000).toFixed(1) + ' 秒';
+      }
+
+      function showHint(msg, allowSkip) {
+        hintText.textContent = msg;
+        hint.hidden = false;
+        if (allowSkip) skipBtn.hidden = false;
+      }
+
+      function tick() {
+        if (finished) return;
+        if (shown < target) shown += Math.max((target - shown) * 0.3, 0.005);
+        else if (shown < cap) shown += (cap - shown) * 0.035;
+        if (shown > Math.max(target, cap)) shown = Math.max(target, cap);
+        render();
+        updateMeta();
+        if (!hadError && hint.hidden && now() - lastStepAt > STALL_MS) {
+          showHint(navigator.onLine === false
+            ? '目前沒有網路連線，連線恢復後請按「重新載入」。'
+            : '網路似乎比較慢，仍在努力載入中…若一直停在這裡，可以按「重新載入」。', false);
+        }
+      }
+
+      function hide() {
+        if (finished) return;
+        finished = true;
+        clearInterval(timer);
+        shown = 1; render();
+        stage.textContent = '完成';
+        document.documentElement.classList.add('boot-ready');
+        setTimeout(function () {
+          root.classList.add('is-done');
+          setTimeout(function () { if (root.parentNode) root.parentNode.removeChild(root); }, 450);
+        }, 180);
+      }
+
+      window.__boot = {
+        step: function (p, label, nextCap) {
+          if (finished) return;
+          target = Math.max(target, p);
+          cap = Math.max(target, typeof nextCap === 'number' ? nextCap : p);
+          if (label) stage.textContent = label;
+          lastStepAt = now();
+          if (!hadError && !hint.hidden && skipBtn.hidden) hint.hidden = true;
+        },
+        fail: function (msg) {
+          if (finished) return;
+          hadError = true;
+          stage.textContent = '載入時發生問題';
+          showHint(msg || '載入時發生錯誤，建議按「重新載入」再試一次。', true);
+        },
+        done: hide,
+        get finished() { return finished; },
+        get hadError() { return hadError; }
+      };
+
+      skipBtn.addEventListener('click', hide);
+      reloadBtn.addEventListener('click', function (e) {
+        if (reloadBtn.getAttribute('href') === '#') { e.preventDefault(); location.reload(); }
+        stage.textContent = '重新載入中…';
+      });
+      window.addEventListener('error', function (ev) {
+        if (finished || (ev && ev.target && ev.target !== window)) return;
+        window.__boot.fail();
+      }, true);
+      window.addEventListener('offline', updateMeta);
+      window.addEventListener('online', updateMeta);
+
+      window.__boot.step(0.05, '正在載入外觀樣式…', 0.24);
+      updateMeta(); render();
+      timer = setInterval(tick, 100);
+    })();
+  </script>
