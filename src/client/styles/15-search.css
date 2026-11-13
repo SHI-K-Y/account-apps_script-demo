@@ -733,3 +733,163 @@ mark.sr-mark {
   .sr-progress-track > i { transition: none; }
   .sr-group.is-flash { animation: none; }
 }
+
+/* =============================================================================
+ * 搜尋框外觀：Uiverse「Lakshay-art」搜尋元件（只動外觀，HTML／class／id 都沒改）
+ * -----------------------------------------------------------------------------
+ * 原元件要加 7 個裝飾 div；這裡全改用 .sr-bar 與 .sr-input-wrap 的偽元素完成，
+ * 所以不用動 search.html，也不會和既有 class 撞名（新增的變數與動畫一律加 uv-sr- 前綴）。
+ *   .sr-bar::before        → 外圈光暈（原 .glow）
+ *   .sr-bar::after         → 旋轉邊框（原 .border / .darkBorderBg / .white 合併）
+ *   .sr-input-wrap::before → 左上角彩色光點（原 #pink-mask）
+ *   .sr-submit-btn         → 對應原本右側的 filter 按鈕位置（維持原有的主色按鈕）
+ * 顏色全部取自現有變數（--accent、--glass-*、--hl…），深色模式會自動跟著換。
+ * 原元件的光束只在 hover／focus 時旋轉（transition，沒有無限循環動畫），
+ * 所以不需要 ambient- 命名；prefers-reduced-motion 與 data-motion 都會關掉轉場。
+ * ============================================================================= */
+@property --uv-sr-a {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 0deg;
+}
+
+.sr-bar {
+  --uv-sr-r: 16px;                                   /* 外框圓角（原 12px，配合此處外層的膠囊玻璃略放大） */
+  --uv-sr-pad: 6px;
+  --uv-sr-ring-w: 1.5px;
+  --uv-sr-fill: var(--glass-chip);                   /* 原 #010201 → 不透明的晶片底色，深淺色各自取值 */
+  --uv-sr-ring-base: var(--glass-border);            /* 原 #1c191c */
+  --uv-sr-c1: var(--accent);                         /* 原 #402fb5 / #18116a */
+  --uv-sr-c2: color-mix(in oklab, var(--accent) 55%, var(--hl)); /* 原 #cf30aa / #dfa2da */
+  --uv-sr-glow-op: 0.28;
+  --uv-sr-a: 0deg;
+
+  position: relative;
+  gap: 6px;
+  padding: var(--uv-sr-pad);
+  border-radius: var(--uv-sr-r);
+  background: var(--uv-sr-fill);
+  box-shadow: var(--lg-well-shadow);
+  transition: --uv-sr-a 2s ease, box-shadow var(--dur-fast) var(--ease-out);
+}
+
+/* 光暈：在 .sr-head 的堆疊層內、位於 .sr-bar 底色之下（原 .glow，blur 30px / opacity .4） */
+.sr-bar::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  z-index: -1;
+  border-radius: calc(var(--uv-sr-r) + 8px);
+  pointer-events: none;
+  background: conic-gradient(
+    from calc(var(--uv-sr-a) + 60deg) at 50% 50%,
+    transparent 0%,
+    var(--uv-sr-c1) 5%,
+    transparent 38%,
+    transparent 50%,
+    var(--uv-sr-c2) 60%,
+    transparent 87%
+  );
+  filter: blur(16px);
+  opacity: var(--uv-sr-glow-op);
+  transition: opacity 2s ease;
+}
+
+/* 旋轉邊框：只露出外圈 1.5px（沿用 20-uiverse-effects.css 卡片光環的遮罩寫法） */
+.sr-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  padding: var(--uv-sr-ring-w);
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    conic-gradient(
+      from calc(var(--uv-sr-a) + 70deg) at 50% 50%,
+      transparent 0%,
+      var(--uv-sr-c1) 5%,
+      transparent 14%,
+      transparent 50%,
+      var(--uv-sr-c2) 60%,
+      transparent 64%
+    ),
+    linear-gradient(var(--uv-sr-ring-base), var(--uv-sr-ring-base));
+  -webkit-mask: linear-gradient(currentColor 0 0) content-box, linear-gradient(currentColor 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(currentColor 0 0) content-box, linear-gradient(currentColor 0 0);
+  mask-composite: exclude;
+}
+
+/* hover：光束反向轉半圈；focus：順向轉一圈（與原元件相同的 2s／4s） */
+.sr-bar:hover { --uv-sr-a: -180deg; }
+.sr-bar:focus-within {
+  --uv-sr-a: 360deg;
+  --uv-sr-glow-op: 0.5;
+  transition: --uv-sr-a 4s ease, box-shadow var(--dur-fast) var(--ease-out);
+}
+/* 鍵盤焦點框：沿用原本輸入框聚焦時的外框（--lg-well-focus），不因換樣式而消失 */
+.sr-bar:focus-within { box-shadow: var(--lg-well-shadow), var(--lg-well-focus); }
+
+/* 輸入框本體變透明，底色與邊框交給外層 .sr-bar（選擇器多一層 .sr-bar 以蓋過 18／19 檔的通用輸入框規則） */
+.sr-bar .sr-input,
+.sr-bar .sr-input:focus,
+.sr-bar .sr-input:focus-visible {
+  height: 40px;
+  border: 0;
+  border-radius: calc(var(--uv-sr-r) - var(--uv-sr-pad));
+  background: transparent;
+  box-shadow: none;
+  outline: none;                 /* 焦點框改由外層 .sr-bar:focus-within 顯示 */
+}
+
+.sr-bar .sr-input-icon { color: var(--muted); transition: color var(--dur-fast) var(--ease-out); }
+.sr-bar:focus-within .sr-input-icon { color: var(--accent); }
+
+/* 左上角彩色光點（原 #pink-mask）：平時微亮，hover 時淡出 */
+.sr-bar .sr-input-wrap::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 2px;
+  width: 30px;
+  height: 20px;
+  pointer-events: none;
+  background: var(--accent);
+  filter: blur(20px);
+  opacity: 0.55;
+  transition: opacity 2s ease;
+}
+.sr-bar:hover .sr-input-wrap::before,
+.sr-bar:focus-within .sr-input-wrap::before { opacity: 0; }
+
+/* 搜尋按鈕：放在框內右側（原 filter 按鈕位置），圓角與框內圈對齊 */
+.sr-bar .sr-submit-btn {
+  height: 40px;
+  border-radius: calc(var(--uv-sr-r) - var(--uv-sr-pad));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sr-bar,
+  .sr-bar:focus-within,
+  .sr-bar::before,
+  .sr-bar .sr-input-wrap::before,
+  .sr-bar .sr-input-icon { transition: none; }
+}
+:root[data-motion="off"] .sr-bar,
+:root[data-motion="off"] .sr-bar::before,
+:root[data-motion="off"] .sr-bar .sr-input-wrap::before { transition: none; }
+
+/* 移除搜尋框外層的膠囊玻璃框（.sr-head 保留，仍負責置頂與寬度；只拿掉底色、邊框、陰影、模糊與邊緣高光）。
+ * 用 #pageSearch 提高優先權，蓋過 17／18 檔對 .sr-head 的玻璃化規則（含 ::before 邊緣層與折射 backdrop-filter）。 */
+#pageSearch .sr-head {
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+#pageSearch .sr-head::before,
+#pageSearch .sr-head::after { content: none; }
