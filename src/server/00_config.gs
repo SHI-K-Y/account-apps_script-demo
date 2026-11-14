@@ -3,6 +3,7 @@ const CONFIG = Object.freeze({
   OPTION_SHEET: '資料選單設定區',
   TEMPLATE_SHEET: '新版記帳簿空白頁',
   SUMMARY_SHEET: '_月份彙總',
+  BUDGET_SHEET: '_預算設定',
   SETTLEMENT_SHEETS: Object.freeze(['對帳系統', '結帳系統']),
   MIN_DATA_ROW: 5,
   MAX_DATA_ROW: 1004,
@@ -24,6 +25,7 @@ const CONFIG = Object.freeze({
     FX_LEDGERS: 'FX_LEDGERS_V1',
     FX_LEDGER_PREFIX: 'FX_LEDGER_V1_',
     FX_RATES_PREFIX: 'FX_RATES_V1_',
+    BUDGET_CONFIG: 'BUDGET_CONFIG_V1',
   }),
   PROP_KEYS: Object.freeze({
     SPREADSHEET_ID: 'SPREADSHEET_ID',

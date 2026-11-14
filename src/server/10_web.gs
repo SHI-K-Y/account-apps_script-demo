@@ -158,7 +158,7 @@ function getBootstrapJsonForDoGet_() {
     const cache = scriptCache_();
     const cachedStr = cache.get(CONFIG.CACHE_KEYS.BOOT_JSON);
     if (cachedStr) {
-      const parsed = JSON.parse(cachedStr);
+      const parsed = refreshBootBudget_(JSON.parse(cachedStr));
       parsed.fromFreshCache = true;
       return sanitizeJsonForScriptTag_(JSON.stringify(parsed));
     }
@@ -166,7 +166,7 @@ function getBootstrapJsonForDoGet_() {
     const props = scriptProps_();
     const snapshotStr = props.getProperty(CONFIG.PROP_KEYS.BOOT_SNAPSHOT);
     if (snapshotStr) {
-      const parsed = JSON.parse(snapshotStr);
+      const parsed = refreshBootBudget_(JSON.parse(snapshotStr));
       parsed.fromFreshCache = false;
       return sanitizeJsonForScriptTag_(JSON.stringify(parsed));
     }

@@ -20,7 +20,8 @@
     "18-glass-chrome.css",
     "19-glass-components.css",
     "20-uiverse-effects.css",
-    "21-ux-enhancements.css"
+    "21-ux-enhancements.css",
+    "22-budget.css"
   ],
   "scripts": [
     "core/env.js",
@@ -47,6 +48,7 @@
     "bookkeeping/recent.js",
     "bookkeeping/record-modals.js",
     "core/feedback.js",
+    "budget/budget-view.js",
     "charts/mini-charts.js",
     "charts/overview-charts.js",
     "app/router.js",
@@ -63,6 +65,7 @@
     "pages/settings/channel-modal.js",
     "pages/settings/bank-modal.js",
     "pages/settings/quick-combos.js",
+    "pages/settings/budget.js",
     "pages/settings/persist.js",
     "pages/search.js",
     "pages/foreign.js"

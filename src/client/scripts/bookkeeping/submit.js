@@ -69,6 +69,7 @@ function submitExpense() {
 
   if (!window.__activePendingExpenses) window.__activePendingExpenses = [];
   window.__activePendingExpenses.unshift(pendingRecord);
+  updateTodayExpenseUI();
 
   if (state.recentState && state.recentState.expense) {
     const expState = state.recentState.expense;

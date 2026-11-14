@@ -57,6 +57,11 @@ function renderRecent(data) {
   if (data.dailyExpenses) {
     state.dailyExpenses = data.dailyExpenses;
   }
+  if (Object.prototype.hasOwnProperty.call(data, 'budget')) {
+    state.budget = data.budget || null;
+  } else if (state.budget && state.budget.month !== data.month) {
+    state.budget = null;
+  }
 
   if (isRecentDateFiltered('expense')) {
     applyRecentDateFilter('expense');
@@ -171,6 +176,13 @@ function updateTodayExpenseUI() {
       Motion.countUp(amountEl, amountEl._countTarget, dayTotal, { format: v => FinanceUtils.format(Math.round(v)) });
     }
   }
+
+  BudgetView.renderToday(document.getElementById('todayBudgetLine'), {
+    budget: state.budget,
+    month: currentMonth,
+    isToday: isToday,
+    isCurrentMonth: isCurrentMonth,
+  });
 }
 
 function updateRecentHeader(type, isFull, count) {

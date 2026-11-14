@@ -213,6 +213,21 @@ function tripSheet(today) {
   ]);
 }
 
+/**
+ * 預算設定（隱藏的「_預算設定」工作表，版面同 src/server/33_budget.gs）。
+ * 五個月前起每月 30,000，本月起調成 31,000：訪客一打開就看得到「今天還能花」與預算進度條，
+ * 切到過去月份則看得到「預算與實際」（有的月份略超、有的略省）。房租與電信費先預留，不影響每日額度。
+ */
+function budgetSheet(today) {
+  const s = sheet('_預算設定', { hidden: true });
+  s.row(1, 'A', ['起始月份', '預算來源', '每月預算', '計入總類', '收入項目', '不計入每日額度的項目', '更新時間']);
+  const first = shiftMonth(today.y, today.m, -(DEMO_MONTHS - 1));
+  const reserves = '房租=12500；電信費=599';
+  s.row(2, 'A', [monthName(first.y, first.m), '固定金額', 30000, '生活費', '', reserves]);
+  s.row(3, 'A', [monthName(today.y, today.m), '固定金額', 31000, '生活費', '', reserves]);
+  return s.data;
+}
+
 function settingsMetadata() {
   return {
     emojis: {},
@@ -275,6 +290,7 @@ export function createDemoWorkbook(today) {
         settlementSheet(today, [cash, shanlan, haiyue, qinghe]),
         monthSheet('新版記帳簿空白頁', [], []),
         settingsSheet(),
+        budgetSheet(today),
       ]),
     },
     properties,

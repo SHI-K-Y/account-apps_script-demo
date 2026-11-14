@@ -38,6 +38,7 @@ function invalidateAllCaches_() {
       CONFIG.CACHE_KEYS.BOOT_JSON,
       CONFIG.CACHE_KEYS.MONTHS_LIST,
       CONFIG.CACHE_KEYS.OPTIONS_ALL,
+      CONFIG.CACHE_KEYS.BUDGET_CONFIG,
     ];
     const props = scriptProps_();
     const monthsStr = props.getProperty(CONFIG.PROP_KEYS.MONTHS_SNAPSHOT);

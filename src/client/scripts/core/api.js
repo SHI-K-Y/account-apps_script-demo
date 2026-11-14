@@ -22,7 +22,7 @@ const Api = (function() {
   const READ_ACTIONS = new Set([
     'getInitialData', 'getRecentRecords', 'getFullRecords', 'searchRecords',
     'getAssetOverview', 'getOverviewCharts', 'getSettingsOptions',
-    'getFxLedgers', 'getFxLedgerData', 'getFxRates'
+    'getFxLedgers', 'getFxLedgerData', 'getFxRates', 'getBudgetSettings'
   ]);
   const READ_TIMEOUT_MS = 45000;
   const RETRY_DELAY_MS = 700;

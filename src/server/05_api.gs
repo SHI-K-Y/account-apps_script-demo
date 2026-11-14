@@ -61,6 +61,11 @@ function apiRoutes_() {
     saveQuickCombos:        { handler: saveQuickCombos_, write: true },
     savePaymentSettingsConfig: { handler: savePaymentSettingsConfig_, write: true },
 
+    // 預算
+    getBudgetSettings:      { handler: getBudgetSettings_ },
+    saveBudgetSettings:     { handler: saveBudgetSettings_, form: true, write: true },
+    deleteBudgetSettings:   { handler: deleteBudgetSettings_, write: true },
+
     // 國外交易帳簿
     getFxLedgers:           { handler: getFxLedgers_ },
     getFxLedgerData:        { handler: getFxLedgerData_ },

@@ -9,6 +9,7 @@ const AppState = {
     income: { item: '', category: '生活費', amount: '' },
     combo: { id: '', type: 'expense', item: '', category: '', payment: '', paid: '', amount: '' },
     dailyExpenses: {},
+    budget: null,
     toastTimer: null,
     recentState: {
       expense: { isFull: false, records: null, fullRecords: null },

@@ -14,7 +14,7 @@ function getInitialData_(forceRefresh) {
         if (parsed.currentMonth === currentMonth && parsed.options && parsed.initialRecent) {
           parsed.todayISO = todayISO;
           parsed.fromFreshCache = true;
-          return parsed;
+          return refreshBootBudget_(parsed);
         }
       } catch (e) {}
     }
@@ -81,6 +81,7 @@ function saveBootSnapshot_(payload, options) {
           expenses: (payload.initialRecent.expenses || []).slice(0, 8),
           incomes: (payload.initialRecent.incomes || []).slice(0, 8),
           dailyExpenses: payload.initialRecent.dailyExpenses || {},
+          budget: payload.initialRecent.budget || null,
         } : null,
       });
       const compactStr = JSON.stringify(compactPayload);

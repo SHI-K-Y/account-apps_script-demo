@@ -15,6 +15,7 @@ function getOverviewCharts_(month, forceRefresh) {
       try {
         const parsed = JSON.parse(cached);
         parsed.categories = getChartExpenseCategories_(null);
+        parsed.budget = chartsBudgetStatus_(null, month);
         return parsed;
       } catch (e) {}
     }
@@ -94,7 +95,17 @@ function getOverviewCharts_(month, forceRefresh) {
     }
   } catch (e) {}
 
+  // 預算狀態不放進圖表快取：每次當場算，改預算或跨日都不必清圖表快取。
+  result.budget = chartsBudgetStatus_(ss, month);
   return result;
+}
+
+function chartsBudgetStatus_(ss, month) {
+  try {
+    return budgetStatusForMonth_(month, getMonthData_(ss, month, false));
+  } catch (e) {
+    return null;
+  }
 }
 
 function buildChartMonthStats_(month, monthData) {

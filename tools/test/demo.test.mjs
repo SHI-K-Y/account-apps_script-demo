@@ -97,6 +97,32 @@ test('Demo：收入、圖表、搜尋、新增月份與國外帳簿都能運作'
   assert.equal(b.call('getFxLedgerData', id, true).records.length, count + 1);
 });
 
+test('Demo：一打開就有預算，記帳頁看得到今天還能花，過去月份看得到預算與實際', () => {
+  const b = backend();
+  const budget = b.initialData().initialRecent.budget;
+  assert.equal(budget.configured, true);
+  assert.equal(budget.mode, 'current');
+  assert.equal(budget.amount, 31000);
+  assert.deepEqual(budget.categories, ['生活費']);
+  assert.deepEqual(budget.reserves.map(r => r.item), ['房租', '電信費']);
+  assert.ok(budget.spent > 0 && budget.daily > 0, '本月已有花費，每日額度大於 0');
+  assert.equal(typeof budget.todayLeft, 'number');
+
+  const added = b.call('addExpense', expense(b, { amount: '250' }));
+  assert.equal(added.recent.budget.todayLeft, budget.todayLeft - 250, '記一筆後立刻扣掉');
+
+  const charts = b.call('getOverviewCharts', '2026.11', false);
+  assert.equal(charts.budget.amount, 31000);
+  assert.ok(charts.budget.expected > 0);
+  const past = b.call('getOverviewCharts', '2026.09', false).budget;
+  assert.equal(past.mode, 'past');
+  assert.equal(past.amount, 30000, '過去月份沿用當時的預算');
+  assert.equal(past.daily, undefined);
+
+  const settings = b.call('getBudgetSettings', false);
+  assert.deepEqual(settings.versions.map(v => [v.month, v.amount]), [['2026.06', 30000], ['2026.11', 31000]]);
+});
+
 test('Demo：每次啟動都是全新的資料（重新整理即還原）', () => {
   const first = backend();
   const original = first.call('getAssetOverview', false).assetTotal;

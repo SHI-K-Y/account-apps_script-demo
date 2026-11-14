@@ -179,5 +179,6 @@ function buildRecentPayload_(month, monthData, expLimit, incLimit) {
     fullExpenses: allExpenses,
     fullIncomes: allIncomes,
     dailyExpenses: (monthData && monthData.dailyExpenses) || {},
+    budget: budgetStatusForMonth_(month, monthData),
   };
 }

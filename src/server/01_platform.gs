@@ -52,6 +52,15 @@ function scriptTimeZone_() {
   return Session.getScriptTimeZone() || DEFAULT_TIME_ZONE_;
 }
 
+/**
+ * 預算計算用的「今天」：固定以台北時間為準（不受試算表或指令碼時區設定影響）。
+ * 回傳 { iso: '2026-11-14', month: '2026.11', day: 14 }。
+ */
+function budgetToday_() {
+  const iso = Utilities.formatDate(new Date(), DEFAULT_TIME_ZONE_, 'yyyy-MM-dd');
+  return { iso: iso, month: iso.slice(0, 4) + '.' + iso.slice(5, 7), day: Number(iso.slice(8, 10)) };
+}
+
 function spreadsheetTimeZone_(ss) {
   return (ss && ss.getSpreadsheetTimeZone()) || scriptTimeZone_();
 }

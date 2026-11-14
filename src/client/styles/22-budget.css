@@ -1,0 +1,343 @@
+/* ============================================================================
+ * 預算：今日總花費卡片的「今天還能花」、支出分析的預算進度條、設定頁的預算分頁
+ * 只使用既有的色彩變數（01-tokens-base.css），深色模式自動跟著切換。
+ * ========================================================================== */
+
+/* ------------------------------ 今日總花費卡片 ------------------------------ */
+.today-budget {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--hairline);
+}
+.today-budget[hidden] { display: none; }
+
+.budget-line-main {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--inc);
+}
+.budget-line-main b {
+  font-size: 17px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.budget-line-sub {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.budget-line-muted {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--subtle);
+}
+.budget-line-main.is-over,
+.budget-line-sub.is-over {
+  color: var(--danger);
+}
+
+.today-expense.card.is-budget-over {
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--danger) 55%, transparent), var(--lg-content-shadow);
+}
+
+.budget-guide {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--jade);
+  cursor: pointer;
+  text-align: left;
+}
+.budget-guide:hover { text-decoration: underline; }
+.budget-guide:focus-visible {
+  outline: 2px solid var(--lg-focus);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ------------------------------ 支出分析：預算進度條 ------------------------------ */
+.oc-budget {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 13px 14px;
+  margin-bottom: 10px;
+}
+.oc-budget.is-empty {
+  padding: 12px 14px;
+}
+.oc-budget-head,
+.oc-budget-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.oc-budget-nums {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.oc-budget-nums b {
+  font-size: 17px;
+  font-weight: 850;
+  color: var(--ink);
+}
+.oc-budget-track {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--glass-chip);
+  box-shadow: inset 0 0 0 1px var(--glass-border-subtle);
+}
+.oc-budget-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--inc);
+  transition: width var(--dur-slow) var(--ease-out);
+}
+.oc-budget.is-over .oc-budget-fill {
+  background: var(--danger);
+}
+.oc-budget-marker {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: var(--ink);
+  box-shadow: 0 0 0 2px var(--hl);
+}
+.oc-budget-pace,
+.oc-budget-rest {
+  font-size: 12px;
+  font-weight: 750;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.oc-budget-pace.is-ahead,
+.oc-budget-rest.is-over {
+  color: var(--danger);
+}
+.oc-budget-pace.is-behind {
+  color: var(--inc);
+}
+
+.oc-budget-excluded {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--subtle);
+}
+
+/* ------------------------------ 設定頁：預算分頁 ------------------------------ */
+.budget-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+.budget-status-grid span {
+  display: flex;
+  flex-direction: column;
+  font-size: 16px;
+  font-weight: 850;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.budget-status-grid small {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.budget-status-grid .is-over { color: var(--danger); }
+
+.budget-month-select {
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.budget-amount-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.budget-amount-input,
+.budget-reserve-amount {
+  flex: 1;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 12px;
+  font-size: 16px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.budget-amount-wrap.is-compact {
+  flex: 1;
+  font-size: 14px;
+}
+.budget-amount-wrap.is-compact .budget-reserve-amount {
+  min-height: 38px;
+  font-size: 15px;
+}
+
+.budget-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.budget-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border-subtle);
+  background: var(--glass-surface-subtle);
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.budget-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.budget-chip.is-on {
+  border-color: transparent;
+  background: var(--accent-gradient);
+  color: var(--on);
+}
+.budget-chip:focus-visible,
+.budget-add-reserve:focus-visible,
+.budget-delete-btn:focus-visible {
+  outline: 2px solid var(--lg-focus);
+  outline-offset: 2px;
+}
+
+.budget-reserve-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.budget-reserve-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.budget-reserve-item {
+  flex: 0 1 42%;
+  min-width: 0;
+}
+.budget-reserve-remove {
+  flex: none;
+}
+.budget-add-reserve {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px dashed var(--line);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.budget-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.budget-save-btn {
+  margin-left: auto;
+}
+.budget-save-btn:disabled {
+  opacity: 0.65;
+  cursor: progress;
+  transform: none;
+}
+.budget-delete-btn {
+  min-height: 40px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.budget-delete-btn.is-confirm {
+  color: var(--danger);
+}
+
+.budget-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.budget-history-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--hairline);
+  font-size: 13px;
+}
+.budget-history-row:first-child { border-top: 0; }
+.budget-history-month {
+  font-weight: 800;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.budget-history-month em {
+  margin-left: 6px;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--jade);
+}
+.budget-history-what {
+  font-weight: 750;
+  color: var(--ink);
+}
+.budget-history-extra {
+  flex-basis: 100%;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oc-budget-fill { transition: none; }
+}
