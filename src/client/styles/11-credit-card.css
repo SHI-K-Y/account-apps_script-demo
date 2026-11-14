@@ -80,7 +80,7 @@
   align-items: center;
   gap: 5px;
   padding: 7px 14px 7px 10px;
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   border: 1px solid var(--glass-border);
   background: var(--glass-chip);
   backdrop-filter: var(--blur-sm);
@@ -142,7 +142,7 @@
   align-items: center;
   gap: 7px;
   padding: 9px 15px;
-  border-radius: 14px;
+  border-radius: var(--lg-radius-control);
   border: 1.5px solid var(--glass-border-subtle);
   background: var(--glass-surface);
   backdrop-filter: var(--blur-sm);
@@ -194,7 +194,7 @@
   width: 24px;
   height: 15px;
   object-fit: cover;
-  border-radius: 3px;
+  border-radius: var(--lg-radius-xs);
   flex-shrink: 0;
   box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-tint) 18%, transparent);
 }
@@ -205,7 +205,7 @@
   gap: 10px;
   margin: 0 14px 14px;
   padding: 14px 16px;
-  border-radius: 20px;
+  border-radius: var(--lg-radius-card);
   background: var(--glass-surface);
   backdrop-filter: var(--blur-md);
   -webkit-backdrop-filter: var(--blur-md);
@@ -267,7 +267,7 @@
   padding: 4px;
   background: var(--glass-chip);
   border: 1px solid var(--glass-border-subtle);
-  border-radius: 13px;
+  border-radius: var(--lg-radius-control);
 }
 
 .cc-filter-btn {
@@ -277,7 +277,7 @@
   font-size: 13px;
   font-weight: 700;
   padding: 6px 12px;
-  border-radius: 9px;
+  border-radius: var(--lg-radius-sm);
   cursor: pointer;
   transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
   white-space: nowrap;
@@ -305,7 +305,7 @@
   align-items: center;
   gap: 5px;
   padding: 7px 14px;
-  border-radius: 12px;
+  border-radius: var(--lg-radius-control);
   border: 1px solid var(--inc-border);
   background: var(--inc-gradient);
   color: var(--on);
@@ -363,7 +363,7 @@
   text-align: center;
   background: var(--glass-chip);
   border: 1px solid var(--glass-border-subtle);
-  border-radius: 10px;
+  border-radius: var(--lg-radius-sm);
   padding: 5px 2px;
   line-height: 1.2;
 }
@@ -432,39 +432,60 @@
    ══════════════════════════════════════════════════ */
 .cc-paid-btn,
 .uv-paid-btn {
+  /* 收合與展開的寬度（手機版在下方 media query 改這兩個變數）。
+     按鈕在版面上固定佔 closed 寬；展開的膠囊由 ::before 用 clip-path 往左長出，不改 width、不推動同列的金額 */
+  --cc-paid-closed: 42px;
+  --cc-paid-open: 118px;
+  --cc-paid-glow: var(--accent-glow);
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  width: 42px;
-  height: 42px;
-  min-width: 42px;
-  min-height: 42px;
-  max-height: 42px;
+  width: var(--cc-paid-closed);
+  height: var(--cc-paid-closed);
+  min-width: var(--cc-paid-closed);
+  min-height: var(--cc-paid-closed);
+  max-height: var(--cc-paid-closed);
   padding: 0;
   border: none;
-  border-radius: var(--lg-radius-capsule, 999px);
+  border-radius: var(--lg-radius-capsule);
   cursor: pointer;
   position: relative;
-  overflow: hidden;
+  isolation: isolate;
+  overflow: visible;
   box-sizing: border-box;
-  background-color: var(--accent);
-  background-image: var(--accent-gradient, none);
-  color: var(--on, #ffffff);
-  box-shadow: 0 3px 12px -2px var(--accent-glow), var(--lg-rim, none);
+  background: none;
+  color: var(--on);
+  filter: drop-shadow(0 3px 5px var(--cc-paid-glow));
   user-select: none;
   white-space: nowrap;
   vertical-align: middle;
   flex-shrink: 0;
   transition:
-    width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-    border-radius 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-    background-color 0.25s var(--ease-out),
-    box-shadow 0.25s var(--ease-out),
     transform 0.15s var(--ease-out),
     filter 0.2s var(--ease-out);
 }
 
-/* 圖示容器：未展開前置中 (100% 寬度) */
+/* 膠囊底色：收合時裁成右端的圓，展開時整條露出 */
+.cc-paid-btn::before,
+.uv-paid-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  width: var(--cc-paid-open);
+  border-radius: var(--lg-radius-capsule);
+  background-color: var(--accent);
+  background-image: var(--accent-gradient, none);
+  box-shadow: var(--lg-rim, none);
+  clip-path: inset(0 0 0 calc(100% - var(--cc-paid-closed)) round var(--lg-radius-capsule));
+  transition:
+    clip-path 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.25s var(--ease-out);
+}
+
+/* 圖示容器：收合時置中；展開時整個往左平移到膠囊左段 */
 .cc-paid-btn :is(.uv-btn-sign, .uv-sign, .sign) {
   width: 100%;
   height: 100%;
@@ -473,10 +494,7 @@
   justify-content: center;
   box-sizing: border-box;
   flex-shrink: 0;
-  transition:
-    width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-    padding 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cc-paid-btn :is(.uv-btn-sign, .uv-sign, .sign) svg {
@@ -500,15 +518,16 @@
   line-height: 1;
 }
 
-/* 文字容器：預設在右側隱藏 */
+/* 文字容器：固定佔膠囊右側 66%，只用透明度淡入 */
 .cc-paid-btn :is(.uv-btn-text, .uv-text, .text) {
   position: absolute;
   right: 0;
   top: 0;
   bottom: 0;
-  width: 0%;
+  width: calc(var(--cc-paid-open) * 0.66);
+  padding-right: 12px;
   opacity: 0;
-  color: var(--on, #ffffff);
+  color: var(--on);
   font-size: 13px;
   font-weight: 750;
   letter-spacing: 0.5px;
@@ -520,48 +539,47 @@
   overflow: hidden;
   box-sizing: border-box;
   pointer-events: none;
-  transition:
-    opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1),
-    width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-    padding 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* 懸浮 (Hover) 與鍵盤焦點 (Focus-visible) 展開效果 */
 .cc-paid-btn:is(:hover, :focus-visible):not(:disabled) {
-  width: 118px;
-  border-radius: var(--lg-radius-capsule, 999px);
-  filter: brightness(1.05);
-  box-shadow: 0 4px 16px -2px var(--accent-glow), var(--lg-rim, none);
+  z-index: 2;
+  filter: drop-shadow(0 4px 6px var(--cc-paid-glow)) brightness(1.05);
 }
 
+.cc-paid-btn:is(:hover, :focus-visible):not(:disabled)::before {
+  clip-path: inset(0 round var(--lg-radius-capsule));
+}
+
+/* 圖示中心：膠囊左端 + 14px 內距 + 左段（34%）剩餘寬度的一半，與原本展開後的位置相同 */
 .cc-paid-btn:is(:hover, :focus-visible):not(:disabled) :is(.uv-btn-sign, .uv-sign, .sign) {
-  width: 34%;
-  padding-left: 14px;
+  transform: translateX(calc(7px - 0.83 * var(--cc-paid-open) + var(--cc-paid-closed) / 2));
 }
 
 .cc-paid-btn:is(:hover, :focus-visible):not(:disabled) :is(.uv-btn-text, .uv-text, .text) {
   opacity: 1;
-  width: 66%;
-  padding-right: 12px;
 }
 
 /* 按鈕點擊效果 */
 .cc-paid-btn:active:not(:disabled) {
   transform: translate(1.5px, 1.5px);
-  filter: brightness(0.96);
+  filter: drop-shadow(0 3px 5px var(--cc-paid-glow)) brightness(0.96);
 }
 
 /* 已繳費狀態（O） */
 .cc-paid-btn.already-paid {
+  --cc-paid-glow: var(--inc-glow);
+  color: var(--on);
+}
+
+.cc-paid-btn.already-paid::before {
   background-color: var(--inc);
   background-image: var(--inc-gradient, none);
-  color: var(--on, #ffffff);
-  box-shadow: 0 3px 12px -2px var(--inc-glow), var(--lg-rim, none);
 }
 
 .cc-paid-btn.already-paid:is(:hover, :focus-visible):not(:disabled) {
-  box-shadow: 0 4px 16px -2px var(--inc-glow), var(--lg-rim, none);
-  filter: brightness(1.08);
+  filter: drop-shadow(0 4px 6px var(--cc-paid-glow)) brightness(1.08);
 }
 
 /* 處理中狀態 */
@@ -570,7 +588,6 @@
   opacity: 0.72;
   filter: grayscale(0.25);
   transform: none;
-  box-shadow: none;
 }
 
 .cc-paid-btn:disabled :is(.uv-btn-sign, .uv-sign, .sign) svg {
@@ -589,20 +606,16 @@
   z-index: 2;
 }
 
-/* 深色模式外觀 */
-:root[data-theme="dark"] .cc-paid-btn,
-:root:not([data-theme="light"]) .cc-paid-btn {
-  box-shadow: 0 4px 14px -2px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.22);
-}
-
-:root[data-theme="dark"] .cc-paid-btn.already-paid,
-:root:not([data-theme="light"]) .cc-paid-btn.already-paid {
-  box-shadow: 0 4px 14px -2px var(--inc-glow), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+/* 深色模式外觀：膠囊頂端加一道亮邊 */
+:root[data-theme="dark"] .cc-paid-btn::before,
+:root:not([data-theme="light"]) .cc-paid-btn::before {
+  box-shadow: inset 0 1px 0 var(--lg-rim-hi);
 }
 
 /* prefers-reduced-motion 與 data-motion 關閉動畫 */
 @media (prefers-reduced-motion: reduce) {
   .cc-paid-btn,
+  .cc-paid-btn::before,
   .cc-paid-btn :is(.uv-btn-sign, .uv-sign, .sign),
   .cc-paid-btn :is(.uv-btn-text, .uv-text, .text),
   .cc-paid-btn:disabled :is(.uv-btn-sign, .uv-sign, .sign) svg {
@@ -615,10 +628,12 @@
 }
 
 :root[data-motion="off"] .cc-paid-btn,
+:root[data-motion="off"] .cc-paid-btn::before,
 :root[data-motion="off"] .cc-paid-btn :is(.uv-btn-sign, .uv-sign, .sign),
 :root[data-motion="off"] .cc-paid-btn :is(.uv-btn-text, .uv-text, .text),
 :root[data-motion="off"] .cc-paid-btn:disabled :is(.uv-btn-sign, .uv-sign, .sign) svg,
 :root[data-motion="lite"] .cc-paid-btn,
+:root[data-motion="lite"] .cc-paid-btn::before,
 :root[data-motion="lite"] .cc-paid-btn :is(.uv-btn-sign, .uv-sign, .sign),
 :root[data-motion="lite"] .cc-paid-btn :is(.uv-btn-text, .uv-text, .text),
 :root[data-motion="lite"] .cc-paid-btn:disabled :is(.uv-btn-sign, .uv-sign, .sign) svg {
@@ -669,7 +684,7 @@
   .cc-card-tab {
     padding: 8px 12px;
     font-size: 13px;
-    border-radius: 12px;
+    border-radius: var(--lg-radius-control);
   }
 
   .cc-summary-bar {
@@ -732,16 +747,8 @@
   }
 
   .cc-paid-btn {
-    width: 38px;
-    height: 38px;
-    min-width: 38px;
-    min-height: 38px;
-    max-height: 38px;
-    padding: 0;
-  }
-
-  .cc-paid-btn:is(:hover, :focus-visible):not(:disabled) {
-    width: 108px;
+    --cc-paid-closed: 38px;
+    --cc-paid-open: 108px;
   }
 
   .cc-paid-btn :is(.uv-btn-text, .uv-text, .text) {

@@ -63,7 +63,7 @@
 .budget-guide:focus-visible {
   outline: 2px solid var(--lg-focus);
   outline-offset: 3px;
-  border-radius: 4px;
+  border-radius: var(--lg-radius-xs);
 }
 
 /* ------------------------------ 支出分析：預算進度條 ------------------------------ */
@@ -99,7 +99,7 @@
 .oc-budget-track {
   position: relative;
   height: 12px;
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   background: var(--glass-chip);
   box-shadow: inset 0 0 0 1px var(--glass-border-subtle);
 }
@@ -108,7 +108,7 @@
   inset: 0 auto 0 0;
   border-radius: inherit;
   background: var(--inc);
-  transition: width var(--dur-slow) var(--ease-out);
+  /* 寬度由 budget-view.js 以 inline style 直接寫入（每次重新產生元素），不做寬度動畫 */
 }
 .oc-budget.is-over .oc-budget-fill {
   background: var(--danger);
@@ -119,7 +119,7 @@
   bottom: -4px;
   width: 3px;
   margin-left: -1.5px;
-  border-radius: 2px;
+  border-radius: var(--lg-radius-xs);
   background: var(--ink);
   box-shadow: 0 0 0 2px var(--hl);
 }
@@ -145,15 +145,28 @@
 }
 
 /* ------------------------------ 設定頁：預算分頁 ------------------------------ */
+/* 本月狀態是第一列：標題放大、四個數字直接排在卡片上（不另外裝框） */
+.pref-card.budget-status {
+  gap: 8px;
+}
+.budget-status .pref-card-title {
+  font-size: 17px;
+}
 .budget-status-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
+  gap: 12px 16px;
+}
+@media (min-width: 600px) {
+  .budget-status-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 .budget-status-grid span {
   display: flex;
   flex-direction: column;
-  font-size: 16px;
+  gap: 2px;
+  font-size: 20px;
   font-weight: 850;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
@@ -208,7 +221,7 @@
   gap: 4px;
   min-height: 34px;
   padding: 0 12px;
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   border: 1px solid var(--glass-border-subtle);
   background: var(--glass-surface-subtle);
   color: var(--muted);
@@ -258,7 +271,7 @@
   gap: 4px;
   min-height: 34px;
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: var(--lg-radius-sm);
   border: 1px dashed var(--line);
   background: none;
   color: var(--ink);
@@ -274,6 +287,8 @@
   justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
+  padding: 20px 0;
+  border-top: 1px solid var(--lg-row-divider);
 }
 .budget-save-btn {
   margin-left: auto;

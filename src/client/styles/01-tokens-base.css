@@ -81,9 +81,15 @@ table.full_size td { padding:0!important; }
   --inc-text: #3f7461;
   --accent-text: var(--exp-text);
 
+  /* 圓角系統：全站只用這幾階（2026-11-14 收斂，原本散落 46 種數值）
+     capsule 膠囊（晶片、分段、徽章） · card 外層卡片／面板／彈出層
+     control 按鈕、輸入框、選項、內層區塊 · sm 小按鈕、日期小方塊、圖示框 · xs 縮圖、細條、kbd */
   --lg-radius-capsule: 999px;
   --lg-radius-card: 22px;
-  --lg-radius-popover: 20px;
+  --lg-radius-control: 14px;
+  --lg-radius-sm: 10px;
+  --lg-radius-xs: 4px;
+  --lg-radius-popover: var(--lg-radius-card);
   --lg-radius-sheet: 30px;
   --lg-pad-control: 4px;
   --lg-pad-popover: 6px;
@@ -91,6 +97,17 @@ table.full_size td { padding:0!important; }
   --lg-radius-popover-inner: calc(var(--lg-radius-popover) - var(--lg-pad-popover));
   --lg-radius-sheet-inner: calc(var(--lg-radius-sheet) - var(--lg-pad-sheet));
   --lg-radius-card-inner: calc(var(--lg-radius-card) - 8px);
+
+  /* 原本寫死在元件裡的色值（2026-11-14 收進 token，數值不變） */
+  --lg-hex-frame: rgba(255, 255, 255, 0.28);
+  --lg-rim-hi: rgba(255, 255, 255, 0.22);
+  --lg-rim-hi-soft: rgba(255, 255, 255, 0.16);
+  --lg-ink-shadow: rgba(0, 0, 0, 0.55);
+  --lg-drop-shade: rgba(0, 0, 0, 0.35);
+  --mask-solid: #000;
+
+  /* 桌機「確認記帳」按鈕黏在底部時，要讓出浮動導覽列的高度 */
+  --submit-bar-offset: calc(84px + env(safe-area-inset-bottom));
 
   --surface-1: rgba(255, 253, 249, 0.96);
   --surface-2: #f5efe5;

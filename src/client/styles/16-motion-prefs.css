@@ -35,7 +35,7 @@
 
 .sec[data-step] {
   scroll-margin-top: calc(12px + env(safe-area-inset-top, 0px));
-  border-radius: 16px;
+  border-radius: var(--lg-radius-control);
   --step-glow: var(--accent-soft);
   --step-error: color-mix(in srgb, var(--exp) 16%, transparent);
   --step-error-ring: color-mix(in srgb, var(--exp) 75%, transparent);
@@ -75,7 +75,7 @@
   padding: 0;
   margin: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--lg-radius-xs);
   background: transparent;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -115,19 +115,22 @@
   border: 0;
 }
 
+/* 設定頁的「偏好設定」「預算」：外層 .settings-list-container 已經是卡片，
+   .pref-card 只是卡片裡的一列（無底色、無框、無陰影），列與列之間用細線分隔 */
 .pref-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 .pref-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: var(--glass-chip);
-  border: 1px solid var(--glass-border-subtle);
+  gap: 14px;
+  padding: 20px 0;
+  border-top: 1px solid var(--lg-row-divider);
+}
+.pref-card:first-child {
+  border-top: 0;
+  padding-top: 8px;
 }
 .pref-card-row {
   flex-direction: row;
@@ -139,7 +142,7 @@
   min-width: 0;
 }
 .pref-card-title {
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--ink);
   line-height: 1.35;
@@ -162,7 +165,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   padding: 4px;
-  border-radius: 14px;
+  border-radius: var(--lg-radius-control);
   background: var(--glass-surface-subtle);
   border: 1px solid var(--glass-border-subtle);
 }
@@ -173,7 +176,7 @@
   min-height: 38px;
   padding: 0 8px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--lg-radius-sm);
   background: transparent;
   color: var(--muted);
   font-size: 13.5px;
@@ -208,7 +211,7 @@
   height: 30px;
   padding: 0;
   border: 1px solid var(--glass-border);
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   background: var(--glass-surface-subtle);
   cursor: pointer;
   transition: background-color 0.2s ease, border-color 0.2s ease;
@@ -303,7 +306,7 @@
 .motion-glow {
   position: absolute;
   inset: -8px;
-  border-radius: 20px;
+  border-radius: var(--lg-radius-card);
   pointer-events: none;
   z-index: -1;
   opacity: 0;
@@ -319,7 +322,7 @@
   bottom: 4px;
   left: 4px;
   width: calc(50% - 6px);
-  border-radius: 12px;
+  border-radius: var(--lg-radius-control);
   background: var(--accent-gradient);
   box-shadow: 0 4px 14px -1px var(--accent-glow);
   transform: translateX(0);
@@ -345,7 +348,7 @@ body[data-mode="income"] .tabs::before {
   left: 0;
   width: 0;
   height: 0;
-  border-radius: 14px;
+  border-radius: var(--lg-radius-control);
   background: var(--nav-active-bg);
   pointer-events: none;
   opacity: 0;
@@ -484,7 +487,7 @@ body[data-mode="income"] .tabs::before {
   align-items: center;
   gap: 10px;
   padding: 11px 18px 13px 12px;
-  border-radius: 18px;
+  border-radius: var(--lg-radius-card);
   overflow: hidden;
   text-align: left;
   z-index: 130;
@@ -518,7 +521,7 @@ body[data-mode="income"] .tabs::before {
   right: 14px;
   bottom: 4px;
   height: 2px;
-  border-radius: 2px;
+  border-radius: var(--lg-radius-xs);
   background: color-mix(in srgb, var(--hl) 55%, transparent);
   transform-origin: left center;
   transform: scaleX(0);
@@ -586,7 +589,7 @@ body[data-mode="income"] .tabs::before {
   border-radius: 50%;
 }
 .motion-particle.is-square {
-  border-radius: 2px;
+  border-radius: var(--lg-radius-xs);
 }
 
 .recent-item {

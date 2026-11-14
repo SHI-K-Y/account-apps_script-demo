@@ -55,7 +55,7 @@
 }
 
 .month-select {
-  border-radius: 20px;
+  border-radius: var(--lg-radius-card);
   color: var(--lg-ink);
   background-image: var(--lg-sheen), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236e7788' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
@@ -73,7 +73,7 @@
 .topbar-btn-group {
   padding: var(--lg-pad-control);
   gap: 2px;
-  border-radius: 22px;
+  border-radius: var(--lg-radius-card);
   transition: transform var(--lg-dur-tap) var(--lg-spring-tap), border-radius var(--lg-dur-snappy) var(--lg-spring-snappy);
 }
 .topbar-btn-group .icon-btn {
@@ -536,7 +536,6 @@ body::after {
 
 :is(
   .settings-list-container,
-  .pref-card,
   .card,
   .ov-card,
   .st-diff-card,

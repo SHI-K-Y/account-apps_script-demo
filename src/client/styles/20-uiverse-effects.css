@@ -58,6 +58,12 @@
     inset 0 0.05em 0.187em var(--uv-edge-shadow);
   transform: none;
   transition: background-color var(--uv-t-fill), box-shadow var(--uv-t-fill), transform var(--lg-dur-tap) var(--lg-spring-tap);
+  /* 各部件的位移量（只用 transform 移動，不動 left/top/bottom）；深色模式與 hover 只改這幾個變數 */
+  --uv-halo-x: 0em;
+  --uv-knob-x: 0em;
+  --uv-stars-y: 0em;
+  --uv-cloud-y: 0em;
+  --uv-hover-x: 0em;
 }
 
 :root:root:root .icon-btn.theme-toggle-btn::before {
@@ -79,7 +85,8 @@
     0 0 0 0.625em var(--uv-halo),
     0 0 0 1.25em var(--uv-halo);
   pointer-events: none;
-  transition: left var(--uv-t-move);
+  transform: translateX(calc(var(--uv-halo-x) + var(--uv-hover-x)));
+  transition: transform var(--uv-t-move);
 }
 
 :root:root:root .icon-btn.theme-toggle-btn::after {
@@ -105,7 +112,8 @@
   mask-position: center;
   box-shadow: none;
   pointer-events: none;
-  transition: top var(--uv-t-scene);
+  transform: translateY(var(--uv-stars-y));
+  transition: transform var(--uv-t-scene);
 }
 
 :root:root:root .icon-btn.theme-toggle-btn .theme-icon-moon {
@@ -125,7 +133,7 @@
   font-size: var(--uv-size);
   line-height: 1;
   opacity: 1;
-  transform: none;
+  transform: translateY(var(--uv-cloud-y));
   filter: none;
   pointer-events: none;
   box-shadow:
@@ -144,7 +152,7 @@
     4.625em -1.75em 0 0.437em var(--uv-cloud),
     4em -0.625em var(--uv-cloud-back),
     4.125em -2.125em 0 0.437em var(--uv-cloud-back);
-  transition: bottom var(--uv-t-scene) !important;
+  transition: transform var(--uv-t-scene) !important;
 }
 :root:root:root .icon-btn.theme-toggle-btn .theme-icon-moon::before,
 :root:root:root .icon-btn.theme-toggle-btn .theme-icon-moon::after {
@@ -168,7 +176,7 @@
   font-size: var(--uv-size);
   line-height: 1;
   opacity: 1;
-  transform: none;
+  transform: translateX(calc(var(--uv-knob-x) + var(--uv-hover-x)));
   overflow: hidden;
   pointer-events: none;
   box-shadow:
@@ -177,7 +185,7 @@
   filter:
     drop-shadow(0.062em 0.125em 0.125em var(--uv-edge-shadow))
     drop-shadow(0 0.062em 0.125em var(--uv-edge-shadow));
-  transition: left var(--uv-t-move) !important;
+  transition: transform var(--uv-t-move) !important;
 }
 :root:root:root .icon-btn.theme-toggle-btn .theme-icon-sun::before {
   content: "";
@@ -205,12 +213,7 @@
     background: var(--uv-track);
     border-color: transparent;
     color: var(--uv-stars);
-  }
-  :root:root:root .icon-btn.theme-toggle-btn:hover::before {
-    left: calc(var(--uv-halo-off) + var(--uv-nudge));
-  }
-  :root:root:root .icon-btn.theme-toggle-btn:hover .theme-icon-sun {
-    left: calc(var(--uv-knob-off) + var(--uv-nudge));
+    --uv-hover-x: var(--uv-nudge);
   }
 }
 :root:root:root .icon-btn.theme-toggle-btn:active {
@@ -227,27 +230,19 @@
   --uv-glint: color-mix(in srgb, var(--hl) 14%, transparent);
   --uv-edge-shadow: color-mix(in srgb, var(--shadow-tint) 55%, transparent);
 }
-:root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn::before {
-  left: calc(100% - var(--uv-halo-off) - var(--uv-halo-d));
-}
-:root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn::after {
-  top: calc(50% - 0.525em);
-}
-:root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn .theme-icon-moon {
-  bottom: -4.062em;
-}
-:root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn .theme-icon-sun {
-  left: calc(100% - var(--uv-knob-off) - var(--uv-knob-d));
+/* 深色：光暈與月亮移到右端、星星降到中線、雲沉到底（位移量 = 原本 left/top/bottom 的差值） */
+:root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn {
+  --uv-halo-x: calc(var(--uv-w) - 2 * var(--uv-halo-off) - var(--uv-halo-d));
+  --uv-knob-x: calc(var(--uv-w) - 2 * var(--uv-knob-off) - var(--uv-knob-d));
+  --uv-stars-y: calc(var(--uv-h) * 1.5 - 0.525em);
+  --uv-cloud-y: 3.437em;
 }
 :root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn .theme-icon-sun::before {
   transform: translateX(0);
 }
 @media (hover: hover) {
-  :root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn:hover::before {
-    left: calc(100% - var(--uv-halo-off) - var(--uv-halo-d) - var(--uv-nudge));
-  }
-  :root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn:hover .theme-icon-sun {
-    left: calc(100% - var(--uv-knob-off) - var(--uv-knob-d) - var(--uv-nudge));
+  :root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn:hover {
+    --uv-hover-x: calc(var(--uv-nudge) * -1);
   }
 }
 
@@ -349,7 +344,7 @@
 }
 
 #pageSettings .settings-tabs {
-  --uv-card-r: 14px;     
+  --uv-card-r: var(--lg-radius-control);     
   --uv-gap: 8px;
   --uv-dur: 0.3s;
   display: flex;
@@ -522,8 +517,8 @@
   }
 
   .submit-btn::after {
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0 70%, #000 92%);
-    mask-image: linear-gradient(to bottom, transparent 0 70%, #000 92%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0 70%, var(--mask-solid) 92%);
+    mask-image: linear-gradient(to bottom, transparent 0 70%, var(--mask-solid) 92%);
     content: "";
     position: absolute;
     z-index: -1;
@@ -991,7 +986,7 @@
   column-gap: 12px;
   padding: var(--uv-pad-top) 16px 11px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--lg-radius-sm);
   background: transparent;
   box-shadow: none;
   transform: none;
@@ -1013,7 +1008,7 @@
   position: absolute;
   inset: 0 6px;
   z-index: -1;
-  border-radius: 8px;
+  border-radius: var(--lg-radius-sm);
   background-color: var(--uv-plate);
   border-bottom: 3px solid var(--uv-edge-bottom);
   border-left: 2px outset var(--uv-edge-left);
@@ -1055,6 +1050,9 @@
 }
 #pageBookkeeping .recent-right {
   justify-items: end;
+  /* 基礎樣式的 align-items: flex-end 在 grid 裡會讓收合中的修改／刪除鈕從 0 高的列往上長、蓋住金額（點金額會誤觸刪除）；
+     stretch 讓按鈕列真的收成 0 高 */
+  align-items: stretch;
 }
 /* 內容只用裁切收起（沒有 visibility:hidden），讀屏軟體仍讀得到明細，鍵盤也能 Tab 到按鈕 */
 #pageBookkeeping .recent-main small,

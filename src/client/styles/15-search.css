@@ -27,7 +27,7 @@
   backdrop-filter: var(--blur-lg);
   -webkit-backdrop-filter: var(--blur-lg);
   border: 1px solid var(--glass-border);
-  border-radius: 22px;
+  border-radius: var(--lg-radius-card);
   box-shadow: var(--shadow-card);
 }
 
@@ -52,7 +52,7 @@
   height: 46px;
   padding: 0 40px 0 40px;
   border: 1px solid var(--glass-border);
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   background: var(--glass-chip);
   color: var(--ink);
   font-size: 16px;
@@ -105,7 +105,7 @@
   height: 46px;
   padding: 0 18px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   background: var(--accent-gradient);
   color: var(--on);
   font-size: 15px;
@@ -154,7 +154,7 @@
   max-width: 100%;
   border: 1px solid var(--glass-border-subtle);
   background: var(--glass-chip);
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   box-shadow: var(--glass-shine);
 }
 
@@ -182,7 +182,7 @@
   border: 0;
   background: none;
   color: var(--muted);
-  border-radius: 0 999px 999px 0;
+  border-radius: 0 var(--lg-radius-capsule) var(--lg-radius-capsule) 0;
 }
 
 .sr-recent-chip-del:hover { color: var(--exp); }
@@ -234,7 +234,7 @@
   border: 1px solid var(--glass-border);
   background: var(--glass-chip);
   color: var(--ink);
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   font-size: 13.5px;
   font-weight: 700;
   box-shadow: 0 2px 6px color-mix(in srgb, var(--shadow-tint-cool) 3%, transparent), var(--glass-shine);
@@ -300,7 +300,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: var(--lg-radius-sm);
   background: var(--accent);
   color: var(--on);
   font-size: 12px;
@@ -347,7 +347,7 @@
   min-height: 38px;
   padding: 7px 12px;
   font-size: 13px;
-  border-radius: 12px;
+  border-radius: var(--lg-radius-control);
 }
 
 .sr-choices.sr-payment-choices { display: block; }
@@ -370,7 +370,7 @@
   padding: 12px 14px;
   background: var(--glass-surface);
   border: 1px solid var(--glass-border);
-  border-radius: 18px;
+  border-radius: var(--lg-radius-control);
   box-shadow: var(--shadow-card);
 }
 
@@ -394,7 +394,7 @@
   border: 1px solid var(--exp-border);
   background: var(--exp-soft);
   color: var(--exp);
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   font-size: 13px;
   font-weight: 800;
 }
@@ -402,7 +402,7 @@
 .sr-progress-track {
   height: 6px;
   margin-top: 10px;
-  border-radius: 3px;
+  border-radius: var(--lg-radius-xs);
   background: var(--glass-divider);
   overflow: hidden;
 }
@@ -411,7 +411,7 @@
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: 3px;
+  border-radius: var(--lg-radius-xs);
   background: var(--accent-gradient);
   transform: scaleX(var(--p, 0));
   transform-origin: left;
@@ -428,7 +428,7 @@
   color: var(--muted);
   background: var(--glass-chip);
   border: 1px solid var(--glass-border-subtle);
-  border-radius: 12px;
+  border-radius: var(--lg-radius-control);
 }
 
 .sr-notice.is-warn {
@@ -459,7 +459,7 @@
   backdrop-filter: var(--blur-md);
   -webkit-backdrop-filter: var(--blur-md);
   border: 1px solid var(--glass-border);
-  border-radius: 22px;
+  border-radius: var(--lg-radius-card);
   box-shadow: var(--shadow-card);
 }
 
@@ -491,7 +491,7 @@
   padding: 10px 12px;
   background: var(--glass-chip);
   border: 1px solid var(--glass-border-subtle);
-  border-radius: 14px;
+  border-radius: var(--lg-radius-control);
   min-width: 0;
 }
 
@@ -528,7 +528,7 @@
   min-height: 38px;
   padding: 3px 6px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--lg-radius-sm);
   background: none;
   color: var(--ink);
   text-align: left;
@@ -545,7 +545,7 @@ button.sr-bar-row:hover { background: var(--glass-chip); }
 .sr-bar-fill {
   display: block;
   height: 7px;
-  border-radius: 4px;
+  border-radius: var(--lg-radius-xs);
   min-width: 0;
 }
 
@@ -586,7 +586,7 @@ button.sr-bar-row:hover { background: var(--glass-chip); }
   font-size: 12.5px;
   background: var(--glass-chip);
   border: 1px solid var(--glass-border-subtle);
-  border-radius: 12px;
+  border-radius: var(--lg-radius-control);
 }
 
 .sr-top-chip b { color: var(--ink); font-weight: 800; overflow-wrap: anywhere; }
@@ -599,7 +599,7 @@ button.sr-bar-row:hover { background: var(--glass-chip); }
 .sr-group {
   background: var(--glass-surface);
   border: 1px solid var(--glass-border);
-  border-radius: 20px;
+  border-radius: var(--lg-radius-card);
   box-shadow: var(--shadow-card);
   scroll-margin-top: calc(var(--sr-sticky-top) + 4px);
   min-width: 0;
@@ -619,7 +619,7 @@ button.sr-bar-row:hover { background: var(--glass-chip); }
   backdrop-filter: var(--blur-md);
   -webkit-backdrop-filter: var(--blur-md);
   border-bottom: 1px solid var(--glass-divider);
-  border-radius: 19px 19px 0 0;
+  border-radius: calc(var(--lg-radius-card) - 1px) calc(var(--lg-radius-card) - 1px) 0 0;
 }
 
 .sr-group-title { font-size: 14.5px; font-weight: 850; color: var(--title-color); }
@@ -666,7 +666,7 @@ button.sr-bar-row:hover { background: var(--glass-chip); }
 mark.sr-mark {
   padding: 0 2px;
   margin: 0 -1px;
-  border-radius: 4px;
+  border-radius: var(--lg-radius-xs);
   background: var(--sr-mark-bg);
   color: var(--sr-mark-ink);
   font-weight: 800;
@@ -679,7 +679,7 @@ mark.sr-mark {
   text-align: center;
   background: var(--glass-surface);
   border: 1px solid var(--glass-border-subtle);
-  border-radius: 20px;
+  border-radius: var(--lg-radius-card);
   color: var(--muted);
 }
 
@@ -704,7 +704,7 @@ mark.sr-mark {
   min-height: 42px;
   padding: 0 22px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   background: var(--accent-gradient);
   color: var(--on);
   font-size: 14px;
@@ -754,7 +754,7 @@ mark.sr-mark {
 }
 
 .sr-bar {
-  --uv-sr-r: 16px;                                   /* 外框圓角（原 12px，配合此處外層的膠囊玻璃略放大） */
+  --uv-sr-r: var(--lg-radius-control);                                   /* 外框圓角（原 12px，配合此處外層的膠囊玻璃略放大） */
   --uv-sr-pad: 6px;
   --uv-sr-ring-w: 1.5px;
   --uv-sr-fill: var(--glass-chip);                   /* 原 #010201 → 不透明的晶片底色，深淺色各自取值 */

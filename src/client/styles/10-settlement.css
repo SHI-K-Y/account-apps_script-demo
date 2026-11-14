@@ -208,7 +208,7 @@
 .st-date-icon {
   width: 38px;
   height: 38px;
-  border-radius: 12px;
+  border-radius: var(--lg-radius-control);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -256,7 +256,7 @@
   justify-content: center;
   text-align: center;
   font-weight: 700;
-  border-radius: 14px;
+  border-radius: var(--lg-radius-control);
 }
 
 .st-date-input-wrap {
@@ -267,7 +267,7 @@
   width: 100%;
   padding: 12px 16px;
   border: 1.5px solid var(--glass-border);
-  border-radius: 14px;
+  border-radius: var(--lg-radius-control);
   background: var(--glass-chip);
   color: var(--ink);
   font-size: 16px;
@@ -332,7 +332,7 @@
   font-size: 16px;
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: var(--lg-radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -360,7 +360,7 @@
   padding: 12px 14px;
   background: var(--glass-chip);
   border: 1px solid var(--glass-border-subtle);
-  border-radius: 14px;
+  border-radius: var(--lg-radius-control);
 }
 
 .st-total-label {
@@ -425,7 +425,7 @@
   font-size: 15px;
   width: 26px;
   height: 26px;
-  border-radius: 7px;
+  border-radius: var(--lg-radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -452,7 +452,7 @@
   width: 110px;
   padding: 8px 10px;
   border: 1.5px solid var(--glass-border-subtle);
-  border-radius: 10px;
+  border-radius: var(--lg-radius-sm);
   background: var(--glass-chip);
   color: var(--ink);
   font-size: 15px;
@@ -491,7 +491,7 @@
   backdrop-filter: var(--blur-md);
   -webkit-backdrop-filter: var(--blur-md);
   border: 1.5px solid var(--glass-border);
-  border-radius: 20px;
+  border-radius: var(--lg-radius-card);
   padding: 20px;
   box-shadow: var(--shadow-card);
   text-align: center;
@@ -561,7 +561,7 @@
   font-size: 11px;
   font-weight: 800;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   white-space: nowrap;
 }
 
@@ -634,7 +634,7 @@
   gap: 8px;
   width: 100%;
   padding: 11px 16px;
-  border-radius: 14px;
+  border-radius: var(--lg-radius-control);
   font-size: 13.5px;
   font-weight: 700;
   border: 1.5px dashed var(--accent-border);
@@ -686,7 +686,7 @@
   gap: 6px;
   padding: 14px 18px;
   border: 0;
-  border-radius: 16px;
+  border-radius: var(--lg-radius-control);
   background: linear-gradient(135deg, var(--inc) 0%, var(--inc-deep) 100%);
   color: var(--on);
   font-size: 15px;
@@ -727,7 +727,7 @@
   gap: 5px;
   padding: 14px 14px;
   border: 1.5px solid var(--glass-border);
-  border-radius: 16px;
+  border-radius: var(--lg-radius-control);
   background: var(--glass-surface);
   backdrop-filter: var(--blur-sm);
   -webkit-backdrop-filter: var(--blur-sm);
@@ -793,7 +793,7 @@
   .st-diff-section { margin: 0 10px 14px; }
   .st-actions { margin: 0 10px 14px; }
   .st-instructions { margin: 0 10px 14px; }
-  .st-diff-card { border-radius: 20px; }
+  .st-diff-card { border-radius: var(--lg-radius-card); }
   .st-actual-input { width: 100px; font-size: 14px; }
   .st-diff-amount { font-size: 32px; }
 }
@@ -814,7 +814,7 @@
   .settlement-head {
     margin: 0 20px 24px;
     padding: 16px 28px 14px;
-    border-radius: 24px;
+    border-radius: var(--lg-radius-card);
     top: 14px;
   }
 
@@ -958,7 +958,7 @@
   .key {
     min-height: 52px;
     font-size: 20px;
-    border-radius: 14px;
+    border-radius: var(--lg-radius-control);
     transition: transform 0.1s ease, background-color 0.15s ease, box-shadow 0.1s ease;
   }
 
@@ -967,7 +967,7 @@
   }
 
   .bar {
-    border-radius: 0 0 24px 24px;
+    border-radius: 0 0 var(--lg-radius-card) var(--lg-radius-card);
   }
 
   .recent h2 {
@@ -1022,7 +1022,7 @@
   .ov-hero {
     margin: 0 20px 24px;
     padding: 34px 32px 30px;
-    border-radius: 28px;
+    border-radius: var(--lg-radius-card);
   }
 
   .ov-hero-amount {
@@ -1040,7 +1040,7 @@
 
   .ov-mini-card {
     padding: 14px 16px;
-    border-radius: 16px;
+    border-radius: var(--lg-radius-control);
   }
 
   .ov-mini-val {
@@ -1065,7 +1065,7 @@
 
   .ov-card {
     padding: 22px;
-    border-radius: 22px;
+    border-radius: var(--lg-radius-card);
   }
 
   .ov-card:hover {
@@ -1075,7 +1075,7 @@
   .ov-card-icon {
     width: 42px;
     height: 42px;
-    border-radius: 14px;
+    border-radius: var(--lg-radius-control);
     font-size: 21px;
   }
 
@@ -1102,7 +1102,7 @@
 
   .ov-pay-item {
     padding: 12px 14px;
-    border-radius: 14px;
+    border-radius: var(--lg-radius-control);
   }
 
   .ov-pay-val {
@@ -1175,7 +1175,7 @@
   .st-clear-btn {
     padding: 16px 24px;
     font-size: 16px;
-    border-radius: 18px;
+    border-radius: var(--lg-radius-control);
   }
 
   .st-instructions {
@@ -1284,7 +1284,7 @@
     padding: 3px;
     background: var(--glass-chip);
     border: 1px solid var(--glass-border-subtle);
-    border-radius: 12px;
+    border-radius: var(--lg-radius-control);
     align-items: center;
     overflow: hidden;
   }
@@ -1296,7 +1296,7 @@
     font-size: 13px;
     font-weight: 700;
     justify-content: center;
-    border-radius: 9px;
+    border-radius: var(--lg-radius-sm);
     white-space: nowrap;
   }
 
@@ -1317,7 +1317,7 @@
     padding: 10px 8px;
     background: var(--glass-chip);
     border: 1px solid var(--glass-border-subtle);
-    border-radius: 14px;
+    border-radius: var(--lg-radius-control);
     align-content: flex-start;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -1332,7 +1332,7 @@
   }
   .edit-modal-card .edit-choices::-webkit-scrollbar-thumb {
     background: var(--glass-border);
-    border-radius: 999px;
+    border-radius: var(--lg-radius-capsule);
   }
   .edit-modal-card .edit-choices::-webkit-scrollbar-thumb:hover {
     background: var(--muted);

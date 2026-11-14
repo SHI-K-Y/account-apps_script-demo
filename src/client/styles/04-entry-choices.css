@@ -1,7 +1,7 @@
 .choice {
   border: 1px solid var(--glass-border);
   background: var(--glass-chip);
-  border-radius: 14px;
+  border-radius: var(--lg-radius-control);
   padding: 10px 14px;
   min-height: 46px;
   line-height: 1.25;
@@ -536,7 +536,7 @@
 #comboItemChoices .choice {
   padding: 7px 5px;
   min-height: 38px;
-  border-radius: 12px;
+  border-radius: var(--lg-radius-control);
   font-size: 13px;
   display: inline-flex;
   align-items: center;
@@ -654,7 +654,7 @@
   justify-content: center;
   gap: 6px;
   padding: 3.5px 14px;
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   background: var(--pay-badge-bg);
   border: 1px solid var(--pay-badge-border);
   font-size: 12.5px;
@@ -727,7 +727,7 @@
 .pay-group-grid .choice {
   padding: 7px 8px;
   min-height: 38px;
-  border-radius: 12px;
+  border-radius: var(--lg-radius-control);
   font-size: 13px;
   font-weight: 600;
   display: flex;
@@ -756,7 +756,7 @@
   max-width: 86%;
   aspect-ratio: 16 / 10;
   object-fit: cover;
-  border-radius: 5px;
+  border-radius: var(--lg-radius-xs);
   flex-shrink: 0;
   display: block;
   box-shadow: 0 2px 6px color-mix(in srgb, var(--shadow-tint) 22%, transparent), 0 1px 2px color-mix(in srgb, var(--shadow-tint) 12%, transparent);
@@ -798,7 +798,7 @@
 .edit-choices .choice-card-img {
   width: 56px;
   height: 35px;
-  border-radius: 4px;
+  border-radius: var(--lg-radius-xs);
   max-width: 82%;
 }
 
@@ -831,7 +831,7 @@
   max-width: 25px;
   max-height: 18px;
   object-fit: contain;
-  border-radius: 3px;
+  border-radius: var(--lg-radius-xs);
   flex-shrink: 0;
   display: inline-block;
   pointer-events: none;
@@ -874,7 +874,7 @@
 #comboCategoryChoices .choice {
   padding: 6px 14px;
   min-height: 36px;
-  border-radius: 11px;
+  border-radius: var(--lg-radius-sm);
   font-size: 13px;
 }
 
@@ -891,7 +891,7 @@
 #comboPaidChoices .choice {
   padding: 6px 8px;
   min-height: 36px;
-  border-radius: 11px;
+  border-radius: var(--lg-radius-sm);
   font-size: 13px;
   display: flex;
   align-items: center;
@@ -902,7 +902,7 @@
 @media (max-width: 599px) {
   .entry.card {
     padding: 14px 12px 16px;
-    border-radius: 20px;
+    border-radius: var(--lg-radius-card);
     margin: 0 10px;
   }
 
@@ -952,14 +952,14 @@
   .key {
     min-height: 42px;
     font-size: 16px;
-    border-radius: 12px;
+    border-radius: var(--lg-radius-control);
   }
 
   .bar {
     padding: 10px 12px;
     min-height: 56px;
     margin: 14px -12px -16px -12px;
-    border-radius: 0 0 19px 19px;
+    border-radius: 0 0 calc(var(--lg-radius-card) - 1px) calc(var(--lg-radius-card) - 1px);
     border-top: 1px solid var(--glass-border);
     border-left: none;
     border-right: none;

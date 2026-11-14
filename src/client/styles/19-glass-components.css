@@ -10,7 +10,7 @@
   width: var(--lg-ind-w, 0px);
   height: var(--lg-ind-h, 0px);
   translate: var(--lg-ind-x, 0px) var(--lg-ind-y, 0px);
-  border-radius: var(--lg-seg-radius, 14px);
+  border-radius: var(--lg-seg-radius, var(--lg-radius-control));
   background: var(--lg-ind-bg, var(--lg-tint));
   box-shadow: var(--lg-ind-shadow, var(--lg-rim), 0 4px 12px -4px var(--accent-glow));
   opacity: 0;
@@ -76,13 +76,13 @@
 .settings-tabs {
   --lg-tint: color-mix(in srgb, var(--accent) var(--lg-tint-mix), var(--lg-tint-deepen));
   --lg-seg-pad: 6px;
-  --lg-seg-radius: 14px;
+  --lg-seg-radius: var(--lg-radius-control);
   position: relative;
   gap: 4px;
 }
 .settings-tab {
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--lg-radius-control);
   color: var(--lg-ink-secondary);
   background: transparent;
   text-shadow: var(--lg-text-halo);
@@ -105,7 +105,7 @@
 
 .settings-pay-subnav {
   --lg-seg-pad: 4px;
-  --lg-seg-radius: 16px;
+  --lg-seg-radius: var(--lg-radius-control);
   --lg-ind-bg: var(--lg-inner-bg);
   --lg-ind-shadow: var(--lg-lens), var(--lg-ring);
   padding: 4px;
@@ -113,7 +113,7 @@
 }
 .settings-subtab {
   border: 0;
-  border-radius: 16px;
+  border-radius: var(--lg-radius-control);
   color: var(--lg-ink-secondary);
   text-shadow: var(--lg-text-halo);
   transition: color var(--lg-dur-press) var(--ease-out), background-color var(--lg-dur-press) var(--ease-out);
@@ -259,18 +259,15 @@
   color: var(--lg-ink-secondary);
 }
 
-.pref-card {
-  border-radius: var(--lg-radius-card-inner);
-}
 .pref-card-desc {
   color: var(--lg-ink-secondary);
 }
 .pref-segmented {
   --lg-tint: color-mix(in srgb, var(--accent) var(--lg-tint-mix), var(--lg-tint-deepen));
   --lg-seg-pad: 4px;
-  --lg-seg-radius: 10px;
+  --lg-seg-radius: var(--lg-radius-sm);
   padding: 4px;
-  border-radius: 14px;
+  border-radius: var(--lg-radius-control);
   background-color: var(--lg-well-bg);
   background-image: none;
   border: 0;
@@ -278,7 +275,7 @@
 }
 .pref-seg-btn {
   color: var(--lg-group-ink);
-  border-radius: 10px;
+  border-radius: var(--lg-radius-sm);
 }
 .pref-seg-btn:hover:not(:disabled):not(.is-active) {
   color: var(--ink);
@@ -366,7 +363,7 @@
   background: var(--lg-group-bg);
   color: var(--accent-text);
   border: 1.5px dashed var(--accent-border);
-  border-radius: 16px;
+  border-radius: var(--lg-radius-control);
   box-shadow: var(--lg-group-lens);
 }
 :root:root .st-adjust-btn:hover:not(:disabled) {
@@ -395,7 +392,7 @@
 }
 
 .sheet-link-btn {
-  border-radius: 20px;
+  border-radius: var(--lg-radius-card);
 }
 .sheet-link-btn:hover {
   border-color: transparent;
@@ -424,17 +421,17 @@
 }
 .cc-card-tabs {
   --lg-tint: color-mix(in srgb, var(--accent) var(--lg-tint-mix), var(--lg-tint-deepen));
-  --lg-seg-radius: 16px;
+  --lg-seg-radius: var(--lg-radius-control);
   padding: 4px;
   gap: 4px;
-  border-radius: 20px;
+  border-radius: var(--lg-radius-card);
 }
 .cc-card-tab {
   background: transparent;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   border: 0;
-  border-radius: 16px;
+  border-radius: var(--lg-radius-control);
   box-shadow: none;
   color: var(--lg-ink-secondary);
   text-shadow: var(--lg-text-halo);
@@ -460,10 +457,10 @@
 }
 .cc-status-filters {
   --lg-tint: color-mix(in srgb, var(--accent) var(--lg-tint-mix), var(--lg-tint-deepen));
-  --lg-seg-radius: 10px;
+  --lg-seg-radius: var(--lg-radius-sm);
   background: var(--lg-well-bg);
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--lg-radius-control);
   box-shadow: var(--lg-well-shadow);
 }
 .cc-filter-btn { color: var(--lg-group-ink); }
@@ -670,7 +667,7 @@
 .load-full-btn.is-expanded { background: var(--lg-group-bg-hover); }
 .recent-date-chips {
   --lg-tint: color-mix(in srgb, var(--accent) var(--lg-tint-mix), var(--lg-tint-deepen));
-  --lg-seg-radius: 10px;
+  --lg-seg-radius: var(--lg-radius-sm);
   background: var(--lg-well-bg);
   border-color: transparent;
   box-shadow: var(--lg-well-shadow);
@@ -711,7 +708,7 @@
 .channel-preview-badge { color: var(--inc-text); background: var(--inc-soft); border-color: transparent; box-shadow: none; }
 .card-type-tag.credit { color: var(--lg-ink); }
 .card-type-tag.debit { color: var(--inc-text); }
-.quick-combo-type-tabs { --lg-seg-radius: 999px; }
+.quick-combo-type-tabs { --lg-seg-radius: var(--lg-radius-capsule); }
 :root .quick-combo-type-tabs.lg-seg::before {
   top: 0;
   bottom: auto;
@@ -722,11 +719,11 @@
   translate: var(--lg-ind-x, 0px) var(--lg-ind-y, 0px);
 }
 .emoji-popover-tabs {
-  --lg-seg-radius: 8px;
+  --lg-seg-radius: var(--lg-radius-sm);
   --lg-ind-bg: var(--lg-inner-bg);
   --lg-ind-shadow: var(--lg-lens), var(--lg-ring);
 }
-.emoji-pop-tab { background: transparent; color: var(--lg-ink-secondary); border-radius: 8px; }
+.emoji-pop-tab { background: transparent; color: var(--lg-ink-secondary); border-radius: var(--lg-radius-sm); }
 .emoji-pop-tab.active { background: var(--lg-inner-bg); color: var(--lg-ink); box-shadow: var(--lg-lens); }
 .emoji-popover-tabs.lg-seg-on > .emoji-pop-tab.active { background: transparent; box-shadow: none; }
 
@@ -987,7 +984,7 @@ i.ph-fill {
   justify-content: center;
   min-width: 2.2em;
   padding: 3px 5px;
-  border-radius: 5px;
+  border-radius: var(--lg-radius-xs);
   border: 1px solid var(--fx-border);
   background: var(--fx-soft);
   color: var(--fx-ink);
@@ -1212,33 +1209,33 @@ i.ph.sheet-icon-svg { font-size: 22px; }
 }
 
 :is(
-  .settings-list-container, .pref-card, .card, .ov-card, .st-diff-card, .cc-tx-card,
+  .settings-list-container, .card, .ov-card, .st-diff-card, .cc-tx-card,
   .sr-sum-card, .sr-empty-card, .sr-hint, .sr-progress, .sr-group,
   .fx-ledger-card, .fx-detail-card, .fx-stat-card
 ) {
   -webkit-backdrop-filter: var(--lg-content-blur);
   backdrop-filter: var(--lg-content-blur);
 }
-:is(.card, .ov-card, .settings-list-container, .pref-card) :is(.card, .ov-card, .fx-stat-card, .cc-tx-card) {
+:is(.card, .ov-card, .settings-list-container) :is(.card, .ov-card, .fx-stat-card, .cc-tx-card) {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
 
 :root:root:root[data-theme="dark"] :is(.choice:not([data-payment]), .key, .quick-combo-chip, .recent-date-chip, .sr-chip, .fx-chip, .oc-chip),
 :root:root:root:not([data-theme="light"]) :is(.choice:not([data-payment]), .key, .quick-combo-chip, .recent-date-chip, .sr-chip, .fx-chip, .oc-chip) {
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 1px 2px var(--lg-ink-shadow);
 }
 :root:root:root[data-theme="dark"] :is(.choice:not([data-payment]), .key) i.ph,
 :root:root:root:not([data-theme="light"]) :is(.choice:not([data-payment]), .key) i.ph {
-  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.55));
+  filter: drop-shadow(0 1px 1.5px var(--lg-ink-shadow));
 }
 :root:root:root[data-theme="dark"] .key:not(.special),
 :root:root:root:not([data-theme="light"]) .key:not(.special) {
-  color: #ffffff;
+  color: var(--on);
 }
 :root:root:root[data-theme="dark"] .choice[data-cat]:not(.selected),
 :root:root:root:not([data-theme="light"]) .choice[data-cat]:not(.selected) {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 2px rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 1px 0 var(--lg-rim-hi-soft), 0 1px 2px var(--lg-drop-shade);
 }
 
 @media (prefers-reduced-transparency: reduce) {

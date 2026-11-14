@@ -4,7 +4,7 @@
   padding: 16px 20px 18px;
   background: var(--glass-surface);
   border: 1px solid var(--glass-border);
-  border-radius: 22px;
+  border-radius: var(--lg-radius-card);
   box-shadow: var(--shadow-card);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
@@ -43,7 +43,7 @@
 .today-expense-icon-box {
   width: 32px;
   height: 32px;
-  border-radius: 10px;
+  border-radius: var(--lg-radius-sm);
   background: var(--exp-soft);
   color: var(--exp);
   border: 1px solid var(--exp-border);
@@ -73,7 +73,7 @@
   color: var(--exp);
   background: var(--exp-soft);
   border: 1px solid var(--exp-border);
-  border-radius: 8px;
+  border-radius: var(--lg-radius-sm);
   padding: 2px 8px;
   display: inline-flex;
   align-items: center;
@@ -96,7 +96,7 @@
   color: var(--muted);
   background: var(--glass-chip);
   border: 1px solid var(--glass-border-subtle);
-  border-radius: 8px;
+  border-radius: var(--lg-radius-sm);
   padding: 3px 8px;
   line-height: 1.25;
   white-space: nowrap;
@@ -108,7 +108,7 @@
   color: var(--on);
   background: var(--exp-gradient);
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--lg-radius-sm);
   padding: 4px 9px;
   cursor: pointer;
   line-height: 1.2;
@@ -221,7 +221,7 @@
   align-items: center;
   padding: 10px 4px;
   border-top: 1px solid var(--glass-divider);
-  border-radius: 14px;
+  border-radius: var(--lg-radius-control);
   transition: background-color 0.15s ease;
 }
 
@@ -243,7 +243,7 @@
   font-size: 11px;
   font-weight: 600;
   padding: 1px 7px;
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   margin-left: 6px;
   background: color-mix(in srgb, var(--warn) 14%, transparent);
   color: var(--warn-strong);
@@ -282,7 +282,7 @@
   gap: 4px;
   background: var(--glass-chip);
   border: 1px solid var(--glass-border-subtle);
-  border-radius: 13px;
+  border-radius: var(--lg-radius-control);
   padding: 3px;
   max-width: 100%;
 }
@@ -294,7 +294,7 @@
   font-size: 12px;
   font-weight: 600;
   padding: 5px 11px;
-  border-radius: 9px;
+  border-radius: var(--lg-radius-sm);
   cursor: pointer;
   transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
   white-space: nowrap;
@@ -405,7 +405,7 @@
   padding: 5px 8px;
   font-size: 12px;
   color: var(--muted);
-  border-radius: 8px;
+  border-radius: var(--lg-radius-sm);
   background: var(--glass-chip);
   border: 1px solid var(--glass-border-subtle);
   animation: fadeIn calc((var(--dur-fast) + var(--dur-base)) / 2) var(--ease-out);
@@ -428,7 +428,7 @@
   text-align: center;
   background: var(--glass-chip);
   border: 1px solid var(--glass-border-subtle);
-  border-radius: 10px;
+  border-radius: var(--lg-radius-sm);
   padding: 4px 2px;
   line-height: 1.2;
 }
@@ -485,7 +485,7 @@
 .recent-act-btn {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: var(--lg-radius-sm);
   border: 1px solid var(--glass-border-subtle);
   background: var(--glass-chip);
   color: var(--muted);
@@ -554,7 +554,7 @@
   color: var(--ink);
   background: var(--glass-chip);
   border: 1px solid var(--glass-border-subtle);
-  border-radius: 12px;
+  border-radius: var(--lg-radius-control);
   cursor: pointer;
   transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
   box-shadow: 0 1px 4px color-mix(in srgb, var(--shadow-tint) 3%, transparent);
@@ -667,7 +667,7 @@ body.busy .progress {
   color: var(--on);
   border: 1px solid var(--glass-border);
   padding: 12px 20px;
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   font-size: 14px;
   font-weight: 700;
   box-shadow: 0 12px 32px color-mix(in srgb, var(--shadow-tint) 25%, transparent);

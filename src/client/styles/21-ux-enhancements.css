@@ -22,7 +22,7 @@
   min-width: 1.6em;
   padding: 0 0.45em;
   border: 1px solid var(--glass-divider);
-  border-radius: 6px;
+  border-radius: var(--lg-radius-xs);
   font: inherit;
   font-variant-numeric: tabular-nums;
   color: var(--ink-secondary);

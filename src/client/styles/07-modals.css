@@ -17,7 +17,7 @@
   backdrop-filter: var(--blur-lg);
   -webkit-backdrop-filter: var(--blur-lg);
   border: 1px solid var(--glass-border);
-  border-radius: 26px;
+  border-radius: var(--lg-radius-card);
   box-shadow: var(--shadow-float);
   padding: 26px 22px 22px;
   transform: scale(0.92) translateY(12px);
@@ -97,7 +97,7 @@
 .modal-amount-box {
   background: var(--glass-chip);
   border: 1px solid var(--glass-border);
-  border-radius: 16px;
+  border-radius: var(--lg-radius-control);
   padding: 12px 16px;
   text-align: center;
   margin-bottom: 16px;
@@ -109,7 +109,7 @@
   font-size: 12px;
   font-weight: 700;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   margin-bottom: 4px;
 }
 
@@ -137,7 +137,7 @@
 .modal-details {
   background: var(--glass-chip);
   border: 1px solid var(--glass-border);
-  border-radius: 16px;
+  border-radius: var(--lg-radius-control);
   padding: 14px 16px;
   margin-bottom: 18px;
   display: flex;
@@ -176,7 +176,7 @@
 .modal-close-btn {
   width: 100%;
   border: 0;
-  border-radius: 16px;
+  border-radius: var(--lg-radius-control);
   min-height: 50px;
   background: var(--ink);
   color: var(--on);
@@ -286,7 +286,7 @@
 
 .edit-input {
   min-height: 44px;
-  border-radius: 12px;
+  border-radius: var(--lg-radius-control);
   font-size: 15px;
 }
 
@@ -307,7 +307,7 @@
   color: var(--muted);
   background: var(--glass-chip);
   border: 1px solid var(--glass-border-subtle);
-  border-radius: 10px;
+  border-radius: var(--lg-radius-sm);
   padding: 10px 14px;
   line-height: 1.2;
 }
@@ -325,7 +325,7 @@
 .edit-choices .choice {
   font-size: 13px;
   padding: 6px 12px;
-  border-radius: 10px;
+  border-radius: var(--lg-radius-sm);
   min-height: 34px;
 }
 
@@ -361,7 +361,7 @@
 
 .modal-btn {
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--lg-radius-control);
   min-height: 48px;
   font-size: 15px;
   font-weight: 800;
@@ -433,7 +433,7 @@
 .delete-preview-well {
   background: var(--lg-well-bg);
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--lg-radius-control);
   box-shadow: none;
   padding: 16px;
   margin-bottom: 20px;
@@ -454,7 +454,7 @@
   font-size: 11px;
   font-weight: 700;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   background: var(--exp-soft);
   color: var(--exp);
 }
@@ -584,13 +584,13 @@
   .head, .overview-head {
     margin: 8px 10px 14px;
     padding: calc(10px + env(safe-area-inset-top)) 14px 12px;
-    border-radius: 20px;
+    border-radius: var(--lg-radius-card);
     top: 8px;
   }
   .card {
     margin-left: 10px;
     margin-right: 10px;
-    border-radius: 20px;
+    border-radius: var(--lg-radius-card);
   }
   .entry.card {
     margin-left: 10px;
@@ -599,7 +599,7 @@
   }
   .bar {
     margin: 14px -12px -16px -12px;
-    border-radius: 0 0 19px 19px;
+    border-radius: 0 0 calc(var(--lg-radius-card) - 1px) calc(var(--lg-radius-card) - 1px);
     border-top: 1px solid var(--glass-border);
     border-left: none;
     border-right: none;
@@ -620,7 +620,7 @@
 @media (min-width: 600px) {
   .head, .overview-head {
     margin: 10px 16px 18px;
-    border-radius: 22px;
+    border-radius: var(--lg-radius-card);
     top: 10px;
   }
   .choice { padding: 10px 16px; }
@@ -651,7 +651,7 @@
     z-index: 30;
     margin: 0 16px 22px;
     padding: 16px 22px 14px;
-    border-radius: 24px;
+    border-radius: var(--lg-radius-card);
   }
   .entry.card { padding: 26px; }
 
@@ -669,7 +669,7 @@
   #expensePanel .entry.card > .sec:nth-child(6) { grid-column: 1; grid-row: 6; }
   #expensePanel .entry.card > .sec:nth-child(7) { grid-column: 2; grid-row: 1 / 8; }
   #expensePanel .entry.card > .sec:nth-child(8) { grid-column: 1; grid-row: 7; }
-  #expensePanel .entry.card > .bar { grid-column: 1 / -1; position: static; margin: 24px -26px -26px; border-radius: 0 0 24px 24px; }
+  #expensePanel .entry.card > .bar { grid-column: 1 / -1; position: static; margin: 24px -26px -26px; border-radius: 0 0 var(--lg-radius-card) var(--lg-radius-card); }
 
   #incomePanel .entry.card {
     display: grid;
@@ -683,7 +683,35 @@
   #incomePanel .entry.card > .sec:nth-child(4) { grid-column: 1; grid-row: 4; }
   #incomePanel .entry.card > .sec:nth-child(5) { grid-column: 2; grid-row: 1 / 6; }
   #incomePanel .entry.card > .sec:nth-child(6) { grid-column: 1; grid-row: 5; }
-  #incomePanel .entry.card > .bar { grid-column: 1 / -1; position: static; margin: 24px -26px -26px; border-radius: 0 0 24px 24px; }
+  #incomePanel .entry.card > .bar { grid-column: 1 / -1; position: static; margin: 24px -26px -26px; border-radius: 0 0 var(--lg-radius-card) var(--lg-radius-card); }
+
+  /* 桌機：只有「確認記帳」按鈕黏在畫面底部，金額列留在卡片底部不動。
+     .bar 改成 display: contents，金額列與按鈕直接成為卡片 grid 的子項：
+     金額列接手原本 .bar 的底條外觀；按鈕放在右欄、從第一列跨到最後一列並貼齊底端，
+     sticky 才有整張卡片的高度可以移動（grid 子項的 sticky 範圍是它佔的格子） */
+  :is(#expensePanel, #incomePanel) .entry.card > .bar { display: contents; }
+  :is(#expensePanel, #incomePanel) .entry.card > .bar > .bar-amount {
+    grid-column: 1 / -1;
+    margin: 24px -26px -26px;
+    padding: 14px 20px;
+    border-radius: 0 0 var(--lg-radius-card) var(--lg-radius-card);
+    background: var(--lg-content-bg-strong);
+    border-top: 1px solid var(--lg-row-divider);
+  }
+  #expensePanel .entry.card > .bar > .bar-amount { grid-row: 8; }
+  #incomePanel .entry.card > .bar > .bar-amount { grid-row: 6; }
+  :is(#expensePanel, #incomePanel) .entry.card > .bar > .submit-btn {
+    grid-column: 2;
+    align-self: end;
+    justify-self: end;
+    position: sticky;
+    bottom: var(--submit-bar-offset);
+    z-index: 26;
+    /* 停在底條裡時與原本位置一致：右側內距 20px（卡片內距 26px），上下置中於底條 */
+    margin: 0 -6px -12px 0;
+  }
+  #expensePanel .entry.card > .bar > .submit-btn { grid-row: 1 / 9; }
+  #incomePanel .entry.card > .bar > .submit-btn { grid-row: 1 / 7; }
 
   .amount-preview { margin-bottom: 10px; padding: 8px 14px; min-height: 48px; }
   .amount-preview-num { font-size: 26px; }

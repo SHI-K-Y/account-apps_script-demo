@@ -43,7 +43,7 @@
   border: 1px solid var(--glass-border-subtle);
   background: var(--glass-chip);
   color: var(--ink-secondary);
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   padding: 6px 13px;
   font: inherit;
   font-size: 13px;
@@ -160,7 +160,7 @@
   border: 1px solid var(--glass-border);
   background: var(--glass-chip);
   color: var(--ink);
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   padding: 6px 16px;
   font: inherit;
   font-size: 13px;
@@ -174,7 +174,7 @@
   justify-content: space-between;
   gap: 10px;
   padding: 8px 12px;
-  border-radius: 14px;
+  border-radius: var(--lg-radius-control);
   background: var(--exp-soft);
   border: 1px solid var(--exp-border);
   color: var(--ink);
@@ -279,7 +279,7 @@
   width: 100%;
   padding: 6px 8px;
   border: 1px solid transparent;
-  border-radius: 11px;
+  border-radius: var(--lg-radius-sm);
   background: none;
   color: var(--ink);
   font: inherit;
@@ -304,7 +304,7 @@
 .oc-sw {
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border-radius: var(--lg-radius-xs);
   background: var(--mc-color);
 }
 
@@ -340,7 +340,7 @@
   display: inline-flex;
   flex-shrink: 0;
   padding: 2px;
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   border: 1px solid var(--glass-border-subtle);
   background: var(--glass-chip);
 }
@@ -350,7 +350,7 @@
   border: 0;
   background: none;
   color: var(--muted);
-  border-radius: 999px;
+  border-radius: var(--lg-radius-capsule);
   padding: 4px 11px;
   font: inherit;
   font-size: 12px;
@@ -395,7 +395,7 @@
   display: inline-block;
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border-radius: var(--lg-radius-xs);
 }
 
 .oc-key-box.is-income { background: var(--chart-income); }
@@ -412,7 +412,7 @@
   font-weight: 750;
   color: var(--muted);
   width: max-content;
-  border-radius: 6px;
+  border-radius: var(--lg-radius-xs);
 }
 
 .oc-table-scroll {
@@ -550,7 +550,7 @@
   z-index: 5;
   pointer-events: none;
   padding: 6px 10px;
-  border-radius: 10px;
+  border-radius: var(--lg-radius-sm);
   background: var(--chart-tip-bg);
   color: var(--chart-tip-ink);
   font-size: 12px;
