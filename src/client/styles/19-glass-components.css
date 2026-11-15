@@ -339,12 +339,11 @@
   box-shadow: var(--lg-group-lens);
 }
 .st-total-bar.actual {
-  background: color-mix(in srgb, var(--inc) 14%, var(--lg-group-bg));
+  background: color-mix(in srgb, var(--accent) 14%, var(--lg-group-bg));
   border-color: transparent;
 }
-.st-total-bar.actual .st-total-val,
-.st-ledger-val.warn {
-  color: var(--inc-text);
+.st-total-bar.actual .st-total-val {
+  color: var(--accent-text);
 }
 .st-ledger-val.warn { color: var(--exp-text); }
 .st-ledger-icon { box-shadow: var(--lg-group-lens); }
@@ -371,16 +370,16 @@
   border-style: solid;
 }
 .st-submit-btn {
-  --lg-tint: color-mix(in srgb, var(--inc) var(--lg-tint-mix), var(--lg-tint-deepen));
+  --lg-tint: color-mix(in srgb, var(--accent) var(--lg-tint-mix), var(--lg-tint-deepen));
   background: var(--lg-tint);
   border-radius: var(--lg-radius-capsule);
-  box-shadow: var(--lg-rim), 0 6px 18px -6px var(--inc-glow);
+  box-shadow: var(--lg-rim), 0 6px 18px -6px var(--accent-glow);
   text-shadow: 0 1px 1px color-mix(in srgb, var(--shadow-tint) 18%, transparent);
 }
 .st-submit-btn:hover:not(:disabled) {
   transform: none;
   filter: brightness(1.06);
-  box-shadow: var(--lg-rim), 0 8px 22px -6px var(--inc-glow);
+  box-shadow: var(--lg-rim), 0 8px 22px -6px var(--accent-glow);
 }
 .st-clear-btn {
   border-radius: var(--lg-radius-capsule);

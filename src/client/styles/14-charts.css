@@ -705,11 +705,6 @@
 }
 
 #pageSearch {
-  --accent: var(--exp);
-  --accent-gradient: var(--exp-gradient);
-  --accent-soft: var(--exp-soft);
-  --accent-glow: var(--exp-glow);
-  --accent-border: var(--exp-border);
   --sr-sticky-top: 84px;
 }
 

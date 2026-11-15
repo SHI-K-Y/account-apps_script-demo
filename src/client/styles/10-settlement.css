@@ -384,12 +384,12 @@
 }
 
 .st-total-bar.actual {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--inc) 8%, transparent) 0%, color-mix(in srgb, var(--inc) 4%, transparent) 100%);
-  border-color: var(--inc-border);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, transparent) 0%, color-mix(in srgb, var(--accent) 4%, transparent) 100%);
+  border-color: var(--accent-border);
 }
 
 .st-total-bar.actual .st-total-val {
-  color: var(--inc);
+  color: var(--accent-text);
 }
 
 .st-actual-grid {
@@ -472,8 +472,8 @@
 
 .st-actual-input:focus {
   outline: none;
-  border-color: var(--inc);
-  box-shadow: 0 0 0 3px var(--inc-soft);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
   background: var(--glass-surface-hover);
 }
 
@@ -687,13 +687,13 @@
   padding: 14px 18px;
   border: 0;
   border-radius: var(--lg-radius-control);
-  background: linear-gradient(135deg, var(--inc) 0%, var(--inc-deep) 100%);
+  background: var(--accent-gradient);
   color: var(--on);
   font-size: 15px;
   font-weight: 800;
   box-shadow:
-    0 6px 20px -4px color-mix(in srgb, var(--inc) 40%, transparent),
-    0 2px 8px -1px color-mix(in srgb, var(--inc) 20%, transparent),
+    0 6px 20px -4px color-mix(in srgb, var(--accent) 40%, transparent),
+    0 2px 8px -1px color-mix(in srgb, var(--accent) 20%, transparent),
     inset 0 1px 1px color-mix(in srgb, var(--hl) 20%, transparent);
   transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, filter 0.15s ease;
 }
@@ -701,8 +701,8 @@
 .st-submit-btn:hover {
   transform: translateY(-1px);
   box-shadow:
-    0 8px 26px -4px color-mix(in srgb, var(--inc) 50%, transparent),
-    0 3px 12px -1px color-mix(in srgb, var(--inc) 25%, transparent),
+    0 8px 26px -4px color-mix(in srgb, var(--accent) 50%, transparent),
+    0 3px 12px -1px color-mix(in srgb, var(--accent) 25%, transparent),
     inset 0 1px 1px color-mix(in srgb, var(--hl) 25%, transparent);
   filter: brightness(1.05);
 }

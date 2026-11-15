@@ -519,7 +519,7 @@
 }
 .settings-move-btn:hover:not(:disabled) {
   color: var(--accent);
-  background: color-mix(in srgb, var(--jade) 12%, transparent);
+  background: var(--accent-soft);
   border-color: var(--accent);
 }
 .settings-edit-btn:hover {

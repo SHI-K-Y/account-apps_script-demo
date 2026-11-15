@@ -665,12 +665,13 @@ body[data-mode="income"] .tabs::before {
 }
 
 :root {
-  --fx: #2f7fa8;
-  --fx-gradient: linear-gradient(135deg, #3b92bd 0%, #2f7fa8 100%);
-  --fx-soft: rgba(47, 127, 168, 0.12);
-  --fx-glow: rgba(47, 127, 168, 0.28);
-  --fx-border: rgba(47, 127, 168, 0.35);
-  --fx-ink: #1d5a7a;
+  /* 國外交易頁沿用全站主題色（天空藍） */
+  --fx: var(--theme);
+  --fx-gradient: var(--theme-gradient);
+  --fx-soft: var(--theme-soft);
+  --fx-glow: var(--theme-glow);
+  --fx-border: var(--theme-border);
+  --fx-ink: var(--theme-text);
   --fx-bg-gradient:
     radial-gradient(circle at 12% 10%, rgba(47, 127, 168, 0.12) 0%, transparent 45%),
     radial-gradient(circle at 88% 20%, rgba(95, 176, 217, 0.10) 0%, transparent 45%),
@@ -694,12 +695,13 @@ body[data-mode="income"] .tabs::before {
 }
 :root[data-theme="dark"],
 :root:not([data-theme="light"]) {
-  --fx: #4fa3cf;
-  --fx-gradient: linear-gradient(135deg, #4fa3cf 0%, #2f86b3 100%);
-  --fx-soft: rgba(79, 163, 207, 0.20);
-  --fx-glow: rgba(79, 163, 207, 0.36);
-  --fx-border: rgba(79, 163, 207, 0.50);
-  --fx-ink: #9fd3ee;
+  /* 國外交易頁沿用全站主題色（天空藍） */
+  --fx: var(--theme);
+  --fx-gradient: var(--theme-gradient);
+  --fx-soft: var(--theme-soft);
+  --fx-glow: var(--theme-glow);
+  --fx-border: var(--theme-border);
+  --fx-ink: var(--theme-text);
   --fx-bg-gradient:
     radial-gradient(circle at 12% 10%, rgba(79, 163, 207, 0.20) 0%, transparent 45%),
     radial-gradient(circle at 88% 20%, rgba(95, 176, 217, 0.14) 0%, transparent 45%),
@@ -722,12 +724,13 @@ body[data-mode="income"] .tabs::before {
   --fx-c-rest: #9a97ab;
 }
 :root[data-theme="light"] {
-  --fx: #2f7fa8;
-  --fx-gradient: linear-gradient(135deg, #3b92bd 0%, #2f7fa8 100%);
-  --fx-soft: rgba(47, 127, 168, 0.12);
-  --fx-glow: rgba(47, 127, 168, 0.28);
-  --fx-border: rgba(47, 127, 168, 0.35);
-  --fx-ink: #1d5a7a;
+  /* 國外交易頁沿用全站主題色（天空藍） */
+  --fx: var(--theme);
+  --fx-gradient: var(--theme-gradient);
+  --fx-soft: var(--theme-soft);
+  --fx-glow: var(--theme-glow);
+  --fx-border: var(--theme-border);
+  --fx-ink: var(--theme-text);
 }
 
 body[data-page="foreign"] {

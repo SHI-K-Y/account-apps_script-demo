@@ -86,7 +86,7 @@ table.full_size td { padding:0!important; }
 
   --exp-text: #b83e35;
   --inc-text: #3f7461;
-  --accent-text: var(--exp-text);
+  --accent-text: var(--theme-text);
 
   /* 圓角系統：全站只用這幾階（2026-11-14 收斂，原本散落 46 種數值）
      capsule 膠囊（晶片、分段、徽章） · card 外層卡片／面板／彈出層
@@ -161,11 +161,22 @@ table.full_size td { padding:0!important; }
   --inc-glow: rgba(95, 143, 126, 0.28);
   --inc-border: rgba(95, 143, 126, 0.35);
 
-  --accent: var(--exp);
-  --accent-gradient: var(--exp-gradient);
-  --accent-soft: var(--exp-soft);
-  --accent-glow: var(--exp-glow);
-  --accent-border: var(--exp-border);
+  /* 全站主題色：天空藍（2026-11-15 統一）
+     規則：只有「支出／收入」相關的畫面（記帳頁、支出／收入彈窗）用 --exp／--inc，
+     其餘頁面與元件一律用 --accent（預設＝--theme），不要另外替頁面挑顏色。
+     --exp／--inc 仍保留給語意用途：支出金額、收入金額、已繳／相符、錯誤／刪除。 */
+  --theme: #0284c7;
+  --theme-gradient: linear-gradient(135deg, #0b95d4 0%, #0284c7 100%);
+  --theme-soft: rgba(14, 165, 233, 0.14);
+  --theme-glow: rgba(2, 132, 199, 0.28);
+  --theme-border: rgba(2, 132, 199, 0.35);
+  --theme-text: #0369a1;
+
+  --accent: var(--theme);
+  --accent-gradient: var(--theme-gradient);
+  --accent-soft: var(--theme-soft);
+  --accent-glow: var(--theme-glow);
+  --accent-border: var(--theme-border);
   --on: #fffcf7;
 
   --shadow-card:
@@ -198,7 +209,7 @@ table.full_size td { padding:0!important; }
 @property --lg-tint {
   syntax: "<color>";
   inherits: true;
-  initial-value: #b83e35;
+  initial-value: #0771a9;
 }
 
 :root[data-theme="light"] {
@@ -416,7 +427,19 @@ table.full_size td { padding:0!important; }
   --pay-transfer-ink-hover: #9d174d;
 }
 
-body[data-mode="income"] {
+/* 支出／收入相關畫面才換成紅／綠，其餘維持天空藍主題色。
+   新增支出／收入相關的元件時，放進這些範圍內，或比照這裡加上同樣的覆寫。 */
+#pageBookkeeping,
+#editRecordModal.is-expense {
+  --accent-text: var(--exp-text);
+  --accent: var(--exp);
+  --accent-gradient: var(--exp-gradient);
+  --accent-soft: var(--exp-soft);
+  --accent-glow: var(--exp-glow);
+  --accent-border: var(--exp-border);
+}
+body[data-mode="income"] #pageBookkeeping,
+#editRecordModal.is-income {
   --accent-text: var(--inc-text);
   --accent: var(--inc);
   --accent-gradient: var(--inc-gradient);
@@ -698,6 +721,12 @@ body[data-mode="income"] {
   --lg-well-placeholder: #a8a296;
   --exp-text: #ee8f85;
   --inc-text: #86b9a7;
+  --theme: #0b95d4;
+  --theme-gradient: linear-gradient(135deg, #1ea0dc 0%, #0b95d4 100%);
+  --theme-soft: rgba(56, 189, 248, 0.20);
+  --theme-glow: rgba(56, 189, 248, 0.35);
+  --theme-border: rgba(56, 189, 248, 0.45);
+  --theme-text: #7dd3fc;
 
   --surface-1: rgba(34, 34, 36, 0.96);
   --surface-2: #2c2c2e;
