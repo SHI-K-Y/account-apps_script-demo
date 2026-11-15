@@ -621,12 +621,12 @@
   background: linear-gradient(to bottom, var(--lg-scroll-edge) 0, var(--lg-scroll-edge) 60%, transparent 100%);
   border-radius: 0;
 }
-.fx-manage-btn.is-danger, .fx-record-delete-btn {
+.fx-manage-btn.is-danger {
   background: color-mix(in srgb, var(--exp) 14%, var(--lg-group-bg));
   border-color: transparent;
   color: var(--exp-text);
 }
-.fx-manage-btn.is-danger:hover, .fx-record-delete-btn:hover:not(:disabled) {
+.fx-manage-btn.is-danger:hover {
   background: color-mix(in srgb, var(--exp) 24%, var(--lg-group-bg));
 }
 

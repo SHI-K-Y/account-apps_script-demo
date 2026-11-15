@@ -548,7 +548,7 @@ const Motion = (function() {
     '.sheet-link-btn', '.st-clear-btn', '.st-submit-btn', '.st-adjust-btn', '.cc-card-tab', '.cc-filter-btn', '.cc-paid-btn', '.cc-batch-paid-btn',
     '.oc-chip', '.oc-retry', '.oc-seg button',
     '.sr-chip', '.sr-primary-btn', '.sr-stop-btn', '.sr-clear-btn', '.sr-more-toggle', '.sr-bars-toggle', '.sr-recent-chip-main',
-    '.fx-add-btn', '.fx-chip', '.fx-cur-more-btn', '.fx-link-btn', '.fx-manage-btn', '.fx-record-delete-btn',
+    '.fx-add-btn', '.fx-chip', '.fx-cur-more-btn', '.fx-link-btn', '.fx-manage-btn',
     '.recent-date-chip', '.recent-act-btn', '.load-full-btn', '.add-month-btn', '.quick-combo-toggle', '.recent-filter-clear',
     '.card-upload-btn', '.item-modal-pick-btn', '.channel-quick-select-btn', '.quick-combo-no-amount-btn', '.today-expense-back-btn'
   ].join(', ');

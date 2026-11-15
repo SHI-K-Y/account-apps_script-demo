@@ -1712,6 +1712,7 @@ const ForeignPage = (function () {
     updateEditConvert();
     $('fxRecordSubmitBtn').disabled = false;
     openModal($('fxRecordModal'));
+    fitEditAmountPrefix();
   }
 
   function renderEditCurrency() {
@@ -1724,6 +1725,16 @@ const ForeignPage = (function () {
     $('fxEditAmountCur').textContent = ed.currency;
     $('fxEditRateCur').textContent = ed.currency;
     $('fxEditRate').disabled = ed.currency === HOME;
+    $('fxEditAmountPrefix').textContent = symOf(ed.currency).trim();
+    fitEditAmountPrefix();
+  }
+
+  function fitEditAmountPrefix() {
+    const prefix = $('fxEditAmountPrefix');
+    const input = $('fxEditAmount');
+    const w = prefix.offsetWidth;
+    if (w) input.style.setProperty('padding-left', (w + 22) + 'px', 'important');
+    else input.style.removeProperty('padding-left');
   }
 
   function setEditCurrency(cur) {
@@ -1823,23 +1834,12 @@ const ForeignPage = (function () {
     });
   }
 
-  function openDeleteRecordModal(record) {
-    let key;
-    let r;
-    if (record) {
-      key = currentKey();
-      r = record;
-      if (r.isPending) return;
-      if (isBusy(key)) {
-        showToast('資料同步中，請稍候再刪除', 'info');
-        return;
-      }
-    } else {
-      const ed = ui.recordEdit;
-      if (!ed) return;
-      key = ed.key;
-      r = ed.original;
-      closeModal($('fxRecordModal'));
+  function openDeleteRecordModal(r) {
+    const key = currentKey();
+    if (!r || r.isPending) return;
+    if (isBusy(key)) {
+      showToast('資料同步中，請稍候再刪除', 'info');
+      return;
     }
     ui.deleteRecord = { key: key, record: r };
     $('fxDeleteRecordDate').textContent = slash(r.date) || '日期不明';
@@ -2200,7 +2200,6 @@ const ForeignPage = (function () {
     $('fxRecordCloseBtn').addEventListener('click', closeRecordModal);
     $('fxRecordCancelBtn').addEventListener('click', closeRecordModal);
     $('fxRecordSubmitBtn').addEventListener('click', submitRecordModal);
-    $('fxRecordDeleteBtn').addEventListener('click', () => openDeleteRecordModal());
     $('fxEditCurrencyChoices').addEventListener('click', e => {
       const btn = e.target.closest('[data-fx-edit-cur]');
       if (btn) setEditCurrency(btn.dataset.fxEditCur);

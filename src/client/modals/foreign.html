@@ -78,41 +78,49 @@
           <div id="fxRecordModalSubtitle" class="modal-subtitle"></div>
         </div>
       </div>
-      <div class="fx-record-form">
-        <div class="fx-record-grid">
-          <div class="edit-field">
-            <label class="edit-label" for="fxEditDate">日期</label>
-            <input type="date" id="fxEditDate" class="text-input edit-input">
-          </div>
-          <div class="edit-field">
-            <label class="edit-label" for="fxEditAmount">金額（<span id="fxEditAmountCur">當地幣別</span>）</label>
-            <input type="text" id="fxEditAmount" class="text-input edit-input" inputmode="decimal" autocomplete="off" placeholder="金額">
-          </div>
-          <div class="edit-field">
-            <label class="edit-label" for="fxEditRate">匯率（1 <span id="fxEditRateCur">外幣</span> = ? NTD）</label>
-            <input type="text" id="fxEditRate" class="text-input edit-input" inputmode="decimal" autocomplete="off" placeholder="匯率">
-          </div>
-          <div class="edit-field">
-            <label class="edit-label" for="fxEditNote">備註（選填）</label>
-            <input type="text" id="fxEditNote" class="text-input edit-input" maxlength="200" placeholder="例如：午餐 拉麵">
-          </div>
-        </div>
-        <div class="fx-edit-convert" id="fxEditConvert"></div>
+
+      <div class="edit-modal-form">
         <div class="edit-field">
-          <span class="edit-label">幣別</span>
-          <div id="fxEditCurrencyChoices" class="fx-currency-row is-compact" role="group" aria-label="幣別"></div>
+          <label class="edit-label" for="fxEditDate">日期</label>
+          <input type="date" id="fxEditDate" class="text-input edit-input">
         </div>
+
         <div class="edit-field">
           <span class="edit-label">交易項目</span>
           <div id="fxEditItemChoices" class="choices edit-choices"></div>
         </div>
+
         <div class="edit-field">
           <span class="edit-label">交易方式</span>
           <div id="fxEditPaymentChoices" class="choices edit-choices"></div>
         </div>
+
+        <div class="edit-field">
+          <span class="edit-label">幣別</span>
+          <div id="fxEditCurrencyChoices" class="fx-currency-row is-compact" role="group" aria-label="幣別"></div>
+        </div>
+
+        <div class="edit-field">
+          <label class="edit-label" for="fxEditAmount">金額 (<span id="fxEditAmountCur">當地幣別</span>)</label>
+          <div class="edit-amount-wrap">
+            <span class="edit-amount-prefix" id="fxEditAmountPrefix" aria-hidden="true"></span>
+            <input type="text" id="fxEditAmount" class="text-input edit-input edit-amount-input" inputmode="decimal" autocomplete="off" placeholder="金額">
+          </div>
+          <div class="fx-edit-convert" id="fxEditConvert"></div>
+        </div>
+
+        <div class="edit-field">
+          <label class="edit-label" for="fxEditRate">匯率 (1 <span id="fxEditRateCur">外幣</span> = ? NTD)</label>
+          <input type="text" id="fxEditRate" class="text-input edit-input" inputmode="decimal" autocomplete="off" placeholder="匯率">
+        </div>
+
+        <div class="edit-field">
+          <label class="edit-label" for="fxEditNote">備註 (選填)</label>
+          <input type="text" id="fxEditNote" class="text-input edit-input" maxlength="200" placeholder="例如：午餐 拉麵">
+        </div>
       </div>
-      <div class="modal-actions fx-record-actions">
-        <button id="fxRecordDeleteBtn" class="modal-btn fx-record-delete-btn" type="button">刪除</button>
+
+      <div class="modal-actions">
         <button id="fxRecordCancelBtn" class="modal-btn modal-cancel-btn" type="button">取消</button>
         <button id="fxRecordSubmitBtn" class="modal-btn modal-submit-btn" type="button">儲存修改</button>
       </div>

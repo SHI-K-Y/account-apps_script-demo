@@ -788,35 +788,19 @@
 .fx-type-badge { background: var(--fx-soft); color: var(--fx); }
 #fxDeleteLedgerTotal,
 #fxDeleteRecordAmount { color: var(--fx); }
-.fx-record-modal-card { width: min(480px, calc(var(--vw-safe) - 28px)); }
-.fx-record-form {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin: 4px 0 14px;
-}
-.fx-record-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 12px;
-}
+/* 國外帳簿「修改國外交易」：與記帳頁「修改交易紀錄」相同的單欄排版（各尺寸一致） */
+#fxRecordModal .modal-card { width: min(560px, calc(var(--vw-safe) - 32px)); }
+#fxRecordModal .edit-choices { max-height: none; overflow-y: visible; }
+#fxRecordModal .edit-field { scroll-margin: 16px; }
+#fxRecordModal .edit-amount-input { color: var(--fx) !important; }
 .fx-edit-convert {
-  margin-top: -6px;
   font-size: 12.5px;
   font-weight: 700;
   color: var(--fx);
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
-.fx-record-actions { grid-template-columns: auto 1fr 1.3fr; }
-.fx-record-delete-btn {
-  background: transparent;
-  border: 1px solid var(--exp-border);
-  color: var(--exp);
-}
-.fx-record-delete-btn:hover:not(:disabled) { background: var(--exp-soft); }
-#fxEditPaymentChoices,
-#fxEditItemChoices { max-height: 240px; overflow-y: auto; padding: 2px; }
+.fx-edit-convert:empty { display: none; }
 
 .cal-day.fx-in-trip:not(.selected) {
   background: var(--fx-soft);
@@ -845,7 +829,6 @@
   .fx-bar-twd { font-size: 22px; }
 }
 @media (max-width: 420px) {
-  .fx-record-grid { grid-template-columns: 1fr; }
   .fx-back-btn span { display: none; }
   .fx-back-btn { padding: 0; width: 36px; justify-content: center; }
   .fx-kpi-val { font-size: 17px; }
