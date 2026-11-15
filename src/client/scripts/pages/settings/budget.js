@@ -102,37 +102,6 @@ const BudgetSettings = (function() {
 
   /* ----------------------------------- 畫面 ----------------------------------- */
 
-  /* 標題旁的 info 按鈕，點擊後在標題下方顯示說明提示框（重新繪製時會自動收起） */
-  // side＝true：提示框顯示在 icon 右側（適合很短的說明）
-  function titleWithTip(titleHtml, key, text, side) {
-    const id = 'budgetTip-' + key;
-    return '<div class="info-tip-row">' + titleHtml +
-             '<span class="info-tip' + (side ? ' is-side' : '') + '">' +
-               '<button type="button" class="info-tip-btn" data-info-tip aria-label="說明" aria-expanded="false" aria-controls="' + id + '">' +
-                 iconHtml('info') +
-               '</button>' +
-               '<span class="info-tip-bubble" id="' + id + '" role="tooltip" hidden>' + escHtml(text) + '</span>' +
-             '</span>' +
-           '</div>';
-  }
-
-  function closeTips(container, except) {
-    container.querySelectorAll('.info-tip-btn[aria-expanded="true"]').forEach(btn => {
-      if (btn === except) return;
-      btn.setAttribute('aria-expanded', 'false');
-      const bubble = document.getElementById(btn.getAttribute('aria-controls'));
-      if (bubble) bubble.hidden = true;
-    });
-  }
-
-  function toggleTip(container, btn) {
-    closeTips(container, btn);
-    const open = btn.getAttribute('aria-expanded') !== 'true';
-    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    const bubble = document.getElementById(btn.getAttribute('aria-controls'));
-    if (bubble) bubble.hidden = !open;
-  }
-
   function statusHtml(s) {
     if (!s || !s.configured) {
       return '<div class="pref-card budget-status"><div class="pref-card-title">本月尚未設定預算</div>' +
@@ -146,7 +115,7 @@ const BudgetSettings = (function() {
     const title = '<div class="pref-card-title">本月預算 ' + money(s.amount) + '</div>';
     return '<div class="pref-card budget-status">' +
              (Number(s.excludedSpent) > 0
-               ? titleWithTip(title, 'excluded', '另有排除項目 ' + money(s.excludedSpent) + '（' + (s.excludedItems || []).join('、') + '）未計入預算')
+               ? InfoTip.withTitle(title, 'budgetTip-excluded', '另有排除項目 ' + money(s.excludedSpent) + '（' + (s.excludedItems || []).join('、') + '）未計入預算')
                : title) +
              '<div class="budget-status-grid">' +
                '<span><small>已花</small>' + money(s.spent) + '</span>' +
@@ -177,7 +146,7 @@ const BudgetSettings = (function() {
 
     return '<div class="pref-card">' +
              '<div class="pref-card-text">' +
-               titleWithTip('<label class="pref-card-title" for="budgetMonthSelect">套用月份</label>', 'month',
+               InfoTip.withTitle('<label class="pref-card-title" for="budgetMonthSelect">套用月份</label>', 'budgetTip-month',
                  '修改只影響所選月份與之後，過去月份的預算不會被改動。之後若有月份另外設定過，會保留那個月份自己的設定。') +
                '<div class="pref-card-note">' + escHtml(note) + '</div>' +
              '</div>' +
@@ -229,7 +198,7 @@ const BudgetSettings = (function() {
     if (d.source === 'income') {
       return '<div class="pref-card">' +
                '<div class="pref-card-text">' +
-                 titleWithTip('<div class="pref-card-title">算進預算的收入項目</div>', 'income', '預設為全選', true) +
+                 InfoTip.withTitle('<div class="pref-card-title">算進預算的收入項目</div>', 'budgetTip-income', '預設為全選', { side: true }) +
                '</div>' +
                chipsHtml(options().incomeItems, d.incomeItems, 'data-budget-income') +
              '</div>';
@@ -263,7 +232,7 @@ const BudgetSettings = (function() {
     const canAdd = items.some(name => used.indexOf(name) === -1);
     return '<div class="pref-card">' +
              '<div class="pref-card-text">' +
-               titleWithTip('<div class="pref-card-title">不計入每日額度的項目</div>', 'reserve',
+               InfoTip.withTitle('<div class="pref-card-title">不計入每日額度的項目</div>', 'budgetTip-reserve',
                  '例如房租、電信費。月初就先從預算扣掉「預留金額」，付款時在預留範圍內的部分不算進當天的花費，付多的部分才算；這些支出照樣算進本月已花。') +
              '</div>' +
              (rows ? '<div class="budget-reserve-list">' + rows + '</div>' : '') +
@@ -435,14 +404,7 @@ const BudgetSettings = (function() {
     if (container._budgetBound) return;
     container._budgetBound = true;
 
-    // 點提示框以外的地方就收起
-    document.addEventListener('click', e => {
-      if (!e.target.closest || !e.target.closest('.info-tip')) closeTips(container);
-    });
-
     container.addEventListener('click', e => {
-      const tipBtn = e.target.closest('[data-info-tip]');
-      if (tipBtn) { toggleTip(container, tipBtn); return; }
       if (settingsState.currentTab !== 'budget' || !st.draft) {
         if (e.target.closest('[data-budget-retry]')) { st.error = ''; render(container); }
         return;
@@ -485,10 +447,6 @@ const BudgetSettings = (function() {
     });
 
     container.addEventListener('keydown', e => {
-      if (e.key === 'Escape') {
-        const open = container.querySelector('.info-tip-btn[aria-expanded="true"]');
-        if (open) { closeTips(container); open.focus(); return; }
-      }
       const btn = e.target.closest && e.target.closest('[data-budget-source]');
       if (btn) {
         const step = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : (e.key === 'ArrowLeft' || e.key === 'ArrowUp') ? -1 : 0;

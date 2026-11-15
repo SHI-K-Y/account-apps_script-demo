@@ -180,9 +180,9 @@ const ReminderSettings = (function() {
           '<input class="text-input rmd-time-input" type="time" step="60" required data-rmd-time="' + idx + '" value="' + escAttr(r.time) + '"' +
             ' aria-label="' + escAttr(label) + ' 幾點後還沒記就提醒">' +
         '</label>' +
+        InfoTip.html('rmdTip-' + idx, summaryText(r), { under: true, label: label + ' 提醒說明', bubbleAttrs: 'data-rmd-summary="' + idx + '"' }) +
       '</div>' +
       scheduleExtraHtml(r, idx) +
-      '<div class="rmd-summary" data-rmd-summary="' + idx + '">' + escHtml(summaryText(r)) + '</div>' +
       '<div class="rmd-msg" data-rmd-msg="' + idx + '" data-tone="' + msgTone(iss) + '"' + (msgText(iss) ? (iss.error ? ' role="alert"' : '') : ' hidden') + '>' + escHtml(msgText(iss)) + '</div>' +
       '<div class="rmd-status" data-rmd-status="' + idx + '" data-tone="' + info.tone + '"' + (info.text && !iss.error && !iss.warn ? '' : ' hidden') + '>' +
         '<span class="rmd-status-dot" aria-hidden="true"></span><span data-rmd-status-text>' + escHtml(info.text) + '</span>' +
@@ -191,7 +191,7 @@ const ReminderSettings = (function() {
   }
 
   function actionsHtml(hasError, dirty) {
-    return (dirty ? '<span class="meal-dirty-note is-dirty">尚未儲存</span>' : '<span class="meal-dirty-note">儲存後所有裝置都會套用</span>') +
+    return (dirty ? '<span class="meal-dirty-note is-dirty">尚未儲存</span>' : '') +
       '<button type="button" class="settings-add-btn budget-save-btn" data-rmd-save' + (st.saving || hasError || !dirty ? ' disabled' : '') + '>' +
         iconHtml(st.saving ? 'spinner-gap' : 'check', 'regular', 'ic-16' + (st.saving ? ' spinner' : '')) +
         (st.saving ? '儲存中…' : '儲存') +
@@ -210,14 +210,12 @@ const ReminderSettings = (function() {
       '<div class="settings-list-header">' +
         '<div class="settings-list-title-wrap">' +
           '<span class="settings-list-title">記帳提醒</span>' +
-          '<span class="settings-order-hint">儲存後所有裝置都會套用</span>' +
         '</div>' +
       '</div>' +
       '<div class="pref-list rmd-settings">' +
         '<div class="pref-card pref-card-row">' +
           '<div class="pref-card-text">' +
             '<div class="pref-card-title" id="rmdEnabledTitle">打開記帳簿時提醒還沒記的帳</div>' +
-            '<div class="pref-card-desc">過了設定的時間還沒記，打開記帳簿就會跳出提醒；已經記了就不會出現</div>' +
           '</div>' +
           '<button type="button" class="pref-switch' + (d.enabled ? ' is-on' : '') + '" role="switch" data-rmd-master' +
             ' aria-checked="' + (d.enabled ? 'true' : 'false') + '" aria-labelledby="rmdEnabledTitle">' +
@@ -227,7 +225,6 @@ const ReminderSettings = (function() {
         '<div class="pref-card' + (d.enabled ? '' : ' is-muted') + '">' +
           '<div class="pref-card-text">' +
             '<div class="pref-card-title">提醒</div>' +
-            '<div class="pref-card-desc">每天、每週：看當天有沒有記；每月：從設定日起看這個月有沒有記（月初就先記好也算），沒打開的那天之後打開仍會提醒到月底</div>' +
           '</div>' +
           (rows ? '<ul class="rmd-list">' + rows + '</ul>' : '<div class="meal-slot-empty">尚未設定任何提醒</div>') +
           (canAdd ? '<button type="button" class="budget-add-reserve" data-rmd-add>' + iconHtml('plus', 'regular', 'ic-14') + '新增提醒</button>' : '') +

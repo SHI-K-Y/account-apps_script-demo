@@ -80,17 +80,6 @@ const MealSlotSettings = (function() {
     });
   }
 
-  function suggestionNow(d) {
-    const now = new Date();
-    const hhmm = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-    if (!d.enabled) return '目前已關閉，記帳頁不會自動預選項目';
-    const minutes = now.getHours() * 60 + now.getMinutes();
-    const slot = d.slots.find(s => MealSlots.contains(s, minutes));
-    if (!slot) return '現在 ' + hhmm + ' 不在任何時段內，記帳頁不會預選項目';
-    if (expenseItems().indexOf(slot.item) === -1) return '現在 ' + hhmm + ' 對應的「' + slot.item + '」已不存在，不會預選項目';
-    return '現在 ' + hhmm + ' 打開記帳頁，會預選「' + slot.item + '」';
-  }
-
   /* ---------------------------------- 畫面 ---------------------------------- */
 
   function timelineHtml(d) {
@@ -158,8 +147,6 @@ const MealSlotSettings = (function() {
     const list = issues(d);
     const tl = container.querySelector('[data-meal-tl]');
     if (tl) tl.outerHTML = timelineHtml(d);
-    const note = container.querySelector('[data-meal-now]');
-    if (note) note.textContent = suggestionNow(d);
     list.forEach((issue, idx) => {
       const el = container.querySelector('[data-meal-msg="' + idx + '"]');
       if (!el) return;
@@ -202,15 +189,12 @@ const MealSlotSettings = (function() {
       '<div class="settings-list-header">' +
         '<div class="settings-list-title-wrap">' +
           '<span class="settings-list-title">時段建議</span>' +
-          '<span class="settings-order-hint">儲存後所有裝置都會套用</span>' +
         '</div>' +
       '</div>' +
       '<div class="pref-list meal-settings">' +
         '<div class="pref-card pref-card-row">' +
           '<div class="pref-card-text">' +
             '<div class="pref-card-title" id="mealEnabledTitle">依時間自動建議記帳項目</div>' +
-            '<div class="pref-card-desc">記帳日期是今天時，依現在時間先幫你選好項目並標上「建議」；你自己點選的項目不會被換掉</div>' +
-            '<div class="pref-card-note" data-meal-now>' + escHtml(suggestionNow(d)) + '</div>' +
           '</div>' +
           '<button type="button" class="pref-switch' + (d.enabled ? ' is-on' : '') + '" role="switch" data-meal-toggle' +
             ' aria-checked="' + (d.enabled ? 'true' : 'false') + '" aria-labelledby="mealEnabledTitle">' +
@@ -219,8 +203,8 @@ const MealSlotSettings = (function() {
         '</div>' +
         '<div class="pref-card' + (d.enabled ? '' : ' is-muted') + '">' +
           '<div class="pref-card-text">' +
-            '<div class="pref-card-title">時段</div>' +
-            '<div class="pref-card-desc">時段之間不能重疊；開始時間晚於結束時間代表跨午夜（例如 22:00–01:59 宵夜）</div>' +
+            InfoTip.withTitle('<div class="pref-card-title">時段</div>', 'mealTip-slots',
+              '時段之間不能重疊；開始時間晚於結束時間代表跨午夜（例如 22:00–01:59 宵夜）') +
           '</div>' +
           timelineHtml(d) +
           (rows ? '<ul class="meal-slot-list">' + rows + '</ul>' : '<div class="meal-slot-empty">尚未設定任何時段</div>') +

@@ -113,7 +113,7 @@
   border-top: 0;
   padding-top: 2px;
 }
-.rmd-row.is-off :is(.rmd-line-when, .rmd-weekdays, .rmd-monthday, .rmd-summary) {
+.rmd-row.is-off :is(.rmd-line-when, .rmd-weekdays, .rmd-monthday) {
   opacity: 0.5;
 }
 
@@ -134,10 +134,14 @@
 
 /* 第二行：每天／每週／每月、時間（窄螢幕自動換行） */
 .rmd-line-when {
+  position: relative; /* 時間右側的說明（info）：提示框以整行為定位容器，顯示在 icon 正下方 */
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 12px;
+}
+.rmd-line-when .info-tip {
+  margin-left: -6px; /* 和時間欄位靠近一點，看得出是在說明這組設定 */
 }
 .rmd-line-when .rmd-seg {
   flex: 1 1 180px;
@@ -216,13 +220,6 @@
 }
 
 /* 說明與目前狀態 */
-.rmd-summary {
-  font-size: 12.5px;
-  font-weight: 650;
-  line-height: 1.5;
-  color: var(--muted);
-}
-.rmd-summary:empty { display: none; }
 .rmd-msg {
   font-size: 12px;
   font-weight: 700;
