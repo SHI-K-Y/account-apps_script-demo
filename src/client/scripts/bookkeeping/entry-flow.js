@@ -257,15 +257,7 @@ function syncExpenseItemSelectionUI() {
 }
 
 function getSuggestedExpenseItem() {
-  const now = new Date();
-  const minutes = now.getHours() * 60 + now.getMinutes();
-  const toMinutes = time => {
-    const [hour, minute] = time.split(':').map(Number);
-    return hour * 60 + minute;
-  };
-  const slot = MEAL_TIME_SLOTS.find(s => minutes >= toMinutes(s.start) && minutes <= toMinutes(s.end));
-  const items = state.data.options.expenseItems;
-  return slot && Array.isArray(items) && items.includes(slot.item) ? slot.item : '';
+  return MealSlots.match(new Date(), state.data.options.expenseItems);
 }
 
 function applySuggestedExpenseItem() {

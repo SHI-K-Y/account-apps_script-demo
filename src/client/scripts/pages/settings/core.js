@@ -6,6 +6,7 @@ var SETTINGS_TAB_LABELS = {
   paymentMethods: '支出方式',
   quickCombos: '常用組合',
   budget: '預算',
+  mealSlots: '時段建議',
 };
 
 var ICON_CATEGORIES = {
@@ -318,7 +319,7 @@ function updateSettingsTopControls() {
   var emojiPickBtn = document.getElementById('settingsEmojiPickBtn');
   var newInput = document.getElementById('settingsNewInput');
 
-  if (tab === 'preferences' || tab === 'budget') {
+  if (tab === 'preferences' || tab === 'budget' || tab === 'mealSlots') {
     if (paySubnav) paySubnav.style.display = 'none';
     if (payActionBar) payActionBar.style.display = 'none';
     if (topActionBar) topActionBar.style.display = 'none';
@@ -578,13 +579,14 @@ function loadSettings(forceRefresh) {
   updateSettingsTopControls();
 
   if (forceRefresh) BudgetSettings.invalidate();
+  if (forceRefresh) MealSlotSettings.invalidate();
 
   if (!forceRefresh && settingsState.data) {
     renderSettingsList();
     return;
   }
 
-  if (settingsState.currentTab === 'preferences' || settingsState.currentTab === 'budget') {
+  if (settingsState.currentTab === 'preferences' || settingsState.currentTab === 'budget' || settingsState.currentTab === 'mealSlots') {
     renderSettingsList();
   } else {
     container.innerHTML =
@@ -615,6 +617,7 @@ function loadSettings(forceRefresh) {
         }
       }
       ensureMetadataInitialized();
+      MealSlotSettings.invalidate();
       var hadSkeleton = Boolean(container.querySelector('.overview-skeleton'));
       renderSettingsList();
       if (hadSkeleton) Motion.revealCards(container);
@@ -626,7 +629,7 @@ function loadSettings(forceRefresh) {
     .withFailureHandler(function(err) {
       settingsState.loading = false;
       RefreshSpin.stopAll();
-      if (settingsState.currentTab === 'preferences' || settingsState.currentTab === 'budget') {
+      if (settingsState.currentTab === 'preferences' || settingsState.currentTab === 'budget' || settingsState.currentTab === 'mealSlots') {
         showToast('載入設定失敗：' + (err.message || err), 'error');
         return;
       }

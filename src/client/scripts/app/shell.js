@@ -183,6 +183,10 @@ function bindStaticEvents() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') applySuggestedExpenseItem();
   });
+  // 頁面一直開著時跨過時段邊界（例如 14:29 → 14:30），建議也要跟著換；使用者自己選的項目不受影響。
+  setInterval(() => {
+    if (document.visibilityState === 'visible') applySuggestedExpenseItem();
+  }, 60000);
   const backTodayBtn = document.getElementById('todayExpenseBackTodayBtn');
   if (backTodayBtn) {
     backTodayBtn.addEventListener('click', () => {

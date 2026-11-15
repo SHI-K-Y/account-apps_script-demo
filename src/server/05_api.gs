@@ -59,6 +59,7 @@ function apiRoutes_() {
     updateSettingsOption:   { handler: updateSettingsOption_, write: true },
     reorderSettingsOptions: { handler: reorderSettingsOptions_, write: true },
     saveQuickCombos:        { handler: saveQuickCombos_, write: true },
+    saveMealSlots:          { handler: saveMealSlots_, form: true, write: true },
     savePaymentSettingsConfig: { handler: savePaymentSettingsConfig_, write: true },
 
     // 預算

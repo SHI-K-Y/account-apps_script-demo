@@ -21,7 +21,8 @@
     "19-glass-components.css",
     "20-uiverse-effects.css",
     "21-ux-enhancements.css",
-    "22-budget.css"
+    "22-budget.css",
+    "23-meal-slots.css"
   ],
   "scripts": [
     "core/env.js",
@@ -66,6 +67,7 @@
     "pages/settings/bank-modal.js",
     "pages/settings/quick-combos.js",
     "pages/settings/budget.js",
+    "pages/settings/meal-slots.js",
     "pages/settings/persist.js",
     "pages/search.js",
     "pages/foreign.js"

@@ -12,6 +12,11 @@ function renderSettingsList() {
     return;
   }
 
+  if (settingsState.currentTab === 'mealSlots') {
+    MealSlotSettings.render(container);
+    return;
+  }
+
   if (!settingsState.data) return;
 
   ensureMetadataInitialized();

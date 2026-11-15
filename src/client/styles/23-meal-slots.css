@@ -1,0 +1,166 @@
+/* ============================================================================
+ * 設定頁：時段建議（pages/settings/meal-slots.js）
+ * 版面沿用偏好設定／預算的 .pref-card 與 .budget-actions，這裡只補時段列與時間軸。
+ * 只使用既有的色彩變數，深色模式自動跟著切換。
+ * ========================================================================== */
+.meal-settings {
+  --meal-tone-0: var(--warn);
+  --meal-tone-1: var(--jade);
+  --meal-tone-2: var(--exp);
+  --meal-tone-3: color-mix(in srgb, var(--cat-living-ink) 70%, #fff);
+  --meal-tone-4: color-mix(in srgb, var(--cat-entertainment-ink) 65%, #fff);
+  --meal-tone-5: color-mix(in srgb, var(--cat-sport-ink) 65%, #fff);
+}
+.meal-settings .tone-0 { --tone: var(--meal-tone-0); }
+.meal-settings .tone-1 { --tone: var(--meal-tone-1); }
+.meal-settings .tone-2 { --tone: var(--meal-tone-2); }
+.meal-settings .tone-3 { --tone: var(--meal-tone-3); }
+.meal-settings .tone-4 { --tone: var(--meal-tone-4); }
+.meal-settings .tone-5 { --tone: var(--meal-tone-5); }
+
+.meal-settings .pref-card.is-muted .meal-tl,
+.meal-settings .pref-card.is-muted .meal-slot-list {
+  opacity: 0.55;
+}
+
+/* ------------------------------ 24 小時時間軸 ------------------------------ */
+.meal-tl {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.meal-tl-track {
+  position: relative;
+  height: 14px;
+  border-radius: var(--lg-radius-capsule);
+  background: var(--glass-chip);
+  box-shadow: inset 0 0 0 1px var(--glass-border-subtle);
+  overflow: hidden;
+}
+.meal-tl-seg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--tone);
+}
+.meal-tl.is-off .meal-tl-seg {
+  filter: grayscale(1);
+}
+.meal-tl-now {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink);
+  box-shadow: 0 0 0 1px var(--hl);
+}
+.meal-tl-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------- 時段列 --------------------------------- */
+.meal-slot-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* 手機：第一行「色點＋項目＋移除」，第二行起訖時間 */
+.meal-slot-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "dot item remove"
+    ".   times times"
+    ".   msg   msg";
+  align-items: center;
+  gap: 8px;
+}
+@media (min-width: 560px) {
+  .meal-slot-row {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "dot item times remove"
+      ".   msg  msg   msg";
+  }
+}
+.meal-slot-dot {
+  grid-area: dot;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--tone);
+}
+.meal-slot-item {
+  grid-area: item;
+  min-width: 0;
+  width: 100%;
+}
+.meal-slot-times {
+  grid-area: times;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.meal-slot-time {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 10px;
+  font-size: 15px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 560px) {
+  .meal-slot-time { flex: none; width: 148px; }
+}
+.meal-slot-row.has-error .meal-slot-time {
+  border-color: color-mix(in srgb, var(--danger) 60%, transparent);
+}
+.meal-slot-sep {
+  color: var(--muted);
+  font-weight: 800;
+}
+.meal-slot-remove {
+  grid-area: remove;
+}
+.meal-slot-msg {
+  grid-area: msg;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.meal-slot-msg[hidden] { display: none; }
+.meal-slot-msg[data-tone="is-error"] { color: var(--danger); }
+.meal-slot-msg[data-tone="is-warn"] { color: var(--warn-text); }
+
+.meal-slot-empty {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--subtle);
+}
+
+/* --------------------------------- 底部動作 --------------------------------- */
+.meal-dirty-note {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--subtle);
+}
+.meal-dirty-note.is-dirty {
+  color: var(--warn-text);
+}
+.meal-actions .budget-save-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
