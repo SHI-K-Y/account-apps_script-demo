@@ -22,7 +22,8 @@
     "20-uiverse-effects.css",
     "21-ux-enhancements.css",
     "22-budget.css",
-    "23-meal-slots.css"
+    "23-meal-slots.css",
+    "24-reminders.css"
   ],
   "scripts": [
     "core/env.js",
@@ -35,6 +36,7 @@
     "core/local-cache.js",
     "core/image-optimizer.js",
     "core/state.js",
+    "core/reminders.js",
     "core/icons.js",
     "core/modal-manager.js",
     "core/calendar.js",
@@ -54,6 +56,7 @@
     "charts/overview-charts.js",
     "app/router.js",
     "app/ux.js",
+    "app/reminder-prompt.js",
     "pages/overview.js",
     "pages/settlement.js",
     "pages/credit-card.js",
@@ -68,6 +71,7 @@
     "pages/settings/quick-combos.js",
     "pages/settings/budget.js",
     "pages/settings/meal-slots.js",
+    "pages/settings/reminders.js",
     "pages/settings/persist.js",
     "pages/search.js",
     "pages/foreign.js"

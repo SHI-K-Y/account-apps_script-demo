@@ -82,6 +82,7 @@ function renderRecent(data) {
   updateLoadFullButton('income', incFull, incRecords.length);
 
   updateTodayExpenseUI();
+  ReminderPrompt.onRecordsChanged();
 }
 
 function updateTodayExpenseUI() {

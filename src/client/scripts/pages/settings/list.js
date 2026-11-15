@@ -17,6 +17,11 @@ function renderSettingsList() {
     return;
   }
 
+  if (settingsState.currentTab === 'reminders') {
+    ReminderSettings.render(container);
+    return;
+  }
+
   if (!settingsState.data) return;
 
   ensureMetadataInitialized();

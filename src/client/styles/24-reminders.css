@@ -1,0 +1,253 @@
+/* ============================================================================
+ * 記帳提醒
+ *   1. 打開記帳簿時跳出的提醒卡片（modals/reminder.html、app/reminder-prompt.js）
+ *   2. 設定頁「記帳提醒」分頁（pages/settings/reminders.js）
+ * 版面沿用 .modal-card、.pref-card、.budget-actions；只使用既有的色彩變數，深色模式自動跟著切換。
+ * ========================================================================== */
+
+/* -------------------------------- 1. 提醒卡片 -------------------------------- */
+.reminder-card {
+  width: min(380px, calc(var(--vw-safe) - 32px));
+  padding: 26px 20px 14px;
+}
+.reminder-header {
+  margin-bottom: 20px;
+}
+.modal-icon.reminder-icon {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  box-shadow: 0 4px 16px var(--accent-soft);
+}
+.reminder-kicker {
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.reminder-desc {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.reminder-actions .modal-submit-btn {
+  gap: 4px;
+}
+.reminder-snooze-btn {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 6px;
+  border: 0;
+  border-radius: var(--lg-radius-control);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+.reminder-snooze-btn:hover {
+  color: var(--ink);
+  background: var(--glass-chip);
+}
+.reminder-snooze-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.reminder-more {
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--hairline);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--subtle);
+  text-align: center;
+}
+.reminder-more[hidden] { display: none; }
+
+/* 跳出時鈴鐺輕晃一次（動畫設定為精簡／關閉或系統減少動態效果時不晃） */
+.reminder-modal.show .reminder-icon i {
+  animation: reminder-ring 0.9s var(--ease-out) 0.18s 1 both;
+  transform-origin: 50% 8%;
+}
+@keyframes reminder-ring {
+  0%, 100% { transform: rotate(0); }
+  15% { transform: rotate(14deg); }
+  30% { transform: rotate(-12deg); }
+  45% { transform: rotate(8deg); }
+  60% { transform: rotate(-5deg); }
+  75% { transform: rotate(2deg); }
+}
+:root[data-motion="lite"] .reminder-modal .reminder-icon i,
+:root[data-motion="off"] .reminder-modal .reminder-icon i {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reminder-modal .reminder-icon i { animation: none; }
+}
+
+/* ------------------------------ 2. 設定頁：提醒列 ------------------------------ */
+.rmd-settings .pref-card.is-muted .rmd-list {
+  opacity: 0.55;
+}
+.rmd-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.rmd-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 0;
+  border-top: 1px solid var(--hairline);
+}
+.rmd-row:first-child {
+  border-top: 0;
+  padding-top: 2px;
+}
+.rmd-row.is-off :is(.rmd-line-when, .rmd-weekdays, .rmd-monthday, .rmd-summary) {
+  opacity: 0.5;
+}
+
+/* 第一行：開關、支出／收入、項目、移除 */
+.rmd-line-what {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+.rmd-item {
+  min-width: 0;
+  width: 100%;
+}
+.rmd-remove {
+  flex: none;
+}
+
+/* 第二行：每天／每週／每月、時間（窄螢幕自動換行） */
+.rmd-line-when {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.rmd-line-when .rmd-seg {
+  flex: 1 1 180px;
+}
+.rmd-seg {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+}
+.rmd-seg .pref-seg-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.rmd-time,
+.rmd-monthday {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.rmd-field-label {
+  font-size: 12.5px;
+  font-weight: 750;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.rmd-time-input {
+  width: 128px;
+  min-height: 40px;
+  padding: 0 10px;
+  font-size: 15px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.rmd-row.has-error .rmd-time-input:invalid {
+  border-color: color-mix(in srgb, var(--danger) 60%, transparent);
+}
+.rmd-monthday-select {
+  width: auto;
+  min-width: 96px;
+}
+
+/* 每週：星期一到日 */
+.rmd-weekdays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rmd-day {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--lg-well-bg);
+  box-shadow: var(--lg-well-shadow);
+  color: var(--muted);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.rmd-day:hover:not(.is-on) {
+  color: var(--ink);
+}
+.rmd-day.is-on {
+  background: color-mix(in srgb, var(--accent) var(--lg-tint-mix), var(--lg-tint-deepen));
+  box-shadow: var(--lg-rim);
+  color: var(--on);
+}
+.rmd-day:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 說明與目前狀態 */
+.rmd-summary {
+  font-size: 12.5px;
+  font-weight: 650;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.rmd-summary:empty { display: none; }
+.rmd-msg {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.rmd-msg[hidden] { display: none; }
+.rmd-msg[data-tone="error"] { color: var(--danger); }
+.rmd-msg[data-tone="warn"] { color: var(--warn-text); }
+.rmd-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 750;
+  line-height: 1.45;
+  color: var(--subtle);
+}
+.rmd-status[hidden] { display: none; }
+.rmd-status-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.rmd-status[data-tone="done"] { color: var(--jade); }
+.rmd-status[data-tone="due"] { color: var(--warn-text); }

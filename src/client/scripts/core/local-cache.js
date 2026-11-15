@@ -288,5 +288,17 @@ const LocalCache = {
 
   saveFxHintHiddenDate: function(iso) {
     try { localStorage.setItem(this.KEY_FX_HINT_HIDDEN, iso || ''); } catch (e) {}
+  },
+
+  /* 記帳提醒「今日不再顯示」：{ date, keys }，日期不是今天就視為沒有（隔天自動恢復）。 */
+  KEY_REMINDER_SNOOZE: 'FAST_BOOKKEEPING_REMINDER_SNOOZE_V1',
+
+  getReminderSnooze: function(todayISO) {
+    const data = this._getJson(this.KEY_REMINDER_SNOOZE);
+    return data && data.date === todayISO && Array.isArray(data.keys) ? data.keys.slice() : [];
+  },
+
+  saveReminderSnooze: function(todayISO, keys) {
+    this._setJson(this.KEY_REMINDER_SNOOZE, { date: todayISO, keys: Array.isArray(keys) ? keys : [] });
   }
 };

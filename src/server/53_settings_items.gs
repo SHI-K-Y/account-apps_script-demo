@@ -80,6 +80,7 @@ function saveSettingsItemWithEmoji_(categoryOrPayload, valueArg, emojiArg, rowNu
       delete meta.emojis[oldText];
       renameQuickComboOption_(meta, category, oldText, cleanText);
       renameMealSlotOption_(meta, category, oldText, cleanText);
+      renameRecordReminderOption_(meta, category, oldText, cleanText);
     }
     const cleanEmoji = String(emoji || '').trim();
     if (cleanEmoji) {

@@ -56,6 +56,9 @@ function init() {
     setLoading(true);
     syncInitialDataInBackground(false);
   }
+
+  // 記帳提醒：有背景同步時會等同步結束，用最新資料判斷
+  ReminderPrompt.start();
 }
 
 function applyInitialData(data, opts) {
@@ -121,13 +124,15 @@ function applyInitialData(data, opts) {
 
 function syncInitialDataInBackground(forceRefresh) {
   const syncVersion = state.mutationVersion;
+  ReminderPrompt.syncStarted();
   Api.server
     .withSuccessHandler(data => {
       setLoading(false);
-      if (syncVersion !== state.mutationVersion) return;
-      if (!data) return;
-      applyInitialData(data, { isBackgroundSync: true });
-      LocalCache.saveBoot(state.data);
+      if (syncVersion === state.mutationVersion && data) {
+        applyInitialData(data, { isBackgroundSync: true });
+        LocalCache.saveBoot(state.data);
+      }
+      ReminderPrompt.syncFinished();
     })
     .withFailureHandler(err => {
       setLoading(false);
@@ -136,6 +141,7 @@ function syncInitialDataInBackground(forceRefresh) {
       } else {
         console.warn('Background sync error:', err);
       }
+      ReminderPrompt.syncFinished();
     })
     .getInitialData(Boolean(forceRefresh));
 }

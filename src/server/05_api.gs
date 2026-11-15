@@ -60,6 +60,7 @@ function apiRoutes_() {
     reorderSettingsOptions: { handler: reorderSettingsOptions_, write: true },
     saveQuickCombos:        { handler: saveQuickCombos_, write: true },
     saveMealSlots:          { handler: saveMealSlots_, form: true, write: true },
+    saveRecordReminders:    { handler: saveRecordReminders_, form: true, write: true },
     savePaymentSettingsConfig: { handler: savePaymentSettingsConfig_, write: true },
 
     // 預算

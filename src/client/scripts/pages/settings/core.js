@@ -7,7 +7,14 @@ var SETTINGS_TAB_LABELS = {
   quickCombos: '常用組合',
   budget: '預算',
   mealSlots: '時段建議',
+  reminders: '記帳提醒',
 };
+
+/* 不是清單、自己畫整個面板的分頁：不顯示上方的新增列與支出方式子選單 */
+var SETTINGS_PANEL_TABS = ['preferences', 'budget', 'mealSlots', 'reminders'];
+function isSettingsPanelTab(tab) {
+  return SETTINGS_PANEL_TABS.indexOf(tab) !== -1;
+}
 
 var ICON_CATEGORIES = {
   '餐飲美食': ['egg', 'bowl-food', 'cooking-pot', 'cookie', 'pint-glass', 'fork-knife', 'bowl-steam', 'hamburger', 'pizza', 'fish-simple', 'bread', 'coffee', 'beer-stein', 'orange-slice', 'leaf', 'cake', 'fire', 'ice-cream', 'wine', 'martini', 'carrot', 'avocado', 'popcorn', 'knife'],
@@ -319,7 +326,7 @@ function updateSettingsTopControls() {
   var emojiPickBtn = document.getElementById('settingsEmojiPickBtn');
   var newInput = document.getElementById('settingsNewInput');
 
-  if (tab === 'preferences' || tab === 'budget' || tab === 'mealSlots') {
+  if (isSettingsPanelTab(tab)) {
     if (paySubnav) paySubnav.style.display = 'none';
     if (payActionBar) payActionBar.style.display = 'none';
     if (topActionBar) topActionBar.style.display = 'none';
@@ -580,13 +587,14 @@ function loadSettings(forceRefresh) {
 
   if (forceRefresh) BudgetSettings.invalidate();
   if (forceRefresh) MealSlotSettings.invalidate();
+  if (forceRefresh) ReminderSettings.invalidate();
 
   if (!forceRefresh && settingsState.data) {
     renderSettingsList();
     return;
   }
 
-  if (settingsState.currentTab === 'preferences' || settingsState.currentTab === 'budget' || settingsState.currentTab === 'mealSlots') {
+  if (isSettingsPanelTab(settingsState.currentTab)) {
     renderSettingsList();
   } else {
     container.innerHTML =
@@ -618,6 +626,7 @@ function loadSettings(forceRefresh) {
       }
       ensureMetadataInitialized();
       MealSlotSettings.invalidate();
+      ReminderSettings.invalidate();
       var hadSkeleton = Boolean(container.querySelector('.overview-skeleton'));
       renderSettingsList();
       if (hadSkeleton) Motion.revealCards(container);
@@ -629,7 +638,7 @@ function loadSettings(forceRefresh) {
     .withFailureHandler(function(err) {
       settingsState.loading = false;
       RefreshSpin.stopAll();
-      if (settingsState.currentTab === 'preferences' || settingsState.currentTab === 'budget' || settingsState.currentTab === 'mealSlots') {
+      if (isSettingsPanelTab(settingsState.currentTab)) {
         showToast('載入設定失敗：' + (err.message || err), 'error');
         return;
       }
