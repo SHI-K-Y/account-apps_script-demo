@@ -356,3 +356,73 @@
 @media (prefers-reduced-motion: reduce) {
   .oc-budget-fill { transition: none; }
 }
+
+/* 標題旁的 info 提示框：點按鈕展開，提示框對齊整列寬度，避免窄螢幕溢出 */
+.info-tip-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.info-tip {
+  display: inline-flex;
+}
+.info-tip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: -4px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font-size: 17px;
+  cursor: pointer;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+.info-tip-btn:hover,
+.info-tip-btn[aria-expanded="true"] {
+  color: var(--ink);
+  background: var(--glass-surface-subtle);
+}
+.info-tip-btn:focus-visible {
+  outline: 2px solid var(--lg-focus);
+  outline-offset: 1px;
+}
+.info-tip-bubble {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  width: max-content;
+  max-width: min(360px, 100%);
+  padding: 10px 12px;
+  background-color: rgb(var(--lg-glass-rgb) / min(1, calc(var(--lg-alpha-thick) + 0.30)));
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: var(--lg-blur-thick);
+  backdrop-filter: var(--lg-blur-thick);
+  border-radius: var(--lg-radius-sm);
+  box-shadow: var(--lg-lens), var(--lg-ring), var(--lg-shadow-float);
+  font-size: 12.5px;
+  font-weight: 650;
+  line-height: 1.55;
+  color: var(--ink);
+}
+/* 側邊版：提示框貼在 icon 右側、垂直置中 */
+.info-tip.is-side {
+  position: relative;
+}
+.info-tip.is-side .info-tip-bubble {
+  top: 50%;
+  left: calc(100% + 6px);
+  transform: translateY(-50%);
+  max-width: none;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+.info-tip-bubble[hidden] {
+  display: none;
+}

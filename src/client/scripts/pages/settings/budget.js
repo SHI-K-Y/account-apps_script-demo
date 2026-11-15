@@ -102,6 +102,37 @@ const BudgetSettings = (function() {
 
   /* ----------------------------------- 畫面 ----------------------------------- */
 
+  /* 標題旁的 info 按鈕，點擊後在標題下方顯示說明提示框（重新繪製時會自動收起） */
+  // side＝true：提示框顯示在 icon 右側（適合很短的說明）
+  function titleWithTip(titleHtml, key, text, side) {
+    const id = 'budgetTip-' + key;
+    return '<div class="info-tip-row">' + titleHtml +
+             '<span class="info-tip' + (side ? ' is-side' : '') + '">' +
+               '<button type="button" class="info-tip-btn" data-info-tip aria-label="說明" aria-expanded="false" aria-controls="' + id + '">' +
+                 iconHtml('info') +
+               '</button>' +
+               '<span class="info-tip-bubble" id="' + id + '" role="tooltip" hidden>' + escHtml(text) + '</span>' +
+             '</span>' +
+           '</div>';
+  }
+
+  function closeTips(container, except) {
+    container.querySelectorAll('.info-tip-btn[aria-expanded="true"]').forEach(btn => {
+      if (btn === except) return;
+      btn.setAttribute('aria-expanded', 'false');
+      const bubble = document.getElementById(btn.getAttribute('aria-controls'));
+      if (bubble) bubble.hidden = true;
+    });
+  }
+
+  function toggleTip(container, btn) {
+    closeTips(container, btn);
+    const open = btn.getAttribute('aria-expanded') !== 'true';
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    const bubble = document.getElementById(btn.getAttribute('aria-controls'));
+    if (bubble) bubble.hidden = !open;
+  }
+
   function statusHtml(s) {
     if (!s || !s.configured) {
       return '<div class="pref-card budget-status"><div class="pref-card-title">本月尚未設定預算</div>' +
@@ -112,17 +143,17 @@ const BudgetSettings = (function() {
                '<div class="pref-card-desc">目前還沒有記錄符合條件的收入，記一筆後就會算出預算。</div></div>';
     }
     const left = Number(s.todayLeft) || 0;
+    const title = '<div class="pref-card-title">本月預算 ' + money(s.amount) + '</div>';
     return '<div class="pref-card budget-status">' +
-             '<div class="pref-card-title">本月預算 ' + money(s.amount) + '</div>' +
+             (Number(s.excludedSpent) > 0
+               ? titleWithTip(title, 'excluded', '另有排除項目 ' + money(s.excludedSpent) + '（' + (s.excludedItems || []).join('、') + '）未計入預算')
+               : title) +
              '<div class="budget-status-grid">' +
                '<span><small>已花</small>' + money(s.spent) + '</span>' +
                '<span class="' + (s.remaining < 0 ? 'is-over' : '') + '"><small>' + (s.remaining < 0 ? '已超支' : '剩餘') + '</small>' + money(Math.abs(s.remaining)) + '</span>' +
                '<span><small>每日額度</small>' + money(s.daily) + '</span>' +
                '<span class="' + (left < 0 ? 'is-over' : '') + '"><small>' + (left < 0 ? '今天超支' : '今天還能花') + '</small>' + money(Math.abs(left)) + '</span>' +
              '</div>' +
-             (Number(s.excludedSpent) > 0
-               ? '<div class="pref-card-desc">另有排除項目 ' + money(s.excludedSpent) + '（' + escHtml((s.excludedItems || []).join('、')) + '）未計入預算</div>'
-               : '') +
            '</div>';
   }
 
@@ -146,8 +177,8 @@ const BudgetSettings = (function() {
 
     return '<div class="pref-card">' +
              '<div class="pref-card-text">' +
-               '<label class="pref-card-title" for="budgetMonthSelect">套用月份</label>' +
-               '<div class="pref-card-desc">修改只影響所選月份與之後，過去月份的預算不會被改動。之後若有月份另外設定過，會保留那個月份自己的設定。</div>' +
+               titleWithTip('<label class="pref-card-title" for="budgetMonthSelect">套用月份</label>', 'month',
+                 '修改只影響所選月份與之後，過去月份的預算不會被改動。之後若有月份另外設定過，會保留那個月份自己的設定。') +
                '<div class="pref-card-note">' + escHtml(note) + '</div>' +
              '</div>' +
              '<select id="budgetMonthSelect" class="month-select budget-month-select">' + opts + '</select>' +
@@ -160,13 +191,13 @@ const BudgetSettings = (function() {
       return '<button type="button" role="radio" class="pref-seg-btn' + (on ? ' is-active' : '') + '" data-budget-source="' + opt.value + '"' +
                ' aria-checked="' + (on ? 'true' : 'false') + '" tabindex="' + (on ? '0' : '-1') + '">' + opt.label + '</button>';
     }).join('');
-    let desc = '每個月固定一個金額。';
-    if (d.source === 'income') desc = '把當月「生活費」總類的收入當成預算，例如每月記一筆生活費額度。可以只算特定的收入項目，避免退款或代墊還款灌大預算。';
+    let desc = '';
+    if (d.source === 'fixed') desc = '每個月固定一個金額。';
     if (d.source === 'off') desc = '從所選月份起不使用預算。';
     return '<div class="pref-card">' +
              '<div class="pref-card-text">' +
                '<div class="pref-card-title" id="budgetSourceTitle">預算來源</div>' +
-               '<div class="pref-card-desc">' + escHtml(desc) + '</div>' +
+               (desc ? '<div class="pref-card-desc">' + escHtml(desc) + '</div>' : '') +
              '</div>' +
              '<div class="pref-segmented" role="radiogroup" aria-labelledby="budgetSourceTitle">' + seg + '</div>' +
            '</div>';
@@ -198,8 +229,7 @@ const BudgetSettings = (function() {
     if (d.source === 'income') {
       return '<div class="pref-card">' +
                '<div class="pref-card-text">' +
-                 '<div class="pref-card-title">算進預算的收入項目</div>' +
-                 '<div class="pref-card-desc">只看總類是「生活費」的收入。都不選＝所有生活費收入都算。</div>' +
+                 titleWithTip('<div class="pref-card-title">算進預算的收入項目</div>', 'income', '預設為全選', true) +
                '</div>' +
                chipsHtml(options().incomeItems, d.incomeItems, 'data-budget-income') +
              '</div>';
@@ -211,7 +241,6 @@ const BudgetSettings = (function() {
     return '<div class="pref-card">' +
              '<div class="pref-card-text">' +
                '<div class="pref-card-title">計入預算的總類</div>' +
-               '<div class="pref-card-desc">只有這些總類的支出會算進預算。</div>' +
              '</div>' +
              chipsHtml(options().expenseCategories, d.categories, 'data-budget-category') +
            '</div>';
@@ -234,8 +263,8 @@ const BudgetSettings = (function() {
     const canAdd = items.some(name => used.indexOf(name) === -1);
     return '<div class="pref-card">' +
              '<div class="pref-card-text">' +
-               '<div class="pref-card-title">不計入每日額度的項目</div>' +
-               '<div class="pref-card-desc">例如房租、電信費。月初就先從預算扣掉「預留金額」，付款時在預留範圍內的部分不算進當天的花費，付多的部分才算；這些支出照樣算進本月已花。</div>' +
+               titleWithTip('<div class="pref-card-title">不計入每日額度的項目</div>', 'reserve',
+                 '例如房租、電信費。月初就先從預算扣掉「預留金額」，付款時在預留範圍內的部分不算進當天的花費，付多的部分才算；這些支出照樣算進本月已花。') +
              '</div>' +
              (rows ? '<div class="budget-reserve-list">' + rows + '</div>' : '') +
              (canAdd ? '<button type="button" class="budget-add-reserve" data-budget-reserve-add>' + iconHtml('plus', 'regular', 'ic-14') + '新增項目</button>' : '') +
@@ -248,7 +277,6 @@ const BudgetSettings = (function() {
     return '<div class="pref-card">' +
              '<div class="pref-card-text">' +
                '<div class="pref-card-title">排除項目</div>' +
-               '<div class="pref-card-desc">完全不計入預算，例如旅遊、大件 3C 等非日常的大筆消費：本月已花、每日額度、今天還能花都不會算到它。和上面的「不計入每日額度」不同，那些項目照樣算進本月已花。</div>' +
              '</div>' +
              chipsHtml(options().expenseItems, d.excludedItems, 'data-budget-exclude', disabled) +
            '</div>';
@@ -281,7 +309,6 @@ const BudgetSettings = (function() {
     bind(container);
     const header = '<div class="settings-list-header"><div class="settings-list-title-wrap">' +
                      '<span class="settings-list-title">預算</span>' +
-                     '<span class="settings-order-hint">存在試算表的「_預算設定」工作表（隱藏），備份時會一起帶走</span>' +
                    '</div></div>';
 
     if (!st.data) {
@@ -408,7 +435,14 @@ const BudgetSettings = (function() {
     if (container._budgetBound) return;
     container._budgetBound = true;
 
+    // 點提示框以外的地方就收起
+    document.addEventListener('click', e => {
+      if (!e.target.closest || !e.target.closest('.info-tip')) closeTips(container);
+    });
+
     container.addEventListener('click', e => {
+      const tipBtn = e.target.closest('[data-info-tip]');
+      if (tipBtn) { toggleTip(container, tipBtn); return; }
       if (settingsState.currentTab !== 'budget' || !st.draft) {
         if (e.target.closest('[data-budget-retry]')) { st.error = ''; render(container); }
         return;
@@ -451,6 +485,10 @@ const BudgetSettings = (function() {
     });
 
     container.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        const open = container.querySelector('.info-tip-btn[aria-expanded="true"]');
+        if (open) { closeTips(container); open.focus(); return; }
+      }
       const btn = e.target.closest && e.target.closest('[data-budget-source]');
       if (btn) {
         const step = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : (e.key === 'ArrowLeft' || e.key === 'ArrowUp') ? -1 : 0;
