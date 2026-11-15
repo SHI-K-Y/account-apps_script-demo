@@ -31,3 +31,67 @@
 @media (hover: hover) and (pointer: fine) and (min-width: 900px) {
   .kbd-hint { display: block; }
 }
+
+/* 返回頂端按鈕：記帳頁右下角、浮在底部導覽列上方的圓形玻璃按鈕；捲動超過一段距離才出現 */
+.back-to-top-btn {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(max(12px, calc(env(safe-area-inset-bottom) - 6px)) + 76px);
+  z-index: 81;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  color: var(--lg-ink-secondary);
+  background-color: rgb(var(--lg-glass-rgb) / var(--lg-a, var(--lg-alpha-thick)));
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: var(--lg-blur);
+  backdrop-filter: var(--lg-blur);
+  box-shadow: var(--lg-lens), var(--lg-ring), var(--lg-shadow-float);
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(12px) scale(0.86);
+  transition:
+    opacity var(--dur-base) var(--ease-out),
+    transform var(--lg-dur-tap) var(--lg-spring-tap),
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--lg-dur-press) var(--ease-out),
+    visibility 0s linear var(--dur-base);
+  -webkit-tap-highlight-color: transparent;
+}
+.back-to-top-btn i.ph { filter: var(--lg-icon-halo); }
+body[data-page="bookkeeping"] .back-to-top-btn.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+  transition:
+    opacity var(--dur-base) var(--ease-out),
+    transform var(--lg-dur-tap) var(--lg-spring-tap),
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--lg-dur-press) var(--ease-out),
+    visibility 0s;
+}
+.back-to-top-btn:hover {
+  color: var(--accent);
+  box-shadow: var(--lg-lens-pressed), var(--lg-ring), var(--lg-shadow-float), 0 0 0 3px var(--accent-soft);
+}
+body[data-page="bookkeeping"] .back-to-top-btn.is-visible:active {
+  transform: scale(0.92);
+  box-shadow: var(--lg-lens-pressed), var(--lg-ring), var(--lg-shadow);
+}
+.back-to-top-btn:focus-visible {
+  outline: 2px solid var(--lg-focus);
+  outline-offset: 3px;
+}
+:root[data-motion="off"] .back-to-top-btn { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .back-to-top-btn,
+  body[data-page="bookkeeping"] .back-to-top-btn.is-visible { transition: opacity var(--dur-fast) linear, visibility 0s; transform: none; }
+}

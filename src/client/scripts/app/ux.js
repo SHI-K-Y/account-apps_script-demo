@@ -7,6 +7,7 @@
  *  4. 跨日校正：頁面放著過夜後回來，若日期欄還停在「昨天的今天」，自動改成今天，避免記錯日期。
  *  5. 久未使用自動同步：頁面在背景超過 10 分鐘後回到前景，背景同步一次最新資料。
  *  6. 無障礙語意：底部導覽標示目前頁面（aria-current）、支出／收入分頁標示選取狀態（aria-selected）。
+ *  7. 返回頂端：記帳頁往下捲動一段距離後，右下角出現圓形按鈕，點一下回到頁面頂端。
  * ============================================================================= */
 const UxEnhancements = (function() {
   const STALE_AFTER_MS = 10 * 60 * 1000;
@@ -168,12 +169,56 @@ const UxEnhancements = (function() {
     syncTabSemantics();
   }
 
+  function bindBackToTop() {
+    const btn = document.getElementById('backToTopBtn');
+    if (!btn) return;
+    const SHOW_AFTER = 400;
+    let ticking = false;
+
+    function sync() {
+      ticking = false;
+      const y = window.pageYOffset || document.documentElement.scrollTop || 0;
+      const show = document.body.dataset.page === 'bookkeeping' && y > SHOW_AFTER;
+      if (btn.classList.contains('is-visible') === show) return;
+      btn.classList.toggle('is-visible', show);
+      btn.tabIndex = show ? 0 : -1;
+    }
+    function schedule() {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(sync);
+    }
+
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule, { passive: true });
+    // 換頁時 body[data-page] 會改變：離開記帳頁要立即收起按鈕
+    new MutationObserver(schedule).observe(document.body, { attributes: true, attributeFilter: ['data-page'] });
+
+    btn.addEventListener('click', () => {
+      const smooth = typeof Motion !== 'undefined' && Motion.enabled();
+      if (typeof Motion !== 'undefined') {
+        if (Motion.cancelScroll) Motion.cancelScroll();
+        Motion.haptic('light');
+      }
+      window.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'auto' });
+      // 鍵盤使用者：焦點移回頁首，避免焦點停在即將消失的按鈕上
+      const title = document.querySelector('#pageBookkeeping .topbar h1');
+      if (title && document.activeElement === btn) {
+        title.setAttribute('tabindex', '-1');
+        title.focus({ preventScroll: true });
+      }
+    });
+
+    sync();
+  }
+
   function init() {
     document.addEventListener('keydown', onEntryKeydown);
     bindConnectivity();
     bindUnloadGuard();
     bindReturnToApp();
     bindSemantics();
+    bindBackToTop();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
