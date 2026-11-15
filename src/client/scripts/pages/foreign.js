@@ -550,16 +550,23 @@ const ForeignPage = (function () {
     const options = opt || {};
     const isHome = r.currency === HOME;
     const meta = (options.showDate ? mdLabel(r.date) + '，' : '') + (r.payment || '');
+    const actBtn = (act, icon, label) => {
+      const text = r.isPending ? '資料同步中，暫無法' + label : label + '此筆交易紀錄';
+      return '<button type="button" class="recent-act-btn ' + act + '-btn" data-fx-rec-act="' + act + '"' +
+        (r.isPending ? ' disabled' : '') + ' title="' + escAttr(text) + '" aria-label="' + escAttr(text) + '">' +
+        iconHtml(icon, 'regular', 'ic-14') + '</button>';
+    };
     return '<div class="fx-rec' + (r.isPending ? ' is-pending' : '') + '"' +
-      (r.isPending ? ' data-temp-id="' + escAttr(r.tempId) + '" aria-disabled="true"' : ' data-row="' + escAttr(r.row) + '" role="button" tabindex="0"') +
-      ' aria-label="' + escAttr(r.item + ' ' + fmtLocal(r.amount, r.currency) + (r.note ? '，' + r.note : '') + (r.isPending ? '，同步中' : '，點一下修改')) + '">' +
+      (r.isPending ? ' data-temp-id="' + escAttr(r.tempId) + '" aria-disabled="true"' : ' data-row="' + escAttr(r.row) + '"') + '>' +
       '<div class="fx-rec-emoji" aria-hidden="true">' + iconHtml(itemIcon(r.item)) + '</div>' +
       '<div class="fx-rec-main"><strong>' + escHtml(r.item) +
         (r.isPending ? '<span class="recent-pending-badge">同步中…</span>' : '') + '</strong>' +
         (r.note ? '<span class="fx-rec-note">' + escHtml(r.note) + '</span>' : '') +
         '<span class="fx-rec-pay">' + escHtml(meta) + '</span></div>' +
       '<div class="fx-rec-right"><div class="fx-rec-local">' + escHtml(fmtLocal(r.amount, r.currency)) + '</div>' +
-        (isHome ? '' : '<div class="fx-rec-twd">' + escHtml(fmtTwd(r.twd)) + '</div>') + '</div></div>';
+        (isHome ? '' : '<div class="fx-rec-twd">' + escHtml(fmtTwd(r.twd)) + '</div>') +
+        '<div class="recent-actions fx-rec-actions">' + actBtn('edit', 'note-pencil', '修改') + actBtn('delete', 'trash', '刪除') + '</div>' +
+      '</div></div>';
   }
 
   function renderRecentList(records) {
@@ -1816,12 +1823,25 @@ const ForeignPage = (function () {
     });
   }
 
-  function openDeleteRecordModal() {
-    const ed = ui.recordEdit;
-    if (!ed) return;
-    const r = ed.original;
-    ui.deleteRecord = { key: ed.key, record: r };
-    closeModal($('fxRecordModal'));
+  function openDeleteRecordModal(record) {
+    let key;
+    let r;
+    if (record) {
+      key = currentKey();
+      r = record;
+      if (r.isPending) return;
+      if (isBusy(key)) {
+        showToast('資料同步中，請稍候再刪除', 'info');
+        return;
+      }
+    } else {
+      const ed = ui.recordEdit;
+      if (!ed) return;
+      key = ed.key;
+      r = ed.original;
+      closeModal($('fxRecordModal'));
+    }
+    ui.deleteRecord = { key: key, record: r };
     $('fxDeleteRecordDate').textContent = slash(r.date) || '日期不明';
     $('fxDeleteRecordItem').innerHTML = '<span class="item-inline-icon" aria-hidden="true">' + iconHtml(itemIcon(r.item)) + '</span>' + escHtml(r.item);
     $('fxDeleteRecordAmount').textContent = fmtLocal(r.amount, r.currency);
@@ -2104,7 +2124,9 @@ const ForeignPage = (function () {
     const onRecord = e => {
       if (e.target.closest('[data-fx-action="reload-ledger"]')) { fetchLedger(currentKey(), true); return; }
       const rec = recordFromEvent(e.target);
-      if (rec) openRecordModal(rec);
+      const act = e.target.closest('[data-fx-rec-act]');
+      if (rec && act && act.dataset.fxRecAct === 'delete') openDeleteRecordModal(rec);
+      else if (rec) openRecordModal(rec);
       else if (e.target.closest('.fx-rec.is-pending')) showToast('資料同步中，暫時無法修改', 'info');
     };
     onActivate($('fxRecentList'), onRecord);
@@ -2178,7 +2200,7 @@ const ForeignPage = (function () {
     $('fxRecordCloseBtn').addEventListener('click', closeRecordModal);
     $('fxRecordCancelBtn').addEventListener('click', closeRecordModal);
     $('fxRecordSubmitBtn').addEventListener('click', submitRecordModal);
-    $('fxRecordDeleteBtn').addEventListener('click', openDeleteRecordModal);
+    $('fxRecordDeleteBtn').addEventListener('click', () => openDeleteRecordModal());
     $('fxEditCurrencyChoices').addEventListener('click', e => {
       const btn = e.target.closest('[data-fx-edit-cur]');
       if (btn) setEditCurrency(btn.dataset.fxEditCur);

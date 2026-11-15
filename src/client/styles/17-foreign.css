@@ -567,6 +567,13 @@
   white-space: nowrap;
 }
 .fx-rec.sync-ok { background: var(--sync-ok-bg); }
+.fx-rec-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+.fx-rec-actions .recent-act-btn:focus-visible { outline: 2px solid var(--fx); outline-offset: 1px; }
+.fx-rec-actions .recent-act-btn:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
 
 .fx-filter-chips {
   display: flex;
