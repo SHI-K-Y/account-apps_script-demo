@@ -18,11 +18,16 @@ table.full_size td { padding:0!important; }
   --lg-dur-reduced: 150ms;
   --lg-dur-press: 120ms;
 
-  --lg-alpha: 0.36;
-  --lg-alpha-thick: min(1, calc(var(--lg-alpha) + 0.14));
-  --lg-alpha-clear: calc(var(--lg-alpha) * 0.28);
-  --lg-alpha-inner: min(1, calc(var(--lg-alpha) + 0.12));
-  --lg-glass-rgb: 250 246 239;
+  /* 玻璃材質：Apple 透明款液態玻璃（Clear Liquid Glass，2026-11-15 由毛玻璃改過來）
+     幾乎不著色、不霧化：背後的畫面清楚透出，只做飽和／提亮與邊緣折射；
+     立體感改由邊緣高光（--lg-edge、--lg-lens）與柔和投影表現。
+     alpha 是「調光層」，只在彈出層、彈窗這類疊在內容上的元件加厚一點，維持可讀性。 */
+  --lg-alpha: 0.08;
+  /* thick＝疊在內容上的彈窗／彈出層／提示：加一層調光（Apple 對透明款的建議做法），背後的字才不會和前景打架 */
+  --lg-alpha-thick: min(1, calc(var(--lg-alpha) + 0.54));
+  --lg-alpha-clear: calc(var(--lg-alpha) * 0.5);
+  --lg-alpha-inner: min(1, calc(var(--lg-alpha) + 0.20));
+  --lg-glass-rgb: 255 255 255;
   --lg-regular-bg: rgb(var(--lg-glass-rgb) / var(--lg-alpha));
   --lg-thick-bg: rgb(var(--lg-glass-rgb) / var(--lg-alpha-thick));
   --lg-clear-bg: rgb(var(--lg-glass-rgb) / var(--lg-alpha-clear));
@@ -32,42 +37,44 @@ table.full_size td { padding:0!important; }
   --lg-tint-mix: 82%;
   --lg-tint-mix-soft: 22%;
   --lg-tint-deepen: #1c1c1e;
-  --lg-blur: blur(8px) saturate(190%) brightness(1.06);
-  --lg-blur-thick: blur(16px) saturate(190%) brightness(1.04);
+  /* 不霧化：只留不到 1px 的柔化（讓折射位移的邊緣不出鋸齒），背景細節仍清楚可見 */
+  --lg-blur: blur(0.5px) saturate(150%) brightness(1.05);
+  --lg-blur-thick: blur(3px) saturate(150%) brightness(1.05);
   --lg-rim: inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 -1px 0 rgba(28, 28, 30, 0.06);
-  --lg-ring: inset 0 0 0 0.5px rgba(255, 255, 255, 0.30);
-  --lg-edge: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.45) 18%, rgba(255, 255, 255, 0) 42%, rgba(255, 255, 255, 0) 64%, rgba(255, 255, 255, 0.32) 100%);
-  --lg-edge-width: 1px;
-  --lg-sheen: linear-gradient(to bottom, rgba(255, 255, 255, 0.30) 0%, rgba(255, 255, 255, 0.06) 45%, rgba(255, 255, 255, 0) 72%);
-  --lg-lens: inset 1px 1.5px 1px -1px rgba(255, 255, 255, 0.90), inset -1px -1px 1px -1px rgba(255, 255, 255, 0.40), inset 0 0 10px rgba(255, 255, 255, 0.18), inset 0 -8px 12px -10px rgba(28, 28, 30, 0.12);
-  --lg-lens-pressed: inset 1px 1.5px 2px -1px rgba(255, 255, 255, 1), inset -1px -1px 1px -1px rgba(255, 255, 255, 0.60), inset 0 0 16px rgba(255, 255, 255, 0.38), inset 0 -8px 12px -10px rgba(28, 28, 30, 0.12);
-  --lg-specular: rgba(255, 255, 255, 0.50);
-  --lg-text-halo: 0 0 1px rgba(250, 246, 239, 0.90), 0 0 6px rgba(250, 246, 239, 0.80);
-  --lg-icon-halo: drop-shadow(0 0 0.75px rgba(250, 246, 239, 0.95)) drop-shadow(0 0 3px rgba(250, 246, 239, 0.70));
+  --lg-ring: inset 0 0 0 0.5px rgba(255, 255, 255, 0.55);
+  --lg-edge: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.60) 16%, rgba(255, 255, 255, 0.10) 40%, rgba(255, 255, 255, 0.10) 62%, rgba(255, 255, 255, 0.70) 100%);
+  --lg-edge-width: 1.25px;
+  --lg-sheen: linear-gradient(to bottom, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.03) 42%, rgba(255, 255, 255, 0) 68%);
+  --lg-lens: inset 1.5px 2px 1px -1px rgba(255, 255, 255, 0.95), inset -1.5px -1.5px 1px -1px rgba(255, 255, 255, 0.65), inset 0 0 16px rgba(255, 255, 255, 0.24), inset 0 -10px 14px -12px rgba(28, 28, 30, 0.10);
+  --lg-lens-pressed: inset 1.5px 2px 2px -1px rgba(255, 255, 255, 1), inset -1.5px -1.5px 1px -1px rgba(255, 255, 255, 0.80), inset 0 0 20px rgba(255, 255, 255, 0.45), inset 0 -10px 14px -12px rgba(28, 28, 30, 0.10);
+  --lg-specular: rgba(255, 255, 255, 0.55);
+  /* 背景不再被霧化，文字改靠光暈維持可讀性（Apple 透明款同樣是靠調光／光暈而非模糊） */
+  --lg-text-halo: 0 0 1px rgba(255, 252, 247, 0.95), 0 0 8px rgba(255, 252, 247, 0.85);
+  --lg-icon-halo: drop-shadow(0 0 0.75px rgba(255, 252, 247, 0.95)) drop-shadow(0 0 3px rgba(255, 252, 247, 0.75));
   --lg-shadow: 0 8px 24px -8px rgba(28, 28, 30, 0.18), 0 2px 6px -2px rgba(28, 28, 30, 0.08);
   --lg-shadow-float: 0 22px 48px -12px rgba(28, 28, 30, 0.24), 0 6px 16px -4px rgba(28, 28, 30, 0.10);
   --lg-ink: #1c1c1e;
   --lg-ink-secondary: #3a3a3c;
   --lg-focus: #1c1c1e;
 
-  --lg-content-rgb: 255 253 249;
-  --lg-content-alpha: 0.56;
+  --lg-content-rgb: 255 255 255;
+  --lg-content-alpha: 0.12;
   --lg-content-bg: rgb(var(--lg-content-rgb) / var(--lg-content-alpha));
   --lg-content-bg-strong: rgb(var(--lg-content-rgb) / min(1, calc(var(--lg-content-alpha) + 0.20)));
-  --lg-content-sheen: linear-gradient(to bottom, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.04) 40%, rgba(255, 255, 255, 0) 60%);
-  --lg-content-lens: inset 0 1px 0 rgba(255, 255, 255, 0.70), inset 0 0 0 0.5px rgba(255, 255, 255, 0.40), inset 0 -1px 0 rgba(28, 28, 30, 0.04);
-  --lg-content-shadow: 0 6px 18px -10px rgba(28, 28, 30, 0.18), 0 1px 2px rgba(28, 28, 30, 0.04);
-  --lg-content-blur: blur(10px) saturate(150%);
+  --lg-content-sheen: linear-gradient(160deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.05) 28%, rgba(255, 255, 255, 0) 52%);
+  --lg-content-lens: inset 0 1.5px 0 rgba(255, 255, 255, 0.90), inset 1px 0 0 rgba(255, 255, 255, 0.40), inset -1px -1px 0 rgba(255, 255, 255, 0.35), inset 0 0 0 0.5px rgba(255, 255, 255, 0.50), inset 0 0 24px rgba(255, 255, 255, 0.16);
+  --lg-content-shadow: 0 12px 30px -16px rgba(28, 28, 30, 0.24), 0 1px 2px rgba(28, 28, 30, 0.05);
+  --lg-content-blur: saturate(125%) brightness(1.03);
   --lg-row-divider: rgba(215, 186, 150, 0.38);
   --lg-row-hover: rgb(255 255 255 / 0.38);
   --lg-row-pressed: rgb(255 255 255 / 0.56);
   --lg-row-hover-lens: inset 0 1px 0 rgba(255, 255, 255, 0.55);
 
-  --lg-group-bg: rgb(255 255 255 / 0.34);
-  --lg-group-bg-hover: rgb(255 255 255 / 0.52);
-  --lg-group-bg-pressed: rgb(255 255 255 / 0.68);
-  --lg-group-lens: inset 0 1px 0 rgba(255, 255, 255, 0.70), inset 0 -1px 0 rgba(28, 28, 30, 0.05), 0 1px 2px rgba(28, 28, 30, 0.06);
-  --lg-group-lens-pressed: inset 0 1px 1px rgba(255, 255, 255, 0.95), inset 0 0 12px rgba(255, 255, 255, 0.40), 0 1px 2px rgba(28, 28, 30, 0.04);
+  --lg-group-bg: rgb(255 255 255 / 0.18);
+  --lg-group-bg-hover: rgb(255 255 255 / 0.30);
+  --lg-group-bg-pressed: rgb(255 255 255 / 0.42);
+  --lg-group-lens: inset 0 1px 0 rgba(255, 255, 255, 0.90), inset 0 0 0 0.5px rgba(255, 255, 255, 0.55), inset 0 -1px 0 rgba(28, 28, 30, 0.05), inset 0 0 10px rgba(255, 255, 255, 0.16), 0 1px 3px rgba(28, 28, 30, 0.08);
+  --lg-group-lens-pressed: inset 0 1px 1px rgba(255, 255, 255, 1), inset 0 0 0 0.5px rgba(255, 255, 255, 0.65), inset 0 0 14px rgba(255, 255, 255, 0.42), 0 1px 2px rgba(28, 28, 30, 0.05);
   --lg-group-ink: #3a3a3c;
 
   --lg-well-bg: rgba(28, 28, 30, 0.06);
@@ -99,7 +106,6 @@ table.full_size td { padding:0!important; }
   --lg-radius-card-inner: calc(var(--lg-radius-card) - 8px);
 
   /* 原本寫死在元件裡的色值（2026-11-14 收進 token，數值不變） */
-  --lg-hex-frame: rgba(255, 255, 255, 0.28);
   --lg-rim-hi: rgba(255, 255, 255, 0.22);
   --lg-rim-hi-soft: rgba(255, 255, 255, 0.16);
   --lg-ink-shadow: rgba(0, 0, 0, 0.55);
@@ -641,10 +647,10 @@ body[data-mode="income"] {
     radial-gradient(50vmax 45vmax at 92% 90%, rgba(219, 70, 55, 0.22) 0%, transparent 60%),
     #1c1c1e;
 
-  --lg-alpha: 0.26;
-  --lg-alpha-thick: min(1, calc(var(--lg-alpha) + 0.24));
-  --lg-alpha-clear: calc(var(--lg-alpha) * 0.38);
-  --lg-alpha-inner: calc(var(--lg-alpha) * 0.38);
+  --lg-alpha: 0.12;
+  --lg-alpha-thick: min(1, calc(var(--lg-alpha) + 0.46));
+  --lg-alpha-clear: calc(var(--lg-alpha) * 0.5);
+  --lg-alpha-inner: 0.12;
   --lg-glass-rgb: 30 30 32;
   --lg-regular-bg: rgb(var(--lg-glass-rgb) / var(--lg-alpha));
   --lg-thick-bg: rgb(var(--lg-glass-rgb) / var(--lg-alpha-thick));
@@ -652,15 +658,15 @@ body[data-mode="income"] {
   --lg-clear-dim: rgba(0, 0, 0, 0.32);
   --lg-inner-bg: rgb(255 255 255 / var(--lg-alpha-inner));
   --lg-inner-bg-hover: rgb(255 255 255 / min(1, calc(var(--lg-alpha-inner) + 0.08)));
-  --lg-blur: blur(8px) saturate(180%) brightness(0.86);
-  --lg-blur-thick: blur(18px) saturate(170%) brightness(0.82);
+  --lg-blur: blur(0.5px) saturate(150%) brightness(0.94);
+  --lg-blur-thick: blur(3px) saturate(160%) brightness(0.88);
   --lg-rim: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 -1px 0 rgba(0, 0, 0, 0.35);
-  --lg-ring: inset 0 0 0 0.5px rgba(255, 255, 255, 0.10);
-  --lg-edge: linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.20) 18%, rgba(255, 255, 255, 0) 42%, rgba(255, 255, 255, 0) 64%, rgba(255, 255, 255, 0.16) 100%);
-  --lg-sheen: linear-gradient(to bottom, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.03) 45%, rgba(255, 255, 255, 0) 72%);
-  --lg-lens: inset 1px 1.5px 1px -1px rgba(255, 255, 255, 0.40), inset -1px -1px 1px -1px rgba(255, 255, 255, 0.14), inset 0 0 12px rgba(255, 255, 255, 0.05), inset 0 -8px 12px -10px rgba(0, 0, 0, 0.40);
-  --lg-lens-pressed: inset 1px 1.5px 2px -1px rgba(255, 255, 255, 0.65), inset -1px -1px 1px -1px rgba(255, 255, 255, 0.26), inset 0 0 16px rgba(255, 255, 255, 0.12), inset 0 -8px 12px -10px rgba(0, 0, 0, 0.40);
-  --lg-specular: rgba(255, 255, 255, 0.16);
+  --lg-ring: inset 0 0 0 0.5px rgba(255, 255, 255, 0.18);
+  --lg-edge: linear-gradient(135deg, rgba(255, 255, 255, 0.80) 0%, rgba(255, 255, 255, 0.32) 16%, rgba(255, 255, 255, 0.04) 40%, rgba(255, 255, 255, 0.04) 62%, rgba(255, 255, 255, 0.36) 100%);
+  --lg-sheen: linear-gradient(to bottom, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.02) 42%, rgba(255, 255, 255, 0) 68%);
+  --lg-lens: inset 1.5px 2px 1px -1px rgba(255, 255, 255, 0.55), inset -1.5px -1.5px 1px -1px rgba(255, 255, 255, 0.26), inset 0 0 14px rgba(255, 255, 255, 0.07), inset 0 -10px 14px -12px rgba(0, 0, 0, 0.45);
+  --lg-lens-pressed: inset 1.5px 2px 2px -1px rgba(255, 255, 255, 0.75), inset -1.5px -1.5px 1px -1px rgba(255, 255, 255, 0.36), inset 0 0 18px rgba(255, 255, 255, 0.14), inset 0 -10px 14px -12px rgba(0, 0, 0, 0.45);
+  --lg-specular: rgba(255, 255, 255, 0.20);
   --lg-text-halo: 0 0 1px rgba(8, 8, 10, 0.90), 0 0 6px rgba(8, 8, 10, 0.75);
   --lg-icon-halo: drop-shadow(0 0 0.75px rgba(8, 8, 10, 0.95)) drop-shadow(0 0 3px rgba(8, 8, 10, 0.70));
   --lg-shadow: 0 10px 28px -8px rgba(0, 0, 0, 0.55), 0 2px 8px -2px rgba(0, 0, 0, 0.35);
@@ -669,12 +675,12 @@ body[data-mode="income"] {
   --lg-ink-secondary: #dcd7cb;
   --lg-focus: #e8c49a;
 
-  --lg-content-rgb: 34 34 36;
-  --lg-content-alpha: 0.46;
-  --lg-content-sheen: linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.015) 40%, rgba(255, 255, 255, 0) 60%);
-  --lg-content-lens: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 0.5px rgba(255, 255, 255, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.30);
-  --lg-content-shadow: 0 8px 22px -10px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.25);
-  --lg-content-blur: blur(12px) saturate(140%) brightness(0.9);
+  --lg-content-rgb: 18 18 20;
+  --lg-content-alpha: 0.20;
+  --lg-content-sheen: linear-gradient(160deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 28%, rgba(255, 255, 255, 0) 52%);
+  --lg-content-lens: inset 0 1px 0 rgba(255, 255, 255, 0.26), inset 1px 0 0 rgba(255, 255, 255, 0.10), inset -1px -1px 0 rgba(255, 255, 255, 0.10), inset 0 0 0 0.5px rgba(255, 255, 255, 0.12), inset 0 0 22px rgba(255, 255, 255, 0.04);
+  --lg-content-shadow: 0 12px 30px -14px rgba(0, 0, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.25);
+  --lg-content-blur: saturate(125%) brightness(0.92);
   --lg-row-divider: rgba(215, 186, 150, 0.22);
   --lg-row-hover: rgb(255 255 255 / 0.07);
   --lg-row-pressed: rgb(255 255 255 / 0.12);

@@ -400,7 +400,7 @@
   width: max-content;
   max-width: min(360px, 100%);
   padding: 10px 12px;
-  background-color: rgb(var(--lg-glass-rgb) / min(1, calc(var(--lg-alpha-thick) + 0.30)));
+  background-color: rgb(var(--lg-glass-rgb) / min(1, calc(var(--lg-alpha-thick) + 0.12)));
   background-image: var(--lg-sheen);
   -webkit-backdrop-filter: var(--lg-blur-thick);
   backdrop-filter: var(--lg-blur-thick);

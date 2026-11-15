@@ -824,17 +824,11 @@
 :root[data-theme="dark"],
 :root:not([data-theme="light"]) {
   --uv-bg-scrim: 68%;
-  /* 深色模式下六角骨架改為半透明黑色，避免白框在深色漸層上過亮 */
-  --uv-hex-frame: rgba(0, 0, 0, 0.32);
 }
 :root[data-theme="dark"] .uv-glow-bg::after,
 :root:not([data-theme="light"]) .uv-glow-bg::after {
-  /* 暗化遮罩疊在六角網格上方（與原本 ::after 位於整個背景之上的順序一致） */
-  background-image:
-    linear-gradient(color-mix(in srgb, var(--uv-bg-base) var(--uv-bg-scrim), transparent), color-mix(in srgb, var(--uv-bg-base) var(--uv-bg-scrim), transparent)),
-    var(--uv-hex-img);
-  background-size: 100% 100%, 12px 20.7846097px, 12px 20.7846097px;
-  background-position: 0 0, 0px 0px, 6px 10.39230485px;
+  /* 暗化遮罩：位於整個背景最上層 */
+  background: color-mix(in srgb, var(--uv-bg-base) var(--uv-bg-scrim), transparent);
 }
 
 @supports (color: color-mix(in srgb, red 50%, blue)) {

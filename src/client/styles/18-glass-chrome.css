@@ -31,8 +31,9 @@
   bottom: -16px;
   transform: translateX(-50%);
   background: var(--lg-head-scrolled-bg);
-  -webkit-backdrop-filter: blur(20px) saturate(170%);
-  backdrop-filter: blur(20px) saturate(170%);
+  /* 透明款：捲動邊緣只用漸層淡出讓內容退開，不再疊毛玻璃 */
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   -webkit-mask-image: linear-gradient(to bottom, var(--mask-fill) 0, var(--mask-fill) calc(100% - 16px), transparent 100%);
   mask-image: linear-gradient(to bottom, var(--mask-fill) 0, var(--mask-fill) calc(100% - 16px), transparent 100%);
   opacity: 0;
@@ -223,9 +224,10 @@ body::after {
   left: 0;
   right: 0;
   bottom: 0;
-  height: calc(88px + env(safe-area-inset-bottom));
+  height: calc(104px + env(safe-area-inset-bottom));
   z-index: 79;
-  background: linear-gradient(to top, var(--lg-scroll-edge-mid) 0%, var(--lg-scroll-edge-soft) 45%, transparent 100%);
+  /* 捲動邊緣效果：導覽列本身是透明玻璃，靠這層由下往上淡出讓背後的內容退開，標籤才讀得清楚 */
+  background: linear-gradient(to top, var(--lg-scroll-edge) 0%, var(--lg-scroll-edge-mid) 52%, var(--lg-scroll-edge-soft) 76%, transparent 100%);
   pointer-events: none;
 }
 
@@ -238,7 +240,7 @@ body::after {
   box-shadow: var(--lg-lens), var(--lg-ring), var(--lg-shadow-float);
 }
 .calendar-popover {
-  --lg-a: min(1, calc(var(--lg-alpha-thick) + 0.30));
+  --lg-a: min(1, calc(var(--lg-alpha-thick) + 0.12));
 }
 .calendar-popover .cal-weekdays {
   color: var(--lg-ink-secondary);
@@ -302,8 +304,9 @@ body::after {
   position: absolute;
   inset: 0;
   background: var(--lg-backdrop-dim);
-  -webkit-backdrop-filter: blur(6px) saturate(120%);
-  backdrop-filter: blur(6px) saturate(120%);
+  /* 透明款：背景只調暗、不霧化 */
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   opacity: 0;
   transition: opacity var(--dur-base) var(--ease-out);
   pointer-events: none;

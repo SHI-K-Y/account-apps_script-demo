@@ -696,8 +696,8 @@
   padding: 2px 8px;
   border-radius: var(--lg-radius-capsule);
   background: var(--lg-clear-dim);
-  -webkit-backdrop-filter: blur(4px) saturate(160%);
-  backdrop-filter: blur(4px) saturate(160%);
+  -webkit-backdrop-filter: saturate(160%);
+  backdrop-filter: saturate(160%);
   color: var(--on);
   text-shadow: 0 1px 2px color-mix(in srgb, var(--shadow-tint) 60%, transparent);
 }
@@ -1097,31 +1097,16 @@ i.ph.sheet-icon-svg { font-size: 22px; }
   color: inherit !important;
 }
 
-:root,
-:root[data-theme="light"] {
-  --lg-content-rgb: 255 255 255;
-  --lg-content-alpha: 0.50;
-  --lg-content-blur: blur(22px) saturate(160%);
-  --lg-group-bg: rgb(255 255 255 / 0.55);
-  --lg-group-bg-hover: rgb(255 255 255 / 0.72);
-  --lg-group-bg-pressed: rgb(255 255 255 / 0.85);
-}
+/* 透明款液態玻璃（2026-11-15）：原本這裡把內容卡片與深色玻璃覆寫成 20～28px 的毛玻璃，
+   現在材質數值統一以 01-tokens-base.css 為準，這裡只保留深色模式的玻璃底色。 */
 :root[data-theme="dark"],
 :root:not([data-theme="light"]) {
   --lg-glass-rgb: 22 22 24;
-  --lg-alpha: 0.42;
-  --lg-blur: blur(20px) saturate(160%) brightness(0.75);
-  --lg-blur-thick: blur(28px) saturate(150%) brightness(0.7);
   --lg-head-scrolled-bg: rgb(18 18 20 / 0.72);
-  --lg-content-rgb: 18 18 20;
-  --lg-content-alpha: 0.62;
-  --lg-content-blur: blur(24px) saturate(140%);
-  --lg-content-sheen: linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.015) 40%, rgba(255, 255, 255, 0) 60%);
-  --lg-content-lens: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 0 0 1px rgba(255, 255, 255, 0.09), inset 0 -1px 0 rgba(0, 0, 0, 0.30);
-  --lg-group-bg: rgb(255 255 255 / 0.09);
-  --lg-group-bg-hover: rgb(255 255 255 / 0.15);
-  --lg-group-bg-pressed: rgb(255 255 255 / 0.22);
-  --lg-group-lens: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 1px 2px rgba(0, 0, 0, 0.35);
+  --lg-group-bg: rgb(255 255 255 / 0.07);
+  --lg-group-bg-hover: rgb(255 255 255 / 0.13);
+  --lg-group-bg-pressed: rgb(255 255 255 / 0.20);
+  --lg-group-lens: inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 0 0 0.5px rgba(255, 255, 255, 0.12), inset 0 0 10px rgba(255, 255, 255, 0.04), 0 1px 2px rgba(0, 0, 0, 0.35);
   --lg-well-bg: rgb(0 0 0 / 0.35);
   --lg-well-bg-focus: rgb(0 0 0 / 0.45);
   --surface-1: rgba(28, 28, 30, 0.92);
@@ -1236,6 +1221,81 @@ i.ph.sheet-icon-svg { font-size: 22px; }
 :root:root:root[data-theme="dark"] .choice[data-cat]:not(.selected),
 :root:root:root:not([data-theme="light"]) .choice[data-cat]:not(.selected) {
   box-shadow: inset 0 1px 0 var(--lg-rim-hi-soft), 0 1px 2px var(--lg-drop-shade);
+}
+
+/* 透明款液態玻璃：項目與支付方式磁磚改為「染色透明玻璃」——
+   原本是 0.72～0.85 的粉彩實色塊，現在只帶一點該類別的色相（約 0.3 透明度），
+   背景與卡片一樣透得過去；選取狀態維持原本的實色強調，不受影響。 */
+:root[data-theme="light"] {
+  --cat-bigexpense-bg: color-mix(in srgb, var(--cat-bigexpense-ink) 7%, rgb(255 255 255 / 0.24));
+  --cat-daily-bg: color-mix(in srgb, var(--cat-daily-ink) 7%, rgb(255 255 255 / 0.24));
+  --cat-entertainment-bg: color-mix(in srgb, var(--cat-entertainment-ink) 7%, rgb(255 255 255 / 0.24));
+  --cat-finance-bg: color-mix(in srgb, var(--cat-finance-ink) 7%, rgb(255 255 255 / 0.24));
+  --cat-food-bg: color-mix(in srgb, var(--cat-food-ink) 7%, rgb(255 255 255 / 0.24));
+  --cat-home-bg: color-mix(in srgb, var(--cat-home-ink) 7%, rgb(255 255 255 / 0.24));
+  --cat-laundry-bg: color-mix(in srgb, var(--cat-laundry-ink) 7%, rgb(255 255 255 / 0.24));
+  --cat-living-bg: color-mix(in srgb, var(--cat-living-ink) 7%, rgb(255 255 255 / 0.24));
+  --cat-medical-bg: color-mix(in srgb, var(--cat-medical-ink) 7%, rgb(255 255 255 / 0.24));
+  --cat-other-bg: color-mix(in srgb, var(--cat-other-ink) 7%, rgb(255 255 255 / 0.24));
+  --cat-pet-bg: color-mix(in srgb, var(--cat-pet-ink) 7%, rgb(255 255 255 / 0.24));
+  --cat-reimburse-bg: color-mix(in srgb, var(--cat-reimburse-ink) 7%, rgb(255 255 255 / 0.24));
+  --cat-reimburse-bg-hover: color-mix(in srgb, var(--cat-reimburse-ink) 12%, rgb(255 255 255 / 0.36));
+  --cat-salary-bg: color-mix(in srgb, var(--cat-salary-ink) 7%, rgb(255 255 255 / 0.24));
+  --cat-sport-bg: color-mix(in srgb, var(--cat-sport-ink) 7%, rgb(255 255 255 / 0.24));
+  --cat-study-bg: color-mix(in srgb, var(--cat-study-ink) 7%, rgb(255 255 255 / 0.24));
+  --cat-transport-bg: color-mix(in srgb, var(--cat-transport-ink) 7%, rgb(255 255 255 / 0.24));
+  --cat-travel-bg: color-mix(in srgb, var(--cat-travel-ink) 7%, rgb(255 255 255 / 0.24));
+
+  --pay-cash-bg: color-mix(in srgb, var(--pay-cash-dot) 8%, rgb(255 255 255 / 0.24));
+  --pay-cash-bg-hover: color-mix(in srgb, var(--pay-cash-dot) 14%, rgb(255 255 255 / 0.36));
+  --pay-credit-bg: color-mix(in srgb, var(--pay-credit-dot) 8%, rgb(255 255 255 / 0.24));
+  --pay-credit-bg-hover: color-mix(in srgb, var(--pay-credit-dot) 14%, rgb(255 255 255 / 0.36));
+  --pay-debit-bg: color-mix(in srgb, var(--pay-debit-dot) 8%, rgb(255 255 255 / 0.24));
+  --pay-debit-bg-hover: color-mix(in srgb, var(--pay-debit-dot) 14%, rgb(255 255 255 / 0.36));
+  --pay-qinghe-bg: color-mix(in srgb, var(--pay-qinghe-dot) 8%, rgb(255 255 255 / 0.24));
+  --pay-qinghe-bg-hover: color-mix(in srgb, var(--pay-qinghe-dot) 14%, rgb(255 255 255 / 0.36));
+  --pay-linepay-bg: color-mix(in srgb, var(--pay-linepay-dot) 8%, rgb(255 255 255 / 0.24));
+  --pay-linepay-bg-hover: color-mix(in srgb, var(--pay-linepay-dot) 14%, rgb(255 255 255 / 0.36));
+  --pay-other-bg: color-mix(in srgb, var(--pay-other-dot) 8%, rgb(255 255 255 / 0.24));
+  --pay-other-bg-hover: color-mix(in srgb, var(--pay-other-dot) 14%, rgb(255 255 255 / 0.36));
+  --pay-yohopay-bg: color-mix(in srgb, var(--pay-yohopay-dot) 8%, rgb(255 255 255 / 0.24));
+  --pay-yohopay-bg-hover: color-mix(in srgb, var(--pay-yohopay-dot) 14%, rgb(255 255 255 / 0.36));
+  --pay-transfer-bg: color-mix(in srgb, var(--pay-transfer-dot) 8%, rgb(255 255 255 / 0.24));
+  --pay-transfer-bg-hover: color-mix(in srgb, var(--pay-transfer-dot) 14%, rgb(255 255 255 / 0.36));
+}
+/* 深色：磁磚變成深色透明玻璃，原本給淺色磁磚用的深色字改成提亮的同色系 */
+:root[data-theme="dark"],
+:root:not([data-theme="light"]) {
+  --pay-cash-bg: color-mix(in srgb, var(--pay-cash-dot) 14%, rgb(255 255 255 / 0.06));
+  --pay-cash-bg-hover: color-mix(in srgb, var(--pay-cash-dot) 22%, rgb(255 255 255 / 0.08));
+  --pay-cash-ink: color-mix(in srgb, var(--pay-cash-dot) 55%, #faf6ef);
+  --pay-cash-ink-hover: color-mix(in srgb, var(--pay-cash-dot) 30%, #faf6ef);
+  --pay-credit-bg: color-mix(in srgb, var(--pay-credit-dot) 14%, rgb(255 255 255 / 0.06));
+  --pay-credit-bg-hover: color-mix(in srgb, var(--pay-credit-dot) 22%, rgb(255 255 255 / 0.08));
+  --pay-credit-ink: color-mix(in srgb, var(--pay-credit-dot) 55%, #faf6ef);
+  --pay-debit-bg: color-mix(in srgb, var(--pay-debit-dot) 14%, rgb(255 255 255 / 0.06));
+  --pay-debit-bg-hover: color-mix(in srgb, var(--pay-debit-dot) 22%, rgb(255 255 255 / 0.08));
+  --pay-debit-ink: color-mix(in srgb, var(--pay-debit-dot) 55%, #faf6ef);
+  --pay-debit-ink-hover: color-mix(in srgb, var(--pay-debit-dot) 30%, #faf6ef);
+  --pay-qinghe-bg: color-mix(in srgb, var(--pay-qinghe-dot) 14%, rgb(255 255 255 / 0.06));
+  --pay-qinghe-bg-hover: color-mix(in srgb, var(--pay-qinghe-dot) 22%, rgb(255 255 255 / 0.08));
+  --pay-qinghe-ink: color-mix(in srgb, var(--pay-qinghe-dot) 55%, #faf6ef);
+  --pay-qinghe-ink-hover: color-mix(in srgb, var(--pay-qinghe-dot) 30%, #faf6ef);
+  --pay-linepay-bg: color-mix(in srgb, var(--pay-linepay-dot) 14%, rgb(255 255 255 / 0.06));
+  --pay-linepay-bg-hover: color-mix(in srgb, var(--pay-linepay-dot) 22%, rgb(255 255 255 / 0.08));
+  --pay-linepay-ink: color-mix(in srgb, var(--pay-linepay-dot) 55%, #faf6ef);
+  --pay-other-bg: color-mix(in srgb, var(--pay-other-dot) 14%, rgb(255 255 255 / 0.06));
+  --pay-other-bg-hover: color-mix(in srgb, var(--pay-other-dot) 22%, rgb(255 255 255 / 0.08));
+  --pay-other-ink: color-mix(in srgb, var(--pay-other-dot) 55%, #faf6ef);
+  --pay-other-ink-hover: color-mix(in srgb, var(--pay-other-dot) 30%, #faf6ef);
+  --pay-yohopay-bg: color-mix(in srgb, var(--pay-yohopay-dot) 14%, rgb(255 255 255 / 0.06));
+  --pay-yohopay-bg-hover: color-mix(in srgb, var(--pay-yohopay-dot) 22%, rgb(255 255 255 / 0.08));
+  --pay-yohopay-ink: color-mix(in srgb, var(--pay-yohopay-dot) 55%, #faf6ef);
+  --pay-yohopay-ink-hover: color-mix(in srgb, var(--pay-yohopay-dot) 30%, #faf6ef);
+  --pay-transfer-bg: color-mix(in srgb, var(--pay-transfer-dot) 14%, rgb(255 255 255 / 0.06));
+  --pay-transfer-bg-hover: color-mix(in srgb, var(--pay-transfer-dot) 22%, rgb(255 255 255 / 0.08));
+  --pay-transfer-ink: color-mix(in srgb, var(--pay-transfer-dot) 55%, #faf6ef);
+  --pay-transfer-ink-hover: color-mix(in srgb, var(--pay-transfer-dot) 30%, #faf6ef);
 }
 
 @media (prefers-reduced-transparency: reduce) {

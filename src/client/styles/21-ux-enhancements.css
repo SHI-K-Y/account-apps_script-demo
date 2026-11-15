@@ -47,7 +47,7 @@
   border: 0;
   border-radius: 50%;
   color: var(--lg-ink-secondary);
-  background-color: rgb(var(--lg-glass-rgb) / var(--lg-a, var(--lg-alpha-thick)));
+  background-color: rgb(var(--lg-glass-rgb) / var(--lg-a, var(--lg-alpha)));
   background-image: var(--lg-sheen);
   -webkit-backdrop-filter: var(--lg-blur);
   backdrop-filter: var(--lg-blur);

@@ -5,12 +5,6 @@
   pointer-events: none;
   overflow: hidden;
   contain: strict;
-  --uv-hole: 7px;
-  /* 六角骨架改用半透明白色，讓底層漸層完整透出，僅保留輕微蜂巢肌理 */
-  --uv-hex-frame: var(--lg-hex-frame);
-  --uv-hex-img:
-    radial-gradient(circle at 50% 50%, #0000 1.5px, var(--uv-hex-frame) 0 var(--uv-hole), #0000 var(--uv-hole)),
-    radial-gradient(circle at 50% 50%, #0000 1.5px, var(--uv-hex-frame) 0 var(--uv-hole), #0000 var(--uv-hole));
   /* Uiverse 底層漸層：從左下深橘紅 → 橘金 → 玫瑰粉 → 淡紫 → 天藍（右上）*/
   background: var(--uv-rad-bg);
   will-change: filter;
@@ -33,21 +27,19 @@
     200% 200%,
     200% 200%,
     200% 200%,
-    200% 20.7846097px;
+    200% 200%;
+  /* 第 4 層原本高度只有 20.78px（配合已移除的六角網格），重複後變成一條一條的橫線；
+     2026-11-15 改成和其他三層一樣的大範圍柔光，保留色調、不再有條紋 */
   background-position:
     0% 0%,
     0% 0%,
     0% 0%,
-    0% 0px;
+    0% 0%;
   will-change: transform;
   animation: uv-glow-drift 40s linear infinite;
 }
-.uv-glow-bg::after {
-  background-image: var(--uv-hex-img);
-  background-size: 12px 20.7846097px, 12px 20.7846097px;
-  background-position: 0px 0px, 6px 10.39230485px;
-  will-change: transform;
-}
+/* ::after 原本是 12px 的六角網格（背景上一點一點的圖案），2026-11-15 移除；
+   現在只在深色模式放暗化遮罩（見 20-uiverse-effects.css） */
 
 @keyframes uv-glow-breathe {
   0% {
@@ -64,7 +56,7 @@
       800% 400%,
       1000% -400%,
       -1200% -600%,
-      400% 41.5692194px;
+      -600% 800%;
   }
   to {
     background-position:

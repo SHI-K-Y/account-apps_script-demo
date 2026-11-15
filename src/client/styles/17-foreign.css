@@ -1019,9 +1019,14 @@
 @supports (backdrop-filter: url(#lg-refract)) {
   @media (prefers-reduced-transparency: no-preference) {
     :root.lg-can-refract :is(.month-select, .topbar-btn-group, .bottom-nav, .cc-back-btn),
-    :root.lg-can-refract :is(.head .tabs, .fx-head .tabs, .overview-head .icon-btn, .fx-head .icon-btn) {
+    :root.lg-can-refract :is(.head .tabs, .fx-head .tabs, .overview-head .icon-btn, .fx-head .icon-btn, .back-to-top-btn) {
       -webkit-backdrop-filter: url(#lg-refract) var(--lg-blur);
       backdrop-filter: url(#lg-refract) var(--lg-blur);
+    }
+    /* 透明款玻璃看得到背後的畫面，邊緣折射才有意義：彈出層與提示也一起套用 */
+    :root.lg-can-refract :is(.toast, .calendar-popover, .emoji-picker-popover, .fx-menu) {
+      -webkit-backdrop-filter: url(#lg-refract) var(--lg-blur-thick);
+      backdrop-filter: url(#lg-refract) var(--lg-blur-thick);
     }
   }
 }
