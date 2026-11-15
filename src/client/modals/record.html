@@ -12,51 +12,47 @@
       </div>
 
       <div class="edit-modal-form">
-        <div class="edit-form-row edit-form-row-top">
-          <div class="edit-field edit-field-date" id="editDateField">
-            <label class="edit-label" for="editRecordDay">日期 (日)</label>
-            <div class="edit-date-wrap">
-              <input type="number" id="editRecordDay" class="text-input edit-input edit-day-input" min="1" max="31" placeholder="例如：15">
-              <span id="editRecordMonthBadge" class="edit-month-badge">2026.10</span>
-            </div>
-          </div>
-
-          <div class="edit-field edit-field-amount" id="editAmountField">
-            <label class="edit-label" for="editRecordAmount">金額 (NTD)</label>
-            <div class="edit-amount-wrap">
-              <span class="edit-amount-prefix">$</span>
-              <input type="number" id="editRecordAmount" class="text-input edit-input edit-amount-input" min="1" step="1" placeholder="金額">
-            </div>
-          </div>
-
-          <div class="edit-field edit-field-paid paid-collapsible is-collapsed" id="editPaidField" hidden inert>
-            <div class="paid-collapsible-inner">
-              <label class="edit-label">是否已繳（信用卡）</label>
-              <div id="editPaidChoices" class="choices edit-choices"></div>
-            </div>
-          </div>
-
-          <div class="edit-field edit-field-note" id="editNoteField">
-            <label class="edit-label" for="editRecordNote">備註 (選填)</label>
-            <input type="text" id="editRecordNote" class="text-input edit-input" maxlength="200" placeholder="例如：早餐、咖啡...">
+        <div class="edit-field edit-field-date" id="editDateField">
+          <label class="edit-label" for="editRecordDay">日期 (日)</label>
+          <div class="edit-date-wrap">
+            <input type="number" id="editRecordDay" class="text-input edit-input edit-day-input" min="1" max="31" placeholder="例如：15">
+            <span id="editRecordMonthBadge" class="edit-month-badge">2026.10</span>
           </div>
         </div>
 
-        <div class="edit-form-row edit-form-row-choices">
-          <div class="edit-field edit-field-item" id="editItemField">
-            <label class="edit-label">項目</label>
-            <div id="editItemChoices" class="choices edit-choices"></div>
-          </div>
+        <div class="edit-field edit-field-item" id="editItemField">
+          <span class="edit-label">項目</span>
+          <div id="editItemChoices" class="choices edit-choices"></div>
+        </div>
 
-          <div class="edit-field edit-field-category" id="editCategoryField">
-            <label class="edit-label">總類</label>
-            <div id="editCategoryChoices" class="choices edit-choices"></div>
-          </div>
+        <div class="edit-field edit-field-category" id="editCategoryField">
+          <span class="edit-label">總類</span>
+          <div id="editCategoryChoices" class="choices edit-choices"></div>
+        </div>
 
-          <div class="edit-field edit-field-payment" id="editPaymentField">
-            <label class="edit-label">支付方式</label>
-            <div id="editPaymentChoices" class="choices edit-choices"></div>
+        <div class="edit-field edit-field-payment" id="editPaymentField">
+          <span class="edit-label">支付方式</span>
+          <div id="editPaymentChoices" class="choices edit-choices"></div>
+        </div>
+
+        <div class="edit-field edit-field-paid paid-collapsible is-collapsed" id="editPaidField" hidden inert>
+          <div class="paid-collapsible-inner">
+            <span class="edit-label">是否已繳（信用卡）</span>
+            <div id="editPaidChoices" class="choices edit-choices"></div>
           </div>
+        </div>
+
+        <div class="edit-field edit-field-amount" id="editAmountField">
+          <label class="edit-label" for="editRecordAmount">金額 (NTD)</label>
+          <div class="edit-amount-wrap">
+            <span class="edit-amount-prefix">$</span>
+            <input type="number" id="editRecordAmount" class="text-input edit-input edit-amount-input" min="1" step="1" placeholder="金額">
+          </div>
+        </div>
+
+        <div class="edit-field edit-field-note" id="editNoteField">
+          <label class="edit-label" for="editRecordNote">備註 (選填)</label>
+          <input type="text" id="editRecordNote" class="text-input edit-input" maxlength="200" placeholder="例如：早餐、咖啡...">
         </div>
       </div>
 

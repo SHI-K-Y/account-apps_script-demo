@@ -1193,22 +1193,12 @@
     padding: 30px 28px 26px;
   }
 
-  #editRecordModal .modal-card.edit-modal-card {
-    width: min(1140px, calc(var(--vw-safe) - 40px));
-    max-width: 1180px;
-    max-height: calc(100vh - 48px);
-    padding: 22px 28px 20px;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-  }
-
-  .edit-modal-card .modal-icon-close {
+  .fx-record-modal-card .modal-icon-close {
     top: 18px;
     right: 22px;
   }
 
-  .edit-modal-card .modal-header {
+  .fx-record-modal-card .modal-header {
     display: flex;
     align-items: center;
     text-align: left;
@@ -1219,7 +1209,7 @@
     flex-shrink: 0;
   }
 
-  .edit-modal-card .modal-icon {
+  .fx-record-modal-card .modal-icon {
     width: 42px;
     height: 42px;
     margin: 0;
@@ -1227,91 +1217,35 @@
     box-shadow: 0 3px 12px color-mix(in srgb, var(--shadow-tint) 8%, transparent);
   }
 
-  .edit-modal-card .modal-header-text {
+  .fx-record-modal-card .modal-header-text {
     display: flex;
     flex-direction: column;
     gap: 2px;
   }
 
-  .edit-modal-card .modal-title {
+  .fx-record-modal-card .modal-title {
     font-size: 19px;
     font-weight: 800;
     margin: 0;
     line-height: 1.2;
   }
 
-  .edit-modal-card .modal-subtitle {
+  .fx-record-modal-card .modal-subtitle {
     font-size: 13px;
     margin: 0;
     color: var(--muted);
   }
 
-  .edit-modal-card .edit-modal-form {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    margin-bottom: 0;
-    flex: 1 1 auto;
-  }
-
-  .edit-modal-card .edit-field {
-    order: initial;
+  .fx-record-modal-card .edit-field {
     gap: 5px;
   }
 
-  .edit-modal-card .edit-label {
+  .fx-record-modal-card .edit-label {
     font-size: 12.5px;
     font-weight: 700;
   }
 
-  .edit-modal-card .edit-form-row-top {
-    display: grid;
-    grid-template-columns: 190px 210px 220px 1fr;
-    gap: 14px;
-    align-items: start;
-  }
-
-  #editRecordModal.is-income .edit-form-row-top {
-    grid-template-columns: 190px 220px 1fr;
-  }
-
-  .edit-modal-card #editPaidChoices {
-    max-height: none;
-    min-height: 44px;
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 4px;
-    padding: 3px;
-    background: var(--glass-chip);
-    border: 1px solid var(--glass-border-subtle);
-    border-radius: var(--lg-radius-control);
-    align-items: center;
-    overflow: hidden;
-  }
-
-  .edit-modal-card #editPaidChoices .choice {
-    flex: 1;
-    min-height: 36px;
-    padding: 0 4px;
-    font-size: 13px;
-    font-weight: 700;
-    justify-content: center;
-    border-radius: var(--lg-radius-sm);
-    white-space: nowrap;
-  }
-
-  .edit-modal-card .edit-form-row-choices {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    align-items: start;
-  }
-
-  #editRecordModal.is-income .edit-form-row-choices {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .edit-modal-card .edit-choices {
+  .fx-record-modal-card .edit-choices {
     max-height: 250px;
     min-height: 200px;
     padding: 10px 8px;
@@ -1324,33 +1258,30 @@
     gap: 6px;
   }
 
-  .edit-modal-card .edit-choices::-webkit-scrollbar {
+  .fx-record-modal-card .edit-choices::-webkit-scrollbar {
     width: 4px;
   }
-  .edit-modal-card .edit-choices::-webkit-scrollbar-track {
+  .fx-record-modal-card .edit-choices::-webkit-scrollbar-track {
     background: transparent;
   }
-  .edit-modal-card .edit-choices::-webkit-scrollbar-thumb {
+  .fx-record-modal-card .edit-choices::-webkit-scrollbar-thumb {
     background: var(--glass-border);
     border-radius: var(--lg-radius-capsule);
   }
-  .edit-modal-card .edit-choices::-webkit-scrollbar-thumb:hover {
+  .fx-record-modal-card .edit-choices::-webkit-scrollbar-thumb:hover {
     background: var(--muted);
   }
 
-  .edit-modal-card #editPaymentChoices .pay-group-grid ,
-  .edit-modal-card #fxEditPaymentChoices .pay-group-grid{
+  .fx-record-modal-card #fxEditPaymentChoices .pay-group-grid {
     grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
     gap: 5px;
   }
 
-  .edit-modal-card #editPaymentChoices .pay-group-header ,
-
-  .edit-modal-card #fxEditPaymentChoices .pay-group-header{
+  .fx-record-modal-card #fxEditPaymentChoices .pay-group-header {
     margin: 6px 0 4px;
   }
 
-  .edit-modal-card .modal-actions {
+  .fx-record-modal-card .modal-actions {
     display: flex;
     justify-content: flex-end;
     align-items: center;
@@ -1361,7 +1292,7 @@
     flex-shrink: 0;
   }
 
-  .edit-modal-card .modal-btn {
+  .fx-record-modal-card .modal-btn {
     min-height: 44px;
     padding: 0 26px;
     font-size: 15px;
@@ -1445,11 +1376,7 @@
     gap: 28px;
   }
 
-  #editRecordModal .modal-card.edit-modal-card {
-    width: min(1240px, calc(var(--vw-safe) - 48px));
-    max-width: 1280px;
-  }
-  .edit-modal-card .edit-choices {
+  .fx-record-modal-card .edit-choices {
     max-height: 280px;
     min-height: 220px;
   }

@@ -259,18 +259,17 @@
   margin-bottom: 20px;
 }
 
-.edit-form-row-top,
-.edit-form-row-choices {
-  display: contents;
+/* 記帳頁「修改交易紀錄」：與常用組合彈窗相同的單欄排版（各尺寸一致） */
+#editRecordModal .modal-card {
+  width: min(560px, calc(var(--vw-safe) - 32px));
 }
-
-.edit-field-date     { order: 1; }
-.edit-field-item     { order: 2; }
-.edit-field-category { order: 3; }
-.edit-field-payment  { order: 4; }
-.edit-field-paid     { order: 5; }
-.edit-field-amount   { order: 6; }
-.edit-field-note     { order: 7; }
+#editRecordModal .edit-choices {
+  max-height: none;
+  overflow-y: visible;
+}
+#editRecordModal .edit-field {
+  scroll-margin: 16px;
+}
 
 .edit-field {
   display: flex;

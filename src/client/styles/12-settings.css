@@ -1527,24 +1527,6 @@
   margin-top: -14px;
 }
 
-@media (min-width: 1024px) {
-  .edit-modal-card .edit-field-paid.is-collapsed {
-    margin-top: 0;
-  }
-  .edit-modal-card .edit-field-paid > .paid-collapsible-inner {
-    width: 220px;
-  }
-  #editRecordModal.is-expense .edit-field-note {
-    grid-column: 4;
-  }
-  #editRecordModal.is-expense.is-paid-hidden .edit-form-row-top {
-    grid-template-columns: 190px 210px 0px 1fr;
-  }
-  #editRecordModal.is-expense.is-paid-hidden .edit-field-note {
-    margin-left: -14px;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .paid-collapsible,
   .paid-collapsible-inner {
