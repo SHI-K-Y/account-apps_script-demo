@@ -327,15 +327,12 @@ body::after {
   box-shadow: var(--lg-lens), var(--lg-ring), var(--lg-shadow-float);
   transition: transform var(--dur-slow) var(--lg-spring-tap), opacity var(--dur-base) var(--ease-out);
 }
+/* 手機：彈窗與提醒卡片置中顯示（與桌面相同），兩側留 16px；太高時卡片內捲動 */
 @media (max-width: 599px) {
-  .modal-backdrop {
-    align-items: flex-end;
-    padding: calc(12px + env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
-  }
   .modal-card {
     width: 100%;
     max-width: 520px;
-    transform: translateY(calc(100% + 24px));
+    max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   }
 }
 .modal-btn {

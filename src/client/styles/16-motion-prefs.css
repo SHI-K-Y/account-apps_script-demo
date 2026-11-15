@@ -466,11 +466,6 @@ body[data-mode="income"] .tabs::before {
   opacity: 1;
   transform: none;
 }
-@media (max-width: 599px) {
-  .modal-card {
-    transform: translateY(min(36vh, 260px));
-  }
-}
 .modal-backdrop.is-animating,
 .modal-backdrop.is-animating .modal-card {
   will-change: opacity, transform;
