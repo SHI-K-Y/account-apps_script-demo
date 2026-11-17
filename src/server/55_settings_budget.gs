@@ -14,16 +14,19 @@ function getBudgetSettings_(forceRefresh) {
     todayISO: today.iso,
     currentMonth: today.month,
     versions: config.versions,
-    status: currentBudgetStatus_(ss, config, today),
+    status: currentBudgetStatus_(ss, config, today, Boolean(forceRefresh)),
   };
 }
 
-function currentBudgetStatus_(ss, config, today) {
+function currentBudgetStatus_(ss, config, today, forceRefresh) {
   let monthData = null;
   try {
     if (ss.getSheetByName(today.month)) monthData = getMonthData_(ss, today.month, false);
   } catch (e) {}
-  return computeBudgetStatus_(resolveBudgetVersion_(config, today.month), today.month, monthData, today);
+  const version = resolveBudgetVersion_(config, today.month);
+  let extras = null;
+  try { extras = budgetExtras_(ss, version, today.month, forceRefresh); } catch (e) {}
+  return computeBudgetStatus_(version, today.month, monthData, today, extras);
 }
 
 function assertBudgetMonth_(month, today) {
@@ -63,7 +66,7 @@ function parseBudgetForm_(form, options, today) {
   const month = String(form.month || '').trim();
   assertBudgetMonth_(month, today);
   const source = budgetSourceKey_(form.source);
-  if (!source) throw new Error('預算來源只能是固定金額、生活費收入或停用。');
+  if (!source) throw new Error('預算來源只能是固定金額、生活費收入、生活費餘額或停用。');
 
   const version = { month: month, source: source, amount: 0, categories: [], incomeItems: [], reserves: [], excludedItems: [] };
   if (source === 'off') return version;

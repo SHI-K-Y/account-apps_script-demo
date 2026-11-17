@@ -83,6 +83,8 @@ const BudgetView = (function() {
         html = guideHtml('設定每月預算，看看今天還能花多少');
       } else if (b.awaitingIncome) {
         html = '<span class="budget-line-muted">本月還沒記錄生活費收入，記一筆後就會算出預算</span>';
+      } else if (b.awaitingBalance) {
+        html = '<span class="budget-line-muted">讀不到生活費餘額，暫時無法算出預算</span>';
       } else {
         const left = (Number(b.todayLeft) || 0) - pendingToday(b);
         warn = left < 0;
@@ -99,7 +101,7 @@ const BudgetView = (function() {
         }
         html = main + sub;
       }
-    } else if (b.configured) {
+    } else if (b.configured && !b.awaitingBalance) {
       const over = b.remaining < 0;
       warn = over;
       html = '<span class="budget-line-sub' + (over ? ' is-over' : '') + '">' +
@@ -136,6 +138,10 @@ const BudgetView = (function() {
     if (b.awaitingIncome) {
       return '<div class="ov-card oc-card oc-budget is-empty"><span class="budget-line-muted">' +
                escHtml(monthLabel(b.month)) + '預算來自生活費收入，目前還沒有記錄</span></div>';
+    }
+    if (b.awaitingBalance) {
+      return '<div class="ov-card oc-card oc-budget is-empty"><span class="budget-line-muted">' +
+               escHtml(monthLabel(b.month)) + '預算來自生活費餘額，' + (b.mode === 'future' ? '到這個月份才會算出' : '目前讀不到餘額') + '</span></div>';
     }
 
     const amount = Number(b.amount) || 0;

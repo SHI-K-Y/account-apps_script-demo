@@ -10,11 +10,19 @@
  *   排除項目                      完全不計入預算：本月已花、每日額度、今天還能花都不看它（旅遊、大件 3C）
  * 某個月份套用「起始月份 ≤ 該月」之中最晚的那一列，所以修改本月的設定不會改到過去的月份。
  *
+ * 預算來源：
+ *   固定金額    每月固定一個金額
+ *   生活費收入  當月「生活費」總類的收入合計（可限定收入項目）
+ *   生活費餘額  總覽「生活費・目前餘額」（月份工作表的「累計生活費總收支」）：
+ *               預算 = 月初餘額（上個月累計）＋ 當月生活費收入，
+ *               所以只計入生活費總類時，本月剩餘就等於目前餘額，再平均分配到剩下的天數。
+ *               月初餘額由該月份工作表算回來（累計 − 當月收入 + 當月支出），只跟之前的月份有關，另外快取。
+ *
  * 計算結果不快取：每次回應時用手上的月份明細當場算（掃一遍支出而已），
  * 這樣啟動快取跨日、新增／修改／刪除紀錄後都不需要另外清快取，數字也不會停在昨天。
  */
 const BUDGET_HEADERS_ = Object.freeze(['起始月份', '預算來源', '每月預算', '計入總類', '收入項目', '不計入每日額度的項目', '更新時間', '排除項目']);
-const BUDGET_SOURCES_ = Object.freeze({ fixed: '固定金額', income: '生活費收入', off: '停用' });
+const BUDGET_SOURCES_ = Object.freeze({ fixed: '固定金額', income: '生活費收入', balance: '生活費餘額', off: '停用' });
 const BUDGET_DEFAULT_CATEGORIES_ = Object.freeze(['生活費']);
 const BUDGET_INCOME_CATEGORY_ = '生活費';
 const BUDGET_LIST_SEP_ = '、';
@@ -127,6 +135,56 @@ function resolveBudgetVersion_(config, month) {
   return found && found.source !== 'off' ? found : null;
 }
 
+/* ------------------------- 生活費餘額（月初餘額） ------------------------- */
+
+/**
+ * 某個月份的生活費月初餘額 = 該月工作表的「累計生活費總收支 − 當月生活費總收入 + 當月生活費總支出」，
+ * 也就是上個月底的累計餘額。讀不到（工作表不存在、公式錯誤）時回傳 null。
+ * 這個數字只跟之前的月份有關，記帳時不必重算；之前的月份有異動時由 budgetOpeningCacheKeysAfter_ 清掉。
+ */
+function budgetOpeningBalance_(ss, month, forceRefresh) {
+  const key = CONFIG.CACHE_KEYS.BUDGET_OPENING_PREFIX + month;
+  const cache = scriptCache_();
+  if (!forceRefresh) {
+    const cached = cache.get(key);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed && (parsed.value === null || typeof parsed.value === 'number')) return parsed.value;
+      } catch (e) {}
+    }
+  }
+
+  const spreadsheet = ss || getSpreadsheet_();
+  const sheet = spreadsheet.getSheetByName(month);
+  if (!sheet) return null; // 還沒建立的月份不快取：建立後就讀得到
+  const scan = OVERVIEW_SCAN_RANGE_;
+  const numRows = Math.max(1, Math.min(scan.numRows, sheet.getMaxRows() - scan.row + 1));
+  const numCols = Math.max(1, Math.min(scan.numCols, sheet.getMaxColumns() - scan.col + 1));
+  const values = readOverviewFields_(sheet.getRange(scan.row, scan.col, numRows, numCols).getDisplayValues()).values;
+  const nums = ['livingBalance', 'livingIncome', 'livingExpense'].map(function (k) {
+    const text = String(values[k] == null ? '' : values[k]).trim();
+    return text.charAt(0) === '#' ? NaN : cleanAmount_(text);
+  });
+  const value = nums.every(Number.isFinite) ? budgetRound_(nums[0] - nums[1] + nums[2]) : null;
+  try { cache.put(key, JSON.stringify({ value: value }), CONFIG.CACHE_TTL); } catch (e) {}
+  return value;
+}
+
+/** 某個月份有異動時，之後月份的月初餘額都要重算（往後一年）。 */
+function budgetOpeningCacheKeysAfter_(month) {
+  if (!CONFIG.MONTH_PATTERN.test(String(month || ''))) return [];
+  const keys = [];
+  for (let i = 1; i <= 12; i++) keys.push(CONFIG.CACHE_KEYS.BUDGET_OPENING_PREFIX + shiftMonth_(month, i));
+  return keys;
+}
+
+/** computeBudgetStatus_ 需要的工作表數字（目前只有生活費餘額要用）。 */
+function budgetExtras_(ss, version, month, forceRefresh) {
+  if (!version || version.source !== 'balance') return null;
+  return { openingBalance: budgetOpeningBalance_(ss, month, forceRefresh) };
+}
+
 /* ---------------------------------- 計算 ---------------------------------- */
 
 function budgetRound_(num) {
@@ -139,8 +197,9 @@ function budgetRound_(num) {
  * @param month      'yyyy.MM'
  * @param monthData  { expenses, incomes }（getMonthData_ 的結果；可為 null，視為沒有紀錄）
  * @param today      budgetToday_() 的結果
+ * @param extras     budgetExtras_ 的結果：{ openingBalance }（生活費餘額才需要；null 表示讀不到）
  */
-function computeBudgetStatus_(version, month, monthData, today) {
+function computeBudgetStatus_(version, month, monthData, today, extras) {
   const year = Number(month.slice(0, 4));
   const monthNumber = Number(month.slice(5, 7));
   const daysInMonth = new Date(year, monthNumber, 0).getDate();
@@ -155,8 +214,10 @@ function computeBudgetStatus_(version, month, monthData, today) {
 
   let amount = version.amount;
   let incomeCount = 0;
-  if (version.source === 'income') {
-    const itemSet = version.incomeItems.length ? new Set(version.incomeItems) : null;
+  let openingBalance = null;
+  if (version.source === 'income' || version.source === 'balance') {
+    // 生活費餘額：當月所有生活費收入都會進到餘額，不看收入項目。
+    const itemSet = version.source === 'income' && version.incomeItems.length ? new Set(version.incomeItems) : null;
     amount = 0;
     ((monthData && monthData.incomes) || []).forEach(function (rec) {
       if (!rec || String(rec.category).trim() !== BUDGET_INCOME_CATEGORY_) return;
@@ -164,6 +225,11 @@ function computeBudgetStatus_(version, month, monthData, today) {
       amount += chartAmount_(rec.amount);
       incomeCount++;
     });
+  }
+  if (version.source === 'balance') {
+    const opening = extras && extras.openingBalance;
+    openingBalance = typeof opening === 'number' && Number.isFinite(opening) ? opening : null;
+    amount = openingBalance === null ? 0 : openingBalance + amount;
   }
 
   const isCurrent = mode === 'current';
@@ -204,7 +270,9 @@ function computeBudgetStatus_(version, month, monthData, today) {
     remaining: budgetRound_(amount - spent),
     overspent: budgetRound_(Math.max(0, spent - amount)),
     awaitingIncome: version.source === 'income' && incomeCount === 0,
+    awaitingBalance: version.source === 'balance' && openingBalance === null,
   });
+  if (version.source === 'balance') status.openingBalance = openingBalance === null ? null : budgetRound_(openingBalance);
   if (!isCurrent) return status;
 
   // 預留法：不計入每日額度的項目從月初就先扣掉預留金額；付款時從預留裡扣，超出預留的部分才算進當天的花費。
@@ -249,7 +317,8 @@ function budgetStatusForMonth_(month, monthData) {
   try {
     if (!CONFIG.MONTH_PATTERN.test(String(month || ''))) return null;
     const config = readBudgetConfig_(null, false);
-    return computeBudgetStatus_(resolveBudgetVersion_(config, month), month, monthData, budgetToday_());
+    const version = resolveBudgetVersion_(config, month);
+    return computeBudgetStatus_(version, month, monthData, budgetToday_(), budgetExtras_(null, version, month, false));
   } catch (e) {
     console.warn('[budget] 計算失敗：' + (e && e.message ? e.message : e));
     return null;

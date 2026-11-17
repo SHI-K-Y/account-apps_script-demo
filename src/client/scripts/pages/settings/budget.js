@@ -9,6 +9,7 @@ const BudgetSettings = (function() {
   const SOURCES = [
     { value: 'fixed', label: '固定金額' },
     { value: 'income', label: '生活費收入' },
+    { value: 'balance', label: '生活費餘額' },
     { value: 'off', label: '停用' },
   ];
   const MONTHS_AHEAD = 12;
@@ -111,6 +112,10 @@ const BudgetSettings = (function() {
       return '<div class="pref-card budget-status"><div class="pref-card-title">本月預算來自生活費收入</div>' +
                '<div class="pref-card-desc">目前還沒有記錄符合條件的收入，記一筆後就會算出預算。</div></div>';
     }
+    if (s.awaitingBalance) {
+      return '<div class="pref-card budget-status"><div class="pref-card-title">本月預算來自生活費餘額</div>' +
+               '<div class="pref-card-desc">讀不到本月工作表的「累計生活費總收支」，請確認月份工作表已建立、公式沒有錯誤。</div></div>';
+    }
     const left = Number(s.todayLeft) || 0;
     const title = '<div class="pref-card-title">本月預算 ' + money(s.amount) + '</div>';
     return '<div class="pref-card budget-status">' +
@@ -162,6 +167,7 @@ const BudgetSettings = (function() {
     }).join('');
     let desc = '';
     if (d.source === 'fixed') desc = '每個月固定一個金額。';
+    if (d.source === 'balance') desc = '以總覽的「生活費・目前餘額」當作預算：本月剩餘就是目前餘額，平均分配到剩下的天數。';
     if (d.source === 'off') desc = '從所選月份起不使用預算。';
     return '<div class="pref-card">' +
              '<div class="pref-card-text">' +
@@ -257,6 +263,7 @@ const BudgetSettings = (function() {
     const applying = versionFor(st.data.currentMonth);
     const rows = list.slice().reverse().map(v => {
       const what = v.source === 'off' ? '停用'
+        : v.source === 'balance' ? '生活費餘額'
         : (v.source === 'income' ? '生活費收入' + (v.incomeItems && v.incomeItems.length ? '（' + v.incomeItems.join('、') + '）' : '') : money(v.amount));
       const extra = v.source === 'off' ? '' : (v.categories || []).join('、') +
         ((v.reserves || []).length ? '・預留 ' + v.reserves.map(r => r.item + ' ' + money(r.amount)).join('、') : '') +

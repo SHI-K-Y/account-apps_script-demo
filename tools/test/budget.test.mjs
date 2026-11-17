@@ -205,6 +205,50 @@ test('預算：以當月生活費收入作為預算（可限定收入項目，�
   assert.equal(after.daily, Math.floor((20000 - LIVING) / 18));
 });
 
+test('預算：以生活費餘額作為預算（月初餘額＋當月生活費收入，本月剩餘＝總覽的目前餘額）', () => {
+  // fixture 的 2026.11：累計生活費總收支 5000、當月生活費收入 3000、支出 3755 → 月初餘額 5755
+  const b = createBackend();
+  const balance = over => Object.assign({ month: '2026.11', source: 'balance', categories: ['生活費'], reserves: [] }, over);
+  const s = b.call('saveBudgetSettings', balance()).status;
+  assert.equal(s.source, 'balance');
+  assert.equal(s.awaitingBalance, false);
+  assert.equal(s.openingBalance, 5755);
+  assert.equal(s.amount, 5755 + 3000);
+  assert.equal(s.spent, LIVING);
+  assert.equal(s.remaining, 5000, '本月剩餘就是總覽的生活費目前餘額');
+  assert.equal(s.daily, Math.floor(5000 / 18));
+  assert.deepEqual(recentBudget(b), s);
+  assert.deepEqual(b.rowValues('_預算設定', 2, 'A', 3), ['2026.11', '生活費餘額', '']);
+
+  const withIncome = b.call('addIncome', incomeForm({ item: '家裡', category: '生活費', amount: 2000 })).recent.budget;
+  assert.equal(withIncome.amount, 5755 + 5000, '所有生活費收入都會進到餘額，不看收入項目');
+  const spent = b.call('addExpense', expenseForm({ amount: 120 })).recent.budget;
+  assert.equal(spent.remaining, 5000 + 2000 - 120);
+  assert.equal(spent.todaySpent, 120);
+
+  // 排除項目不吃預算：娛樂 2860 不算已花，剩餘多出這一筆
+  const excluded = b.call('saveBudgetSettings', balance({ excludedItems: ['娛樂'] })).status;
+  assert.equal(excluded.remaining, 5000 + 2000 - 120 + 2860);
+});
+
+test('預算：生活費餘額的月初餘額會快取，之前的月份有異動才重算；讀不到時回報等待中', () => {
+  const b = createBackend();
+  b.call('saveBudgetSettings', { month: '2026.11', source: 'balance', categories: ['生活費'] });
+  b.sheet('2026.11').getRange(17, 19).setValue(6000); // 模擬上個月的數字變了（mock 不算公式）
+  assert.equal(recentBudget(b).openingBalance, 5755, '同月份記帳不重讀月初餘額');
+  b.call('addExpense', expenseForm({ month: '2026.10', day: 21, amount: 50 }));
+  assert.equal(recentBudget(b).openingBalance, 6755, '上個月有異動後重新讀取');
+
+  b.sheet('2026.11').getRange(17, 19).setValue('#REF!');
+  b.call('addExpense', expenseForm({ month: '2026.10', day: 22, amount: 50 }));
+  const broken = recentBudget(b);
+  assert.equal(broken.awaitingBalance, true);
+  assert.equal(broken.amount, 0);
+
+  b.DateCtor.advance(18 * DAY); // 12/1，工作表還沒建立
+  assert.equal(b.call('getBudgetSettings', true).status.awaitingBalance, true);
+});
+
 test('預算：「今天」以台北時間為準', () => {
   // UTC 11/13 16:30 = 台北 11/14 00:30
   const b = createBackend();

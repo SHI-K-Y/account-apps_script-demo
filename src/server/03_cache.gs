@@ -12,6 +12,7 @@ function invalidateOverviewAndSettlementCache_(month) {
     if (month) {
       keys.push(CONFIG.CACHE_KEYS.OVERVIEW_PREFIX + month);
       Array.prototype.push.apply(keys, chartsCacheKeysFrom_(month));
+      Array.prototype.push.apply(keys, budgetOpeningCacheKeysAfter_(month));
     }
     cache.removeAll(keys);
   } catch (e) {}
@@ -27,6 +28,7 @@ function invalidateMonthCaches_(month) {
       CONFIG.CACHE_KEYS.SHEET_LAYOUT_PREFIX + month,
     ];
     Array.prototype.push.apply(keys, chartsCacheKeysFrom_(month));
+    Array.prototype.push.apply(keys, budgetOpeningCacheKeysAfter_(month));
     scriptCache_().removeAll(keys);
   } catch (e) {}
 }
@@ -49,6 +51,7 @@ function invalidateAllCaches_() {
         keys.push(CONFIG.CACHE_KEYS.OVERVIEW_PREFIX + m);
         keys.push(CONFIG.CACHE_KEYS.CHARTS_PREFIX + m);
         keys.push(CONFIG.CACHE_KEYS.SHEET_LAYOUT_PREFIX + m);
+        keys.push(CONFIG.CACHE_KEYS.BUDGET_OPENING_PREFIX + m);
       });
     }
     Array.prototype.push.apply(keys, fxCacheKeys_(readFxLedgerIds_()));
