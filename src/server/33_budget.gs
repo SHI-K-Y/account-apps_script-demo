@@ -15,6 +15,7 @@
  *   生活費收入  當月「生活費」總類的收入合計（可限定收入項目）
  *   生活費餘額  總覽「生活費・目前餘額」（月份工作表的「累計生活費總收支」）：
  *               預算 = 月初餘額（上個月累計）＋ 當月生活費收入，
+ *               − 已排除的生活費支出（排除項目不算已花，但錢已經從餘額扣掉），
  *               所以只計入生活費總類時，本月剩餘就等於目前餘額，再平均分配到剩下的天數。
  *               月初餘額由該月份工作表算回來（累計 − 當月收入 + 當月支出），只跟之前的月份有關，另外快取。
  *
@@ -236,6 +237,7 @@ function computeBudgetStatus_(version, month, monthData, today, extras) {
   const todayDay = Math.min(today.day, daysInMonth);
   let spent = 0;
   let excludedSpent = 0;
+  let excludedLiving = 0; // 排除項目中屬於生活費總類的部分（生活費餘額要扣掉）
   let regularBefore = 0;
   let regularToday = 0;
   const reserved = {}; // 項目 → { before, today }
@@ -245,7 +247,8 @@ function computeBudgetStatus_(version, month, monthData, today, extras) {
     if (!rec || !categorySet.has(String(rec.category).trim())) return;
     const value = chartAmount_(rec.amount);
     if (excludedSet.has(String(rec.item).trim())) {
-      excludedSpent += value; // 排除項目：完全不計入預算，只記下金額給畫面說明
+      excludedSpent += value; // 排除項目：不算已花，只記下金額給畫面說明
+      if (String(rec.category).trim() === BUDGET_INCOME_CATEGORY_) excludedLiving += value;
       return;
     }
     spent += value;
@@ -257,6 +260,9 @@ function computeBudgetStatus_(version, month, monthData, today, extras) {
     else if (isToday) regularToday += value;
     else regularBefore += value;
   });
+
+  // 生活費餘額：排除項目雖然不算已花，但錢已經從餘額扣掉，預算要跟著少，剩餘才會等於目前餘額。
+  if (version.source === 'balance' && openingBalance !== null) amount -= excludedLiving;
 
   Object.assign(status, {
     configured: true,

@@ -124,7 +124,7 @@ const BudgetView = (function() {
     const spent = Number(b.excludedSpent) || 0;
     return '<div class="oc-budget-excluded">' +
              '已排除：' + escHtml(items.join('、')) +
-             (spent > 0 ? '（本月 ' + money(spent) + '，未計入預算）' : '') +
+             (spent > 0 ? '（本月 ' + money(spent) + (b.source === 'balance' ? '，不算已花，已從生活費餘額扣除）' : '，未計入預算）') : '') +
            '</div>';
   }
 

@@ -120,7 +120,7 @@ const BudgetSettings = (function() {
     const title = '<div class="pref-card-title">本月預算 ' + money(s.amount) + '</div>';
     return '<div class="pref-card budget-status">' +
              (Number(s.excludedSpent) > 0
-               ? InfoTip.withTitle(title, 'budgetTip-excluded', '另有排除項目 ' + money(s.excludedSpent) + '（' + (s.excludedItems || []).join('、') + '）未計入預算')
+               ? InfoTip.withTitle(title, 'budgetTip-excluded', '另有排除項目 ' + money(s.excludedSpent) + '（' + (s.excludedItems || []).join('、') + '）' + (s.source === 'balance' ? '不算已花，已從生活費餘額扣除' : '未計入預算'))
                : title) +
              '<div class="budget-status-grid">' +
                '<span><small>已花</small>' + money(s.spent) + '</span>' +

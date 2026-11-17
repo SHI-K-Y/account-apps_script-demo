@@ -226,9 +226,12 @@ test('預算：以生活費餘額作為預算（月初餘額＋當月生活費�
   assert.equal(spent.remaining, 5000 + 2000 - 120);
   assert.equal(spent.todaySpent, 120);
 
-  // 排除項目不吃預算：娛樂 2860 不算已花，剩餘多出這一筆
+  // 排除項目不算已花，但錢已經從餘額扣掉：預算跟著少，剩餘仍然等於目前餘額
   const excluded = b.call('saveBudgetSettings', balance({ excludedItems: ['娛樂'] })).status;
-  assert.equal(excluded.remaining, 5000 + 2000 - 120 + 2860);
+  assert.equal(excluded.spent, LIVING + 120 - 2860);
+  assert.equal(excluded.excludedSpent, 2860);
+  assert.equal(excluded.amount, 5755 + 5000 - 2860);
+  assert.equal(excluded.remaining, 5000 + 2000 - 120, '剩餘仍然等於目前餘額');
 });
 
 test('預算：生活費餘額的月初餘額會快取，之前的月份有異動才重算；讀不到時回報等待中', () => {
