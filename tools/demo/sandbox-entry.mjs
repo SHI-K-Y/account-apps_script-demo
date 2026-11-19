@@ -11,8 +11,8 @@ import { mountOnboarding } from './onboarding.mjs';
 import SERVER_SOURCE from 'demo:server-source';
 
 const STORAGE_PREFIX = 'FAST_BOOKKEEPING_';
-// 純粹的介面偏好（主題、效能等級…）保留，其餘以這個前綴開頭的都是資料快取，一律清掉。
-const KEEP_KEYS = new Set(['FAST_BOOKKEEPING_PREFS_V1', 'FAST_BOOKKEEPING_PERF_V1']);
+// 純粹的介面偏好（動畫效果、自動捲動）保留，其餘以這個前綴開頭的都是資料快取，一律清掉。
+const KEEP_KEYS = new Set(['FAST_BOOKKEEPING_PREFS_V1']);
 const LATENCY_MS = [90, 220]; // 模擬一點點網路延遲，讓讀取中、送出中的動畫看得到
 
 function clearDataCaches() {

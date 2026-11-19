@@ -39,7 +39,7 @@ const COMPARE = typeof args.compare === 'string' ? path.join(PERF_DIR, 'screens'
 const ONLY = typeof args.only === 'string' ? new Set(args.only.split(',')) : null;
 const EXTRA_CSS = typeof args.css === 'string' ? args.css : '';
 const VIEWPORT = { width: 390, height: 844 };
-const PREFS = { motion: 'full', autoScroll: true, perf: 'high' };
+const PREFS = { motion: 'full', autoScroll: true };
 const FIXED_NOW = Date.UTC(2026, 10, 13, 4, 0, 0);
 
 // 要盤點的狀態：page＝切到哪一頁；open＝在頁面內要做的事（開彈窗、打開彈出層）

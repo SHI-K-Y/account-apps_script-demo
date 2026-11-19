@@ -67,7 +67,8 @@
 /* ::after 原本是 12px 的六角網格（背景上一點一點的圖案），2026-11-15 移除；
    現在只在深色模式放暗化遮罩（見 20-uiverse-effects.css） */
 
-/* 名稱刻意不用 ambient- 開頭、也不列在 Perf 的 RATES：不能被降頻（steps()），否則會和 canvas 的亮度不同步 */
+/* 名稱刻意不用 ambient- 開頭、也不列在 core/ambient.js 的 NAMES：canvas 光暈的亮度以這個動畫的時間軸為準，
+   被暫停就會和 canvas 不同步（canvas 在背景時由 core/background.js 自己停住） */
 @keyframes uv-bg-breathe-fade {
   from { opacity: 0; }
   to { opacity: 1; }

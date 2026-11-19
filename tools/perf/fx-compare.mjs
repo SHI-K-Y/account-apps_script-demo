@@ -33,7 +33,7 @@ const NEW = path.resolve(typeof args.new === 'string' ? args.new : path.join(ROO
 const OUT = path.resolve(typeof args.out === 'string' ? args.out : path.join(PERF_DIR, 'screens', 'fx-compare'));
 const ONLY = typeof args.only === 'string' ? new Set(args.only.split(',')) : null;
 const FRACTIONS = [0, 0.25, 0.5, 0.75];
-const PREFS = { motion: 'full', autoScroll: false, perf: 'high' };
+const PREFS = { motion: 'full', autoScroll: false };
 const DEVICES = [{ key: 'mobile', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }];
 if (args.desktop) DEVICES.push({ key: 'desktop', viewport: { width: 1280, height: 900 }, isMobile: false, hasTouch: false });
 
@@ -91,7 +91,7 @@ async function openApp(browser, url, theme, device) {
     locale: 'zh-TW', timezoneId: 'Asia/Taipei', colorScheme: theme,
   });
   await context.addInitScript(p => { try { localStorage.setItem('FAST_BOOKKEEPING_PREFS_V1', JSON.stringify(p)); } catch (e) {} }, PREFS);
-  // 定格之後，Perf 的離屏偵測（IntersectionObserver）可能在截圖前又把動畫 play() 回來；定格期間一律擋掉
+  // 定格之後，Ambient 的離屏偵測（IntersectionObserver）可能在截圖前又把動畫 play() 回來；定格期間一律擋掉
   await context.addInitScript(() => {
     const play = Animation.prototype.play;
     Animation.prototype.play = function () { if (window.__fxFrozen) return undefined; return play.call(this); };

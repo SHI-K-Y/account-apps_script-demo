@@ -835,7 +835,7 @@
   }
 }
 
-/* 效能：捲出畫面暫停已改由 app.html 的 Perf 統一調度（對所有 ambient 動畫生效）；
+/* 效能：捲出畫面暫停已改由 core/ambient.js 統一處理（對所有常駐動畫生效）；
  * 這條 .uv-offscreen 規則保留作相容，沒有程式再加這個 class 也不影響。 */
 :is(
   #todayExpenseCard,

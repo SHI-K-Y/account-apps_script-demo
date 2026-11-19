@@ -12,8 +12,9 @@
 // 其他參數：--runs <n>（重複次數，預設 3）、--no-baseline（不自動比較 baseline.json）、--skip-screens（不截圖）、
 //          --raster-threads <n>（點陣化執行緒數，預設 1；見 main() 的說明）、
 //          --dist <資料夾>（量別的建置產物，例如舊版本：git worktree 建置後指過去；預設 dist/）、
-//          --full-page（截整頁而不是手機畫面大小；固定元素位置會失真，只在要檢查下半頁時用）、
-//          --prefs none（不預設偏好設定，改用 App 自己的判斷；P04 之後用）。
+//          --full-page（截整頁而不是手機畫面大小；固定元素位置會失真，只在要檢查下半頁時用）。
+// 偏好設定一律用 App 的預設值（動畫效果：完整）。P04 移除裝置分級之後所有裝置都是同一套高畫質動畫，
+// 不用再預先指定等級；舊結果檔記的 prefs: 'high'（P03 以前強制高畫質）視為同一個量測條件。
 //
 // 注意：headless 是軟體繪圖，絕對數字比真機悲觀，只拿來比較「改之前／改之後」的相對變化。
 import fs from 'node:fs';
@@ -49,7 +50,6 @@ const OPT = {
   cpu: Number(args.cpu) || 4,
   net: args.net === 'fast3g' ? 'fast3g' : 'none',
   runs: Math.max(1, Number(args.runs) || 3),
-  prefs: args.prefs === 'none' ? 'none' : 'high',
   screens: !args['skip-screens'],
   fullPage: Boolean(args['full-page']),
   rasterThreads: Math.max(1, Number(args['raster-threads']) || 1),
@@ -72,8 +72,6 @@ const SLOW_FRAME_MS = 50.5;
 // 判定「改善／變差」：差異要超過 10%，而且絕對值超過這個雜訊門檻（超過一個 vsync 16.7ms、或 5 次／幀）
 const NOISE_FLOOR = { ms: 17, '幀': 5, '次': 5, '個': 1, fps: 3 };
 const FAST3G = { offline: false, latency: 150, downloadThroughput: 1.6e6 / 8, uploadThroughput: 750e3 / 8 };
-// P04（移除裝置分級）完成以前，先把偏好設成「高畫質」量測現況；否則 headless 會被自動判成 low。
-const PREFS = { motion: 'full', autoScroll: true, perf: 'high' };
 
 const PAGES = [
   { key: 'bookkeeping', label: '記帳頁', nav: '#navBookkeeping' },
@@ -146,10 +144,7 @@ function pageInstrument(cfg) {
   }
   window.Date = new Proxy(FixedDate, { apply: () => new FixedDate().toString() });
 
-  // 2. 偏好設定
-  if (cfg.prefs) {
-    try { localStorage.setItem('FAST_BOOKKEEPING_PREFS_V1', JSON.stringify(cfg.prefs)); } catch (e) {}
-  }
+  // 2. 偏好設定：不預設，用 App 自己的預設值（每個 context 的 localStorage 都是空的）
 
   const P = window.__perf = { bootReady: null, longTasks: [], events: [], rpcInflight: 0, rpcLastEnd: 0 };
 
@@ -233,7 +228,7 @@ async function newPage(browser, opts) {
     viewport: VIEWPORT, deviceScaleFactor: DPR, isMobile: true, hasTouch: true,
     locale: 'zh-TW', timezoneId: 'Asia/Taipei', colorScheme: o.theme || 'light',
   });
-  await context.addInitScript(pageInstrument, { fixedNow: FIXED_NOW, prefs: OPT.prefs === 'high' ? PREFS : null });
+  await context.addInitScript(pageInstrument, { fixedNow: FIXED_NOW });
   const page = await context.newPage();
   page.on('pageerror', e => console.warn('  [頁面錯誤] ' + e.message));
   const cdp = await context.newCDPSession(page);
@@ -731,7 +726,9 @@ function resolveResultFile(name) {
   return null;
 }
 
-const sameConditions = (a, b) => a.cpu === b.cpu && a.net === b.net && a.prefs === b.prefs && (a.rasterThreads || 1) === (b.rasterThreads || 1);
+// 'high'：P03 以前的結果檔（強制高畫質）＝ 現在所有裝置的預設；'none'：P03 以前「交給自動分級」，條件不同
+const prefsCondition = p => (p == null || p === 'high' ? 'default' : p);
+const sameConditions = (a, b) => a.cpu === b.cpu && a.net === b.net && prefsCondition(a.prefs) === prefsCondition(b.prefs) && (a.rasterThreads || 1) === (b.rasterThreads || 1);
 
 async function main() {
   const started = Date.now();
@@ -740,8 +737,7 @@ async function main() {
   const browser = await chromium.launch({ args: ['--num-raster-threads=' + OPT.rasterThreads] });
   const version = browser.version();
   console.log('效能量測：Chromium ' + version + '｜手機 ' + VIEWPORT.width + '×' + VIEWPORT.height + ' @' + DPR + 'x｜CPU ' + OPT.cpu +
-    ' 倍降速' + (OPT.net === 'fast3g' ? '＋Fast 3G' : '') + '｜點陣化執行緒 ' + OPT.rasterThreads + '｜重複 ' + OPT.runs + ' 次取中位數｜偏好設定：' +
-    (OPT.prefs === 'high' ? '高畫質（量測用預設）' : '不預設'));
+    ' 倍降速' + (OPT.net === 'fast3g' ? '＋Fast 3G' : '') + '｜點陣化執行緒 ' + OPT.rasterThreads + '｜重複 ' + OPT.runs + ' 次取中位數');
 
   let runs;
   let stat;
@@ -774,7 +770,7 @@ async function main() {
     label: OPT.label,
     createdAt: new Date().toISOString(),
     conditions: {
-      cpu: OPT.cpu, net: OPT.net, runs: OPT.runs, prefs: OPT.prefs, rasterThreads: OPT.rasterThreads,
+      cpu: OPT.cpu, net: OPT.net, runs: OPT.runs, prefs: 'default', rasterThreads: OPT.rasterThreads,
       // 專案外的資料夾只記最後兩層，不把本機路徑寫進會進版控的 baseline.json
       dist: !OPT.dist ? 'dist' : (path.relative(ROOT, OPT.dist).startsWith('..') ? '(外部) ' + OPT.dist.split(path.sep).slice(-2).join('/') : path.relative(ROOT, OPT.dist)), viewport: VIEWPORT, deviceScaleFactor: DPR,
       fixedNow: new Date(FIXED_NOW).toISOString(), chromium: version, node: process.version, platform: os.platform() + ' ' + os.arch(),
@@ -812,7 +808,7 @@ async function main() {
   const outFile = path.join(RESULTS_DIR, stamp(new Date()) + '-' + OPT.label + '.json');
   fs.writeFileSync(outFile, JSON.stringify(result, null, 2) + '\n');
 
-  const isDefault = OPT.cpu === 4 && OPT.net === 'none' && OPT.prefs === 'high' && OPT.rasterThreads === 1 && OPT.runs >= 3;
+  const isDefault = OPT.cpu === 4 && OPT.net === 'none' && OPT.rasterThreads === 1 && OPT.runs >= 3;
   let savedBaseline = false;
   if (OPT.saveBaseline || (!fs.existsSync(BASELINE_FILE) && isDefault)) {
     fs.writeFileSync(BASELINE_FILE, JSON.stringify(result, null, 2) + '\n');

@@ -163,7 +163,7 @@ test('Demo 網站：單一靜態檔，範本標記都已展開，沙盒可在瀏
 
     // 用最小的瀏覽器替身執行沙盒：確認它會清掉舊快取、提供 google.script.run 與啟動資料。
     const sandboxJs = html.match(/<script id="demoSandbox">\n([\s\S]*?)\n {2}<\/script>/)[1];
-    const store = new Map([['FAST_BOOKKEEPING_BOOT_V2', '{"stale":true}'], ['FAST_BOOKKEEPING_PREFS_V1', '{"perf":"high"}'], ['other', '1']]);
+    const store = new Map([['FAST_BOOKKEEPING_BOOT_V2', '{"stale":true}'], ['FAST_BOOKKEEPING_PREFS_V1', '{"motion":"lite"}'], ['other', '1']]);
     const localStorage = {
       get length() { return store.size; },
       key: i => Array.from(store.keys())[i],

@@ -85,8 +85,8 @@ test('原本會重繪整頁的背景動畫已移除，改成只動 opacity', () 
   assert.ok(kf, '缺少 uv-bg-breathe-fade');
   assert.deepEqual([...new Set(kf[1].match(/[a-z-]+(?=\s*:)/g))], ['opacity']);
   assert.match(bgCss, /contain:\s*strict/);
-  const perf = read('scripts/core/perf.js');
-  assert.doesNotMatch(perf, /'uv-glow-(breathe|drift)'/);
+  const ambient = read('scripts/core/ambient.js');
+  assert.doesNotMatch(ambient, /'uv-glow-(breathe|drift)'/);
   assert.match(read('partials/boot-loader.html'), /class="uv-glow-bg"[^>]*>\s*<canvas class="uv-glow-canvas"/);
   const manifest = JSON.parse(read('manifest.json'));
   assert.ok(manifest.scripts.includes('core/background.js'));

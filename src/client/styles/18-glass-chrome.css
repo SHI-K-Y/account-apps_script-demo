@@ -39,7 +39,7 @@
   -webkit-backdrop-filter: var(--glass-live-sheet);
   backdrop-filter: var(--glass-live-sheet);
 }
-/* 邊緣折射：透明款玻璃看得到背後的畫面，折射才有意義（Chromium；由 core/perf.js 加上 lg-can-refract） */
+/* 邊緣折射：透明款玻璃看得到背後的畫面，折射才有意義（Chromium；由 core/motion.js 的 initRefraction() 依瀏覽器支援度加上 lg-can-refract） */
 @supports (backdrop-filter: url(#lg-refract)) {
   @media (prefers-reduced-transparency: no-preference) {
     :root.lg-can-refract {

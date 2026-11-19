@@ -817,8 +817,8 @@ const Motion = (function() {
         typeof CSS !== 'undefined' && CSS.supports('backdrop-filter', 'url(#lg-refract)') &&
         Boolean(document.getElementById('lg-refract'));
     } catch (e) { ok = false; }
-    // 是否真的啟用由 Perf 依效能等級決定（省電等級會關閉折射）
-    Perf.setRefractSupport(ok);
+    // 所有裝置一律依瀏覽器支援度決定，不分級
+    document.documentElement.classList.toggle('lg-can-refract', ok);
   }
 
   function flipList(container, itemSel, keyFn, mutate) {

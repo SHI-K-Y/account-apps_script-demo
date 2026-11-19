@@ -31,7 +31,7 @@
     "core/api.js",
     "core/theme.js",
     "core/prefs.js",
-    "core/perf.js",
+    "core/ambient.js",
     "core/motion.js",
     "core/uv-fx.js",
     "core/background.js",

@@ -18,14 +18,6 @@
         }
         document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
       } catch (e) {}
-      // 效能等級：在樣式載入前就套用上次的設定／實測結果，避免第一幀用錯等級（完整邏輯在 app.html 的 Perf）
-      try {
-        var tiers = { high: 1, mid: 1, low: 1 };
-        var prefs = JSON.parse(localStorage.getItem('FAST_BOOKKEEPING_PREFS_V1') || '{}') || {};
-        var perf = JSON.parse(localStorage.getItem('FAST_BOOKKEEPING_PERF_V1') || '{}') || {};
-        var tier = tiers[prefs.perf] ? prefs.perf : (tiers[perf.tier] ? perf.tier : '');
-        if (tier) document.documentElement.setAttribute('data-perf', tier);
-      } catch (e) {}
     })();
   </script>
   <style id="bootLoaderStyle">

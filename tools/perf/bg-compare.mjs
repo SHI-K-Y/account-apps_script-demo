@@ -32,7 +32,7 @@ const TIMES = String(typeof args.times === 'string' ? args.times : '0,10,20,30')
 const OUT = path.resolve(typeof args.out === 'string' ? args.out : path.join(PERF_DIR, 'screens', 'bg-compare'));
 const VIDEO_S = args.video ? Number(args.video) || 20 : 0;
 const VIEWPORT = { width: 390, height: 844 };
-const PREFS = { motion: 'full', autoScroll: true, perf: 'high' };
+const PREFS = { motion: 'full', autoScroll: true };
 
 async function serve(root) {
   const app = createDevApp({ root, fixture: true, quiet: true });

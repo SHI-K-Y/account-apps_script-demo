@@ -170,9 +170,6 @@
   background: var(--glass-surface-subtle);
   border: 1px solid var(--glass-border-subtle);
 }
-.pref-segmented:has(> .pref-seg-btn:nth-of-type(4)) {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
 .pref-seg-btn {
   min-height: 38px;
   padding: 0 8px;

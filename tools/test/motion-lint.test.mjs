@@ -8,7 +8,7 @@
 //   3. 例外：在 @keyframes 正上方（或同一行）加註解 /* motion-lint: allow 原因 */，原因不能空白。
 //   4. 不論是否無限循環，都不准 will-change: filter 與 will-change: background-position（會讓瀏覽器為了不會發生的合成預留圖層）。
 //
-// 這裡只看 CSS；用 JS 建立的無限動畫（el.animate(..., { iterations: Infinity })）請照 core/perf.js 的規則自行檢查。
+// 這裡只看 CSS；用 JS 建立的無限動畫（el.animate(..., { iterations: Infinity })）請照 core/ambient.js 開頭的規則自行檢查，並用 Ambient.register() 登記。
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

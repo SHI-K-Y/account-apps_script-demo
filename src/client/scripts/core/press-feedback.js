@@ -44,7 +44,7 @@
 })();
 
 // 效能：卡片旋轉光環、送出按鈕星點等無限循環裝飾動畫，捲出畫面時暫停、回到畫面時接續播放，
-// 現在統一由上方的 Perf 處理（對所有 ambient 動畫生效，未來新增的也自動適用）。
+// 統一由 core/ambient.js 處理（對所有常駐動畫生效，未來新增的也自動適用）。
 
 const RefreshSpin = (function() {
   const SELECTOR = '#refreshBtn, #overviewRefreshBtn, #settlementRefreshBtn, #ccRefreshBtn, #settingsRefreshBtn, #fxListRefreshBtn';
