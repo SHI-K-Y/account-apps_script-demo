@@ -96,6 +96,7 @@ export function createDevApp(options) {
         log: quiet ? () => {} : (...a) => console.log(...a),
         properties: options.properties || {},
         activeUserEmail: options.activeUserEmail,
+        DateCtor: options.DateCtor,   // 效能量測固定「今天」用（tools/perf）；沒給就是真實時間
       });
     }
     api = runtime.load(serverSource());
