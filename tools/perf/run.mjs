@@ -10,6 +10,8 @@
 //   npm run perf -- --save-baseline                把這次結果寫成 tools/perf/baseline.json（截圖同時複製到 screens/baseline/）
 //
 // 其他參數：--runs <n>（重複次數，預設 3）、--no-baseline（不自動比較 baseline.json）、--skip-screens（不截圖）、
+//          --raster-threads <n>（點陣化執行緒數，預設 1；見 main() 的說明）、
+//          --dist <資料夾>（量別的建置產物，例如舊版本：git worktree 建置後指過去；預設 dist/）、
 //          --full-page（截整頁而不是手機畫面大小；固定元素位置會失真，只在要檢查下半頁時用）、
 //          --prefs none（不預設偏好設定，改用 App 自己的判斷；P04 之後用）。
 //
@@ -50,6 +52,8 @@ const OPT = {
   prefs: args.prefs === 'none' ? 'none' : 'high',
   screens: !args['skip-screens'],
   fullPage: Boolean(args['full-page']),
+  rasterThreads: Math.max(1, Number(args['raster-threads']) || 1),
+  dist: typeof args.dist === 'string' ? path.resolve(args.dist) : '',
   compare: typeof args.compare === 'string' ? args.compare : '',
   baseline: typeof args.baseline === 'string' ? args.baseline : '',
   autoBaseline: !args['no-baseline'],
@@ -62,11 +66,11 @@ const DPR = 2;
 const FIXED_NOW = Date.UTC(2026, 10, 13, 4, 0, 0);          // 2026-11-13 12:00 台北（與 tools/test 相同）
 const IDLE_MS = 5000;
 const ACTION_GAP_MS = 1500;
-const INPUT_ROUNDS = 2;
+const INPUT_ROUNDS = 3;
 const SETTLE_MS = 2000;
 const SLOW_FRAME_MS = 50.5;
-// 判定「改善／變差」：差異要超過 10%，而且絕對值超過這個雜訊門檻（一幀 16ms、或 5 次／幀）
-const NOISE_FLOOR = { ms: 16, '幀': 5, '次': 5, '個': 1 };
+// 判定「改善／變差」：差異要超過 10%，而且絕對值超過這個雜訊門檻（超過一個 vsync 16.7ms、或 5 次／幀）
+const NOISE_FLOOR = { ms: 17, '幀': 5, '次': 5, '個': 1 };
 const FAST3G = { offline: false, latency: 150, downloadThroughput: 1.6e6 / 8, uploadThroughput: 750e3 / 8 };
 // P04（移除裝置分級）完成以前，先把偏好設成「高畫質」量測現況；否則 headless 會被自動判成 low。
 const PREFS = { motion: 'full', autoScroll: true, perf: 'high' };
@@ -207,7 +211,7 @@ function stamp(d) {
 }
 
 async function startApp() {
-  const app = createDevApp({ fixture: true, quiet: true, DateCtor: shiftedDate(FIXED_NOW) });
+  const app = createDevApp({ fixture: true, quiet: true, DateCtor: shiftedDate(FIXED_NOW), root: OPT.dist || undefined });
   await new Promise(r => app.server.listen(0, '127.0.0.1', r));
   return { url: 'http://127.0.0.1:' + app.server.address().port + '/', close: () => new Promise(r => app.server.close(r)) };
 }
@@ -454,12 +458,19 @@ function inventoryInPage() {
  * e. 截圖（定格在第 0 幀）與比對
  * ------------------------------------------------------------------------- */
 async function freezeAndShoot(page, file) {
-  await page.evaluate(() => document.getAnimations().forEach(a => { a.pause(); a.currentTime = 0; }));
+  await page.evaluate(() => {
+    document.getAnimations().forEach(a => { a.pause(); a.currentTime = 0; });
+    // 背景光暈畫在 canvas（P01，core/background.js），不是 CSS 動畫，要另外定格
+    if (window.__bgDebug) window.__bgDebug.setTime(0);
+  });
   await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
   // 預設只截手機畫面大小（390×844）：整頁截圖會把視窗撐成整頁高，100vh 背景會被拉長、固定的底部導覽列會跑到圖中間。
   await page.screenshot({ path: file, fullPage: OPT.fullPage, animations: 'allow', caret: 'hide' });
   // 恢復播放，下一頁的動畫才是正常狀態
-  await page.evaluate(() => document.getAnimations().forEach(a => { if (a.playState === 'paused') a.play(); }));
+  await page.evaluate(() => {
+    document.getAnimations().forEach(a => { if (a.playState === 'paused') a.play(); });
+    if (window.__bgDebug) window.__bgDebug.setTime(null);
+  });
 }
 
 function padPng(png, w, h) {
@@ -498,46 +509,64 @@ function compareScreens(label, base) {
 /* ---------------------------------------------------------------------------
  * 流程
  * ------------------------------------------------------------------------- */
+// 頁面狀態會大幅影響幀率（例如輸入金額後送出鈕的 uv-btn-* 動畫開始跑、捲動位置改變畫面內的毛玻璃），
+// 所以每一段量測都從固定的狀態開始：
+//   1. 開機 → 閒置（記帳、總覽、設定、記帳全暫停）：剛開機、還沒有任何互動
+//   2. 互動延遲：每一遍都重新開機（新的合成資料、新的頁面），量的都是「開機後第一次操作」
 async function oneRun(browser, index) {
-  const app = await startApp();   // 每次重新載入合成資料，前一次送出的紀錄不會影響這一次
-  const { context, page, cdp } = await newPage(browser, { throttle: true });
-  try {
-    await boot(page, app.url);
-    const flat = {};
-    const bootStats = await measureBoot(page);
-    for (const k of Object.keys(bootStats)) flat['boot.' + k] = bootStats[k];
+  const flat = {};
+  let bootStats;
+  let idle;
+  {
+    const app = await startApp();   // 每次重新載入合成資料，前一次送出的紀錄不會影響這一次
+    const { context, page, cdp } = await newPage(browser, { throttle: true });
+    try {
+      await boot(page, app.url);
+      bootStats = await measureBoot(page);
+      for (const k of Object.keys(bootStats)) flat['boot.' + k] = bootStats[k];
 
-    await settle(page, 0);
-    // 互動延遲以 8ms 為單位、單次波動大：同一輪開機裡把整串動作做 INPUT_ROUNDS 遍，取中位數。
-    const rounds = [];
-    for (let r = 0; r < INPUT_ROUNDS; r++) {
-      if (r) await settle(page);
-      rounds.push(await measureInputs(page));
+      idle = {};
+      for (const p of PAGES) {
+        await goTo(page, p.key);
+        idle[p.key] = await measureIdle(page, cdp);
+      }
+      await goTo(page, 'bookkeeping');
+      await page.evaluate(() => {
+        document.getAnimations().forEach(a => a.pause());
+        if (window.__bgDebug) window.__bgDebug.sync();   // 背景 canvas 跟著已暫停的 CSS 呼吸動畫定格
+      });
+      idle.bookkeepingPaused = await measureIdle(page, cdp);
+      for (const v of Object.keys(idle)) for (const k of Object.keys(idle[v])) flat['idle.' + v + '.' + k] = idle[v][k];
+    } finally {
+      await context.close();
+      await app.close();
     }
-    const inputs = { values: {}, samples: {}, detail: rounds.map(x => x.detail) };
-    for (const a of ACTIONS) {
-      inputs.samples[a.key] = rounds.map(x => x.values[a.key]);
-      inputs.values[a.key] = median(inputs.samples[a.key]);
-      flat['input.' + a.key] = inputs.values[a.key];
-    }
-
-    const idle = {};
-    for (const p of PAGES) {
-      await goTo(page, p.key);
-      idle[p.key] = await measureIdle(page, cdp);
-    }
-    await goTo(page, 'bookkeeping');
-    await page.evaluate(() => document.getAnimations().forEach(a => a.pause()));
-    idle.bookkeepingPaused = await measureIdle(page, cdp);
-    for (const v of Object.keys(idle)) for (const k of Object.keys(idle[v])) flat['idle.' + v + '.' + k] = idle[v][k];
-
-    console.log('  第 ' + index + ' 次：boot-ready ' + round(bootStats.bootReady) + 'ms、記帳頁閒置 ' + idle.bookkeeping.frames +
-      ' 幀、送出 ' + round(inputs.values.submit) + 'ms');
-    return { metrics: flat, inputEvents: { samples: inputs.samples, topEvent: inputs.detail } };
-  } finally {
-    await context.close();
-    await app.close();
   }
+
+  // 互動延遲以 8ms 為單位、單次波動大：做 INPUT_ROUNDS 遍（每遍重新開機），取中位數。
+  const rounds = [];
+  for (let r = 0; r < INPUT_ROUNDS; r++) {
+    const app = await startApp();
+    const { context, page } = await newPage(browser, { throttle: true });
+    try {
+      await boot(page, app.url);
+      await settle(page);
+      rounds.push(await measureInputs(page));
+    } finally {
+      await context.close();
+      await app.close();
+    }
+  }
+  const inputs = { values: {}, samples: {}, detail: rounds.map(x => x.detail) };
+  for (const a of ACTIONS) {
+    inputs.samples[a.key] = rounds.map(x => x.values[a.key]);
+    inputs.values[a.key] = median(inputs.samples[a.key]);
+    flat['input.' + a.key] = inputs.values[a.key];
+  }
+
+  console.log('  第 ' + index + ' 次：boot-ready ' + round(bootStats.bootReady) + 'ms、記帳頁閒置 ' + idle.bookkeeping.frames +
+    ' 幀、送出 ' + round(inputs.values.submit) + 'ms');
+  return { metrics: flat, inputEvents: { samples: inputs.samples, topEvent: inputs.detail } };
 }
 
 async function warmup(browser) {
@@ -623,7 +652,7 @@ function printTable(result, base) {
   console.log(cols.map(n => '─'.repeat(n)).join('  ').trimEnd());
   rows.slice(1).forEach(r => console.log(line(r)));
   console.log('（離散＝' + result.conditions.runs + ' 次之中最大減最小 ÷ 中位數；互動延遲是 Event Timing，8ms 為單位；' +
-    '差異超過 10% 且超過雜訊門檻（16ms／5 次）才標改善或變差）');
+    '差異超過 10% 且超過雜訊門檻（17ms／5 次）才標改善或變差）');
 }
 
 function printInventory(inv) {
@@ -653,14 +682,16 @@ function resolveResultFile(name) {
   return null;
 }
 
-const sameConditions = (a, b) => a.cpu === b.cpu && a.net === b.net && a.prefs === b.prefs;
+const sameConditions = (a, b) => a.cpu === b.cpu && a.net === b.net && a.prefs === b.prefs && (a.rasterThreads || 1) === (b.rasterThreads || 1);
 
 async function main() {
   const started = Date.now();
-  const browser = await chromium.launch();
+  // headless 用軟體繪圖：點陣化（RasterTask）在獨立執行緒上跑、不受 CPU 降速影響，Chromium 會依核心數開到 4 條。
+  // 多條時幀率取決於作業系統把它們排到哪些核心（大小核、其他程式），連跑兩次可以差到一倍；固定 1 條才穩定，也比較接近手機。
+  const browser = await chromium.launch({ args: ['--num-raster-threads=' + OPT.rasterThreads] });
   const version = browser.version();
   console.log('效能量測：Chromium ' + version + '｜手機 ' + VIEWPORT.width + '×' + VIEWPORT.height + ' @' + DPR + 'x｜CPU ' + OPT.cpu +
-    ' 倍降速' + (OPT.net === 'fast3g' ? '＋Fast 3G' : '') + '｜重複 ' + OPT.runs + ' 次取中位數｜偏好設定：' +
+    ' 倍降速' + (OPT.net === 'fast3g' ? '＋Fast 3G' : '') + '｜點陣化執行緒 ' + OPT.rasterThreads + '｜重複 ' + OPT.runs + ' 次取中位數｜偏好設定：' +
     (OPT.prefs === 'high' ? '高畫質（量測用預設）' : '不預設'));
 
   let runs;
@@ -694,7 +725,9 @@ async function main() {
     label: OPT.label,
     createdAt: new Date().toISOString(),
     conditions: {
-      cpu: OPT.cpu, net: OPT.net, runs: OPT.runs, prefs: OPT.prefs, viewport: VIEWPORT, deviceScaleFactor: DPR,
+      cpu: OPT.cpu, net: OPT.net, runs: OPT.runs, prefs: OPT.prefs, rasterThreads: OPT.rasterThreads,
+      // 專案外的資料夾只記最後兩層，不把本機路徑寫進會進版控的 baseline.json
+      dist: !OPT.dist ? 'dist' : (path.relative(ROOT, OPT.dist).startsWith('..') ? '(外部) ' + OPT.dist.split(path.sep).slice(-2).join('/') : path.relative(ROOT, OPT.dist)), viewport: VIEWPORT, deviceScaleFactor: DPR,
       fixedNow: new Date(FIXED_NOW).toISOString(), chromium: version, node: process.version, platform: os.platform() + ' ' + os.arch(),
     },
     metrics,
@@ -730,7 +763,7 @@ async function main() {
   const outFile = path.join(RESULTS_DIR, stamp(new Date()) + '-' + OPT.label + '.json');
   fs.writeFileSync(outFile, JSON.stringify(result, null, 2) + '\n');
 
-  const isDefault = OPT.cpu === 4 && OPT.net === 'none' && OPT.prefs === 'high' && OPT.runs >= 3;
+  const isDefault = OPT.cpu === 4 && OPT.net === 'none' && OPT.prefs === 'high' && OPT.rasterThreads === 1 && OPT.runs >= 3;
   let savedBaseline = false;
   if (OPT.saveBaseline || (!fs.existsSync(BASELINE_FILE) && isDefault)) {
     fs.writeFileSync(BASELINE_FILE, JSON.stringify(result, null, 2) + '\n');

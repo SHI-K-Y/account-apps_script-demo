@@ -40,14 +40,9 @@ const Perf = (function() {
   const LABELS = { high: '高畫質', mid: '平衡', low: '省電' };
   // 目前專案中的無限循環裝飾動畫（載入中的轉圈圈不算，維持原樣），以及各自在 mid / low 的更新頻率上限。
   // 依「動得多快」決定：動得越慢，降低更新頻率越看不出來。high 一律不設上限（完全原樣）。
-  //   背景呼吸：亮度只在 0.98～1.02 之間變化，5fps 時每步亮度差 < 0.2%，肉眼無法分辨。
-  //   背景流光：巨大柔和的漸層光暈，10fps 時每步位移遠小於光暈本身的漸層寬度。
+  //   （整頁背景光暈已改由 core/background.js 繪製、只動 opacity，不在這裡調度，也不能被降頻。）
   //   分頁星點：每秒只移動 6px，10fps 時每步 0.6px。
-  // 背景與分頁列刻意對齊在同一個時間格（0.1s / 0.05s），讓它們在同一幀一起更新，
-  // 毛玻璃只需重算一次模糊，而不是各更新各的、模糊被觸發好幾次。
   const RATES = {
-    'uv-glow-breathe':  { mid: 10, low: 5 },
-    'uv-glow-drift':    { mid: 20, low: 10 },
     'uv-tab-stars-ltr': { mid: 20, low: 10 },
     'uv-tab-stars-rtl': { mid: 20, low: 10 },
     'uv-tab-glow':      { mid: 20, low: 10 },

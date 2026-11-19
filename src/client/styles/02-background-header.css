@@ -1,3 +1,14 @@
+/* 整頁背景光暈（2026-11-19 P01 改寫）
+ * 原本：整個元素用 filter: brightness() 呼吸（6s ease-in-out alternate），::before 疊 4 層 radial-gradient
+ * 用 background-position 漂移（40s linear）。兩者每一幀都要重繪、重新光柵化整個視窗，上方所有毛玻璃也跟著重算。
+ * 現在（顏色、明暗起伏、漂移路徑、速度與緩動都不變，只是交給合成器）：
+ *   .uv-glow-bg          底層漸層 × 最小亮度（--uv-bg-k-lo）
+ *   ::before             同一個漸層 × 最大亮度（--uv-bg-k-hi），opacity 0↔1 交叉淡入淡出
+ *                        —— (1-o)·lo + o·hi 就是亮度在 min～max 之間線性變化，和原本的 brightness 一樣
+ *   canvas.uv-glow-canvas 4 層漂移光暈，低解析度 canvas 拉伸滿版，由 core/background.js 繪製
+ *                        （Web Worker＋OffscreenCanvas；不支援時退回主執行緒），每幀乘上同步的亮度係數
+ *   ::after              深色模式的暗化遮罩（20-uiverse-effects.css），維持在最上層
+ * 不支援 CSS 相對色彩語法的瀏覽器，改用 01-tokens-base.css 預先算好的色票（--uv-rad-lo-*／--uv-rad-hi-*）。 */
 .uv-glow-bg {
   position: fixed;
   inset: 0;
@@ -5,75 +16,68 @@
   pointer-events: none;
   overflow: hidden;
   contain: strict;
-  /* Uiverse 底層漸層：從左下深橘紅 → 橘金 → 玫瑰粉 → 淡紫 → 天藍（右上）*/
-  background: var(--uv-rad-bg);
-  will-change: filter;
-  animation: uv-glow-breathe 6s ease-in-out infinite alternate;
+  --uv-k: var(--uv-bg-k-lo);
+}
+.uv-glow-bg,
+.uv-glow-bg::before {
+  /* Uiverse 底層漸層：從左下深橘紅 → 橘金 → 玫瑰粉 → 淡紫 → 天藍（右上）；色標與 --uv-rad-bg 相同，各乘上 --uv-k */
+  background: radial-gradient(
+    125% 125% at -2% 101%,
+    rgb(from var(--uv-rad-s1) calc(r * var(--uv-k)) calc(g * var(--uv-k)) calc(b * var(--uv-k))) 10.5%,
+    rgb(from var(--uv-rad-s2) calc(r * var(--uv-k)) calc(g * var(--uv-k)) calc(b * var(--uv-k))) 16%,
+    rgb(from var(--uv-rad-s3) calc(r * var(--uv-k)) calc(g * var(--uv-k)) calc(b * var(--uv-k))) 17.5%,
+    rgb(from var(--uv-rad-s4) calc(r * var(--uv-k)) calc(g * var(--uv-k)) calc(b * var(--uv-k))) 25%,
+    rgb(from var(--uv-rad-s5) calc(r * var(--uv-k)) calc(g * var(--uv-k)) calc(b * var(--uv-k))) 40%,
+    rgb(from var(--uv-rad-s6) calc(r * var(--uv-k)) calc(g * var(--uv-k)) calc(b * var(--uv-k))) 65%,
+    rgb(from var(--uv-rad-s7) calc(r * var(--uv-k)) calc(g * var(--uv-k)) calc(b * var(--uv-k))) 100%
+  );
+}
+@supports not (color: rgb(from red r g b)) {
+  .uv-glow-bg {
+    background: radial-gradient(125% 125% at -2% 101%, var(--uv-rad-lo-1) 10.5%, var(--uv-rad-lo-2) 16%, var(--uv-rad-lo-3) 17.5%,
+      var(--uv-rad-lo-4) 25%, var(--uv-rad-lo-5) 40%, var(--uv-rad-lo-6) 65%, var(--uv-rad-lo-7) 100%);
+  }
+  .uv-glow-bg::before {
+    background: radial-gradient(125% 125% at -2% 101%, var(--uv-rad-hi-1) 10.5%, var(--uv-rad-hi-2) 16%, var(--uv-rad-hi-3) 17.5%,
+      var(--uv-rad-hi-4) 25%, var(--uv-rad-hi-5) 40%, var(--uv-rad-hi-6) 65%, var(--uv-rad-hi-7) 100%);
+  }
 }
 .uv-glow-bg::before,
-.uv-glow-bg::after {
-  content: "";
+.uv-glow-bg::after,
+.uv-glow-canvas {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
+.uv-glow-bg::before,
+.uv-glow-bg::after {
+  content: "";
+}
 .uv-glow-bg::before {
-  background-image:
-    radial-gradient(circle at 50% 50%, var(--uv-gold-1), #0000 60%),
-    radial-gradient(circle at 50% 50%, var(--uv-gold-2), #0000 60%),
-    radial-gradient(circle at 50% 50%, var(--uv-gold-3), #0000 60%),
-    radial-gradient(ellipse at 50% 50%, var(--uv-gold-4), #0000 60%);
-  background-size:
-    200% 200%,
-    200% 200%,
-    200% 200%,
-    200% 200%;
-  /* 第 4 層原本高度只有 20.78px（配合已移除的六角網格），重複後變成一條一條的橫線；
-     2026-11-15 改成和其他三層一樣的大範圍柔光，保留色調、不再有條紋 */
-  background-position:
-    0% 0%,
-    0% 0%,
-    0% 0%,
-    0% 0%;
-  will-change: transform;
-  animation: uv-glow-drift 40s linear infinite;
+  --uv-k: var(--uv-bg-k-hi);
+  /* 沒有動畫時（減少動態效果、動畫效果關閉）停在亮度 1，和原本 filter 被移除時一樣 */
+  opacity: calc((1 - var(--uv-bg-breathe-min)) / (var(--uv-bg-breathe-max) - var(--uv-bg-breathe-min)));
+  animation: uv-bg-breathe-fade 6s ease-in-out infinite alternate;
+}
+.uv-glow-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 /* ::after 原本是 12px 的六角網格（背景上一點一點的圖案），2026-11-15 移除；
    現在只在深色模式放暗化遮罩（見 20-uiverse-effects.css） */
 
-@keyframes uv-glow-breathe {
-  0% {
-    filter: brightness(var(--uv-bg-breathe-min));
-  }
-  to {
-    filter: brightness(var(--uv-bg-breathe-max));
-  }
-}
-
-@keyframes uv-glow-drift {
-  0% {
-    background-position:
-      800% 400%,
-      1000% -400%,
-      -1200% -600%,
-      -600% 800%;
-  }
-  to {
-    background-position:
-      0% 0%,
-      0% 0%,
-      0% 0%,
-      0% 0%;
-  }
+/* 名稱刻意不用 ambient- 開頭、也不列在 Perf 的 RATES：不能被降頻（steps()），否則會和 canvas 的亮度不同步 */
+@keyframes uv-bg-breathe-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .uv-glow-bg,
   .uv-glow-bg::before {
     animation: none;
   }
 }
-
 
 button, input, select, textarea {
   font: inherit;

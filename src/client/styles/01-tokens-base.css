@@ -833,22 +833,54 @@ body::before {
   --uv-gold-4: color-mix(in oklab, var(--card-chip-gold) 60%, var(--exp));
   --uv-bg-breathe-min: 0.98;
   --uv-bg-breathe-max: 1.02;
+  /* 背景呼吸（見 02-background-header.css）：底層畫兩份漸層，一份乘 --uv-bg-k-lo、一份乘 --uv-bg-k-hi，
+     上層用 opacity 交叉淡入淡出 = 亮度在 min～max 之間線性變化；光暈 canvas 每幀乘同一個係數。
+     --uv-bg-gain：把整個背景先除以 gain、再把深色暗化遮罩的透光量乘回 gain（見 20-uiverse-effects.css），
+     深色 1.3 倍亮度時顏色就不會超過 255 被截斷（原本的 filter 套在遮罩之後，本來就不會截斷）。
+     淺色沒有遮罩可以補償，維持 1（原本 filter 的輸出同樣會在 255 截斷，結果一致）。 */
+  --uv-bg-gain: 1;
+  --uv-bg-k-lo: calc(var(--uv-bg-breathe-min) / var(--uv-bg-gain));
+  --uv-bg-k-hi: calc(var(--uv-bg-breathe-max) / var(--uv-bg-gain));
   /* Uiverse radial-gradient 底層漸層輔助變數（light） */
   --uv-rad-core:   var(--exp);                                           /* 左下深橘紅核心 */
   --uv-rad-warm:   color-mix(in oklab, var(--exp) 48%, #faf6ef);         /* 橘金過渡 */
   --uv-rad-pink:   color-mix(in oklab, var(--exp) 22%, #f8e8f0);         /* 玫瑰粉 */
   --uv-rad-lilac:  color-mix(in oklab, var(--inc) 18%, #e8e0f0);         /* 淡紫 */
   --uv-rad-sky:    color-mix(in oklab, var(--inc) 55%, #d8eefc);         /* 天藍收尾 */
+  /* 漸層的 7 個色標（位置固定：10.5% 16% 17.5% 25% 40% 65% 100%） */
+  --uv-rad-s1: var(--uv-rad-core);
+  --uv-rad-s2: color-mix(in oklab, var(--uv-rad-core) 85%, var(--uv-rad-warm));
+  --uv-rad-s3: var(--uv-rad-warm);
+  --uv-rad-s4: color-mix(in oklab, var(--uv-rad-warm) 60%, var(--uv-rad-pink));
+  --uv-rad-s5: var(--uv-rad-pink);
+  --uv-rad-s6: var(--uv-rad-lilac);
+  --uv-rad-s7: var(--uv-rad-sky);
   --uv-rad-bg:     radial-gradient(
     125% 125% at -2% 101%,
-    var(--uv-rad-core)   10.5%,
-    color-mix(in oklab, var(--uv-rad-core)  85%, var(--uv-rad-warm))  16%,
-    var(--uv-rad-warm)   17.5%,
-    color-mix(in oklab, var(--uv-rad-warm)  60%, var(--uv-rad-pink))  25%,
-    var(--uv-rad-pink)   40%,
-    var(--uv-rad-lilac)  65%,
-    var(--uv-rad-sky)    100%
+    var(--uv-rad-s1) 10.5%,
+    var(--uv-rad-s2) 16%,
+    var(--uv-rad-s3) 17.5%,
+    var(--uv-rad-s4) 25%,
+    var(--uv-rad-s5) 40%,
+    var(--uv-rad-s6) 65%,
+    var(--uv-rad-s7) 100%
   );
+  /* 不支援 CSS 相對色彩語法（rgb(from …)）時的後備色票：上面 7 個色標 × --uv-bg-k-lo／--uv-bg-k-hi 預先算好的結果，
+     只取決於 --exp、--inc 與固定色。改了這些顏色要重新產生（tools/test/background.test.mjs 會檢查是否一致）。 */
+  --uv-rad-lo-1: color(srgb 0.841647 0.26902 0.211373);
+  --uv-rad-lo-2: color(srgb 0.858847 0.334103 0.270837);
+  --uv-rad-lo-3: color(srgb 0.932501 0.63982 0.580009);
+  --uv-rad-lo-4: color(srgb 0.939078 0.69015 0.654487);
+  --uv-rad-lo-5: color(srgb 0.946004 0.7645 0.765876);
+  --uv-rad-lo-6: color(srgb 0.795755 0.803915 0.840109);
+  --uv-rad-lo-7: color(srgb 0.570475 0.710464 0.69525);
+  --uv-rad-hi-1: color(srgb 0.876 0.28 0.22);
+  --uv-rad-hi-2: color(srgb 0.893901 0.347739 0.281891);
+  --uv-rad-hi-3: color(srgb 0.970562 0.665935 0.603683);
+  --uv-rad-hi-4: color(srgb 0.977407 0.718319 0.681201);
+  --uv-rad-hi-5: color(srgb 0.984617 0.795705 0.797136);
+  --uv-rad-hi-6: color(srgb 0.828235 0.836728 0.874399);
+  --uv-rad-hi-7: color(srgb 0.593759 0.739463 0.723627);
 }
 :root[data-theme="dark"],
 :root:not([data-theme="light"]) {
@@ -859,22 +891,29 @@ body::before {
   --uv-gold-4: color-mix(in oklab, var(--card-chip-gold) 70%, var(--exp));
   --uv-bg-breathe-min: 0.8;
   --uv-bg-breathe-max: 1.3;
+  --uv-bg-gain: var(--uv-bg-breathe-max);
   /* Uiverse radial-gradient 底層漸層輔助變數（dark） */
   --uv-rad-core:   var(--exp);
   --uv-rad-warm:   color-mix(in oklab, var(--exp) 55%, #2a1a0e);
   --uv-rad-pink:   color-mix(in oklab, var(--exp) 18%, #2d1a28);
   --uv-rad-lilac:  color-mix(in oklab, var(--inc) 15%, #1e1828);
   --uv-rad-sky:    color-mix(in oklab, var(--inc) 45%, #101e28);
-  --uv-rad-bg:     radial-gradient(
-    125% 125% at -2% 101%,
-    var(--uv-rad-core)   10.5%,
-    color-mix(in oklab, var(--uv-rad-core)  80%, var(--uv-rad-warm))  16%,
-    var(--uv-rad-warm)   17.5%,
-    color-mix(in oklab, var(--uv-rad-warm)  55%, var(--uv-rad-pink))  25%,
-    var(--uv-rad-pink)   40%,
-    var(--uv-rad-lilac)  65%,
-    var(--uv-rad-sky)    100%
-  );
+  --uv-rad-s2: color-mix(in oklab, var(--uv-rad-core) 80%, var(--uv-rad-warm));
+  --uv-rad-s4: color-mix(in oklab, var(--uv-rad-warm) 55%, var(--uv-rad-pink));
+  --uv-rad-lo-1: color(srgb 0.528507 0.168929 0.13273);
+  --uv-rad-lo-2: color(srgb 0.486283 0.160699 0.123424);
+  --uv-rad-lo-3: color(srgb 0.324133 0.1254 0.0869853);
+  --uv-rad-lo-4: color(srgb 0.256022 0.108554 0.102231);
+  --uv-rad-lo-5: color(srgb 0.176628 0.0853813 0.109438);
+  --uv-rad-lo-6: color(srgb 0.0959038 0.0966311 0.125875);
+  --uv-rad-lo-7: color(srgb 0.118078 0.187325 0.186266);
+  --uv-rad-hi-1: color(srgb 0.858824 0.27451 0.215686);
+  --uv-rad-hi-2: color(srgb 0.790209 0.261136 0.200564);
+  --uv-rad-hi-3: color(srgb 0.526716 0.203775 0.141351);
+  --uv-rad-hi-4: color(srgb 0.416035 0.1764 0.166126);
+  --uv-rad-hi-5: color(srgb 0.287021 0.138745 0.177837);
+  --uv-rad-hi-6: color(srgb 0.155844 0.157026 0.204547);
+  --uv-rad-hi-7: color(srgb 0.191877 0.304403 0.302682);
 }
 
 body::before {

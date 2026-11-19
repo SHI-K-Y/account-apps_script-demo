@@ -1,0 +1,890 @@
+{
+  "label": "baseline",
+  "createdAt": "2026-11-19T12:34:32.294Z",
+  "conditions": {
+    "cpu": 4,
+    "net": "none",
+    "runs": 3,
+    "prefs": "high",
+    "rasterThreads": 1,
+    "dist": "(外部) pre-p01/dist",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "deviceScaleFactor": 2,
+    "fixedNow": "2026-11-13T04:00:00.000Z",
+    "chromium": "159.0.8154.6",
+    "node": "v26.13.0",
+    "platform": "darwin arm64",
+    "source": "git f1235cf 的 src/（P01 之前的現況）"
+  },
+  "metrics": {
+    "boot.responseEnd": 14.8,
+    "boot.domContentLoaded": 261.6,
+    "boot.bootReady": 261.5,
+    "boot.longTaskTotal": 60,
+    "boot.longTaskMax": 60,
+    "idle.bookkeeping.frames": 160,
+    "idle.bookkeeping.slowFrames": 0,
+    "idle.bookkeeping.p95FrameMs": 50,
+    "idle.bookkeeping.recalcStyleCount": 161,
+    "idle.bookkeeping.recalcStyleMs": 38.66,
+    "idle.bookkeeping.layoutCount": 0,
+    "idle.bookkeeping.taskMs": 144.36,
+    "idle.bookkeeping.paintCount": 483,
+    "idle.bookkeeping.paintMs": 62.29,
+    "idle.bookkeeping.rasterCount": 1448,
+    "idle.bookkeeping.rasterMs": 5019.27,
+    "idle.overview.frames": 206,
+    "idle.overview.slowFrames": 0,
+    "idle.overview.p95FrameMs": 49.9,
+    "idle.overview.recalcStyleCount": 207,
+    "idle.overview.recalcStyleMs": 110.46,
+    "idle.overview.layoutCount": 0,
+    "idle.overview.taskMs": 313.06,
+    "idle.overview.paintCount": 1242,
+    "idle.overview.paintMs": 117.66,
+    "idle.overview.rasterCount": 2483,
+    "idle.overview.rasterMs": 6325.66,
+    "idle.settings.frames": 148,
+    "idle.settings.slowFrames": 0,
+    "idle.settings.p95FrameMs": 50,
+    "idle.settings.recalcStyleCount": 149,
+    "idle.settings.recalcStyleMs": 27.62,
+    "idle.settings.layoutCount": 0,
+    "idle.settings.taskMs": 95.43,
+    "idle.settings.paintCount": 298,
+    "idle.settings.paintMs": 23.47,
+    "idle.settings.rasterCount": 1191,
+    "idle.settings.rasterMs": 5008.31,
+    "idle.bookkeepingPaused.frames": 301,
+    "idle.bookkeepingPaused.slowFrames": 0,
+    "idle.bookkeepingPaused.p95FrameMs": 16.7,
+    "idle.bookkeepingPaused.recalcStyleCount": 1,
+    "idle.bookkeepingPaused.recalcStyleMs": 0.06,
+    "idle.bookkeepingPaused.layoutCount": 0,
+    "idle.bookkeepingPaused.taskMs": 40.05,
+    "idle.bookkeepingPaused.paintCount": 3,
+    "idle.bookkeepingPaused.paintMs": 0.09,
+    "idle.bookkeepingPaused.rasterCount": 24,
+    "idle.bookkeepingPaused.rasterMs": 47.99,
+    "input.selectItem": 192,
+    "input.keypadDigit": 224,
+    "input.submit": 192,
+    "input.toOverview": 272,
+    "input.toSettings": 280,
+    "input.toBookkeeping": 248,
+    "static.bookkeeping.runningAnimations": 4,
+    "static.bookkeeping.backdropInView": 6,
+    "static.overview.runningAnimations": 6,
+    "static.overview.backdropInView": 9,
+    "static.settings.runningAnimations": 2,
+    "static.settings.backdropInView": 4
+  },
+  "spread": {
+    "boot.responseEnd": [
+      14.3,
+      16.1
+    ],
+    "boot.domContentLoaded": [
+      259.6,
+      269.5
+    ],
+    "boot.bootReady": [
+      259.6,
+      269.5
+    ],
+    "boot.longTaskTotal": [
+      58,
+      60
+    ],
+    "boot.longTaskMax": [
+      58,
+      60
+    ],
+    "idle.bookkeeping.frames": [
+      156,
+      160
+    ],
+    "idle.bookkeeping.slowFrames": [
+      0,
+      0
+    ],
+    "idle.bookkeeping.p95FrameMs": [
+      50,
+      50
+    ],
+    "idle.bookkeeping.recalcStyleCount": [
+      157,
+      161
+    ],
+    "idle.bookkeeping.recalcStyleMs": [
+      35.52,
+      52.71
+    ],
+    "idle.bookkeeping.layoutCount": [
+      0,
+      0
+    ],
+    "idle.bookkeeping.taskMs": [
+      135.38,
+      196.82
+    ],
+    "idle.bookkeeping.paintCount": [
+      471,
+      483
+    ],
+    "idle.bookkeeping.paintMs": [
+      50.48,
+      64.69
+    ],
+    "idle.bookkeeping.rasterCount": [
+      1412,
+      1448
+    ],
+    "idle.bookkeeping.rasterMs": [
+      5005.07,
+      5021.05
+    ],
+    "idle.overview.frames": [
+      206,
+      207
+    ],
+    "idle.overview.slowFrames": [
+      0,
+      1
+    ],
+    "idle.overview.p95FrameMs": [
+      49.9,
+      49.9
+    ],
+    "idle.overview.recalcStyleCount": [
+      207,
+      208
+    ],
+    "idle.overview.recalcStyleMs": [
+      83.83,
+      125.35
+    ],
+    "idle.overview.layoutCount": [
+      0,
+      0
+    ],
+    "idle.overview.taskMs": [
+      272.77,
+      351.94
+    ],
+    "idle.overview.paintCount": [
+      1242,
+      1248
+    ],
+    "idle.overview.paintMs": [
+      115.9,
+      146.71
+    ],
+    "idle.overview.rasterCount": [
+      2481,
+      2494
+    ],
+    "idle.overview.rasterMs": [
+      6308.93,
+      6423.3
+    ],
+    "idle.settings.frames": [
+      146,
+      148
+    ],
+    "idle.settings.slowFrames": [
+      0,
+      0
+    ],
+    "idle.settings.p95FrameMs": [
+      50,
+      50
+    ],
+    "idle.settings.recalcStyleCount": [
+      147,
+      149
+    ],
+    "idle.settings.recalcStyleMs": [
+      23.12,
+      29.49
+    ],
+    "idle.settings.layoutCount": [
+      0,
+      0
+    ],
+    "idle.settings.taskMs": [
+      85.83,
+      118.13
+    ],
+    "idle.settings.paintCount": [
+      294,
+      298
+    ],
+    "idle.settings.paintMs": [
+      20.8,
+      32.78
+    ],
+    "idle.settings.rasterCount": [
+      1171,
+      1191
+    ],
+    "idle.settings.rasterMs": [
+      5000.35,
+      5032.74
+    ],
+    "idle.bookkeepingPaused.frames": [
+      300,
+      301
+    ],
+    "idle.bookkeepingPaused.slowFrames": [
+      0,
+      0
+    ],
+    "idle.bookkeepingPaused.p95FrameMs": [
+      16.7,
+      16.7
+    ],
+    "idle.bookkeepingPaused.recalcStyleCount": [
+      0,
+      1
+    ],
+    "idle.bookkeepingPaused.recalcStyleMs": [
+      0,
+      0.46
+    ],
+    "idle.bookkeepingPaused.layoutCount": [
+      0,
+      0
+    ],
+    "idle.bookkeepingPaused.taskMs": [
+      39.4,
+      43.94
+    ],
+    "idle.bookkeepingPaused.paintCount": [
+      3,
+      3
+    ],
+    "idle.bookkeepingPaused.paintMs": [
+      0.09,
+      0.33
+    ],
+    "idle.bookkeepingPaused.rasterCount": [
+      22,
+      25
+    ],
+    "idle.bookkeepingPaused.rasterMs": [
+      45.35,
+      48.47
+    ],
+    "input.selectItem": [
+      192,
+      192
+    ],
+    "input.keypadDigit": [
+      224,
+      240
+    ],
+    "input.submit": [
+      184,
+      200
+    ],
+    "input.toOverview": [
+      264,
+      272
+    ],
+    "input.toSettings": [
+      280,
+      312
+    ],
+    "input.toBookkeeping": [
+      248,
+      248
+    ]
+  },
+  "runs": [
+    {
+      "boot.responseEnd": 14.799999997019768,
+      "boot.domContentLoaded": 261.59999999403954,
+      "boot.bootReady": 261.5,
+      "boot.longTaskTotal": 60,
+      "boot.longTaskMax": 60,
+      "boot.longTaskCount": 1,
+      "idle.bookkeeping.frames": 156,
+      "idle.bookkeeping.slowFrames": 0,
+      "idle.bookkeeping.p95FrameMs": 50,
+      "idle.bookkeeping.recalcStyleCount": 157,
+      "idle.bookkeeping.recalcStyleMs": 52.71000000000001,
+      "idle.bookkeeping.layoutCount": 0,
+      "idle.bookkeeping.taskMs": 196.81699999999995,
+      "idle.bookkeeping.paintCount": 471,
+      "idle.bookkeeping.paintMs": 64.685,
+      "idle.bookkeeping.rasterCount": 1412,
+      "idle.bookkeeping.rasterMs": 5005.068,
+      "idle.overview.frames": 207,
+      "idle.overview.slowFrames": 0,
+      "idle.overview.p95FrameMs": 49.900000000001455,
+      "idle.overview.recalcStyleCount": 208,
+      "idle.overview.recalcStyleMs": 125.353,
+      "idle.overview.layoutCount": 0,
+      "idle.overview.taskMs": 351.94199999999995,
+      "idle.overview.paintCount": 1248,
+      "idle.overview.paintMs": 146.71,
+      "idle.overview.rasterCount": 2494,
+      "idle.overview.rasterMs": 6308.932,
+      "idle.settings.frames": 146,
+      "idle.settings.slowFrames": 0,
+      "idle.settings.p95FrameMs": 50,
+      "idle.settings.recalcStyleCount": 147,
+      "idle.settings.recalcStyleMs": 29.488999999999987,
+      "idle.settings.layoutCount": 0,
+      "idle.settings.taskMs": 118.12899999999993,
+      "idle.settings.paintCount": 294,
+      "idle.settings.paintMs": 32.781,
+      "idle.settings.rasterCount": 1171,
+      "idle.settings.rasterMs": 5000.349,
+      "idle.bookkeepingPaused.frames": 300,
+      "idle.bookkeepingPaused.slowFrames": 0,
+      "idle.bookkeepingPaused.p95FrameMs": 16.700000000000728,
+      "idle.bookkeepingPaused.recalcStyleCount": 1,
+      "idle.bookkeepingPaused.recalcStyleMs": 0.06399999999995298,
+      "idle.bookkeepingPaused.layoutCount": 0,
+      "idle.bookkeepingPaused.taskMs": 39.40300000000008,
+      "idle.bookkeepingPaused.paintCount": 3,
+      "idle.bookkeepingPaused.paintMs": 0.094,
+      "idle.bookkeepingPaused.rasterCount": 22,
+      "idle.bookkeepingPaused.rasterMs": 45.345,
+      "input.selectItem": 192,
+      "input.keypadDigit": 224,
+      "input.submit": 184,
+      "input.toOverview": 264,
+      "input.toSettings": 280,
+      "input.toBookkeeping": 248
+    },
+    {
+      "boot.responseEnd": 16.099999994039536,
+      "boot.domContentLoaded": 269.5,
+      "boot.bootReady": 269.5,
+      "boot.longTaskTotal": 58,
+      "boot.longTaskMax": 58,
+      "boot.longTaskCount": 1,
+      "idle.bookkeeping.frames": 160,
+      "idle.bookkeeping.slowFrames": 0,
+      "idle.bookkeeping.p95FrameMs": 50,
+      "idle.bookkeeping.recalcStyleCount": 161,
+      "idle.bookkeeping.recalcStyleMs": 38.664,
+      "idle.bookkeeping.layoutCount": 0,
+      "idle.bookkeeping.taskMs": 144.36100000000002,
+      "idle.bookkeeping.paintCount": 483,
+      "idle.bookkeeping.paintMs": 62.288,
+      "idle.bookkeeping.rasterCount": 1448,
+      "idle.bookkeeping.rasterMs": 5021.048,
+      "idle.overview.frames": 206,
+      "idle.overview.slowFrames": 1,
+      "idle.overview.p95FrameMs": 49.899999999999636,
+      "idle.overview.recalcStyleCount": 207,
+      "idle.overview.recalcStyleMs": 110.45900000000003,
+      "idle.overview.layoutCount": 0,
+      "idle.overview.taskMs": 313.05500000000006,
+      "idle.overview.paintCount": 1242,
+      "idle.overview.paintMs": 117.657,
+      "idle.overview.rasterCount": 2483,
+      "idle.overview.rasterMs": 6423.295,
+      "idle.settings.frames": 148,
+      "idle.settings.slowFrames": 0,
+      "idle.settings.p95FrameMs": 50,
+      "idle.settings.recalcStyleCount": 149,
+      "idle.settings.recalcStyleMs": 23.116999999999997,
+      "idle.settings.layoutCount": 0,
+      "idle.settings.taskMs": 95.42800000000007,
+      "idle.settings.paintCount": 298,
+      "idle.settings.paintMs": 23.469,
+      "idle.settings.rasterCount": 1191,
+      "idle.settings.rasterMs": 5032.739,
+      "idle.bookkeepingPaused.frames": 301,
+      "idle.bookkeepingPaused.slowFrames": 0,
+      "idle.bookkeepingPaused.p95FrameMs": 16.700000000000728,
+      "idle.bookkeepingPaused.recalcStyleCount": 1,
+      "idle.bookkeepingPaused.recalcStyleMs": 0.4629999999999912,
+      "idle.bookkeepingPaused.layoutCount": 0,
+      "idle.bookkeepingPaused.taskMs": 43.93500000000006,
+      "idle.bookkeepingPaused.paintCount": 3,
+      "idle.bookkeepingPaused.paintMs": 0.094,
+      "idle.bookkeepingPaused.rasterCount": 25,
+      "idle.bookkeepingPaused.rasterMs": 48.469,
+      "input.selectItem": 192,
+      "input.keypadDigit": 240,
+      "input.submit": 192,
+      "input.toOverview": 272,
+      "input.toSettings": 280,
+      "input.toBookkeeping": 248
+    },
+    {
+      "boot.responseEnd": 14.299999997019768,
+      "boot.domContentLoaded": 259.6000000014901,
+      "boot.bootReady": 259.6000000014901,
+      "boot.longTaskTotal": 60,
+      "boot.longTaskMax": 60,
+      "boot.longTaskCount": 1,
+      "idle.bookkeeping.frames": 160,
+      "idle.bookkeeping.slowFrames": 0,
+      "idle.bookkeeping.p95FrameMs": 50,
+      "idle.bookkeeping.recalcStyleCount": 161,
+      "idle.bookkeeping.recalcStyleMs": 35.522,
+      "idle.bookkeeping.layoutCount": 0,
+      "idle.bookkeeping.taskMs": 135.37899999999996,
+      "idle.bookkeeping.paintCount": 483,
+      "idle.bookkeeping.paintMs": 50.479,
+      "idle.bookkeeping.rasterCount": 1448,
+      "idle.bookkeeping.rasterMs": 5019.272,
+      "idle.overview.frames": 206,
+      "idle.overview.slowFrames": 0,
+      "idle.overview.p95FrameMs": 49.899999999999636,
+      "idle.overview.recalcStyleCount": 207,
+      "idle.overview.recalcStyleMs": 83.83399999999996,
+      "idle.overview.layoutCount": 0,
+      "idle.overview.taskMs": 272.767,
+      "idle.overview.paintCount": 1242,
+      "idle.overview.paintMs": 115.903,
+      "idle.overview.rasterCount": 2481,
+      "idle.overview.rasterMs": 6325.662,
+      "idle.settings.frames": 148,
+      "idle.settings.slowFrames": 0,
+      "idle.settings.p95FrameMs": 50,
+      "idle.settings.recalcStyleCount": 149,
+      "idle.settings.recalcStyleMs": 27.62399999999998,
+      "idle.settings.layoutCount": 0,
+      "idle.settings.taskMs": 85.83399999999996,
+      "idle.settings.paintCount": 298,
+      "idle.settings.paintMs": 20.796,
+      "idle.settings.rasterCount": 1191,
+      "idle.settings.rasterMs": 5008.305,
+      "idle.bookkeepingPaused.frames": 301,
+      "idle.bookkeepingPaused.slowFrames": 0,
+      "idle.bookkeepingPaused.p95FrameMs": 16.700000000000728,
+      "idle.bookkeepingPaused.recalcStyleCount": 0,
+      "idle.bookkeepingPaused.recalcStyleMs": 0,
+      "idle.bookkeepingPaused.layoutCount": 0,
+      "idle.bookkeepingPaused.taskMs": 40.05099999999984,
+      "idle.bookkeepingPaused.paintCount": 3,
+      "idle.bookkeepingPaused.paintMs": 0.329,
+      "idle.bookkeepingPaused.rasterCount": 24,
+      "idle.bookkeepingPaused.rasterMs": 47.994,
+      "input.selectItem": 192,
+      "input.keypadDigit": 224,
+      "input.submit": 200,
+      "input.toOverview": 272,
+      "input.toSettings": 312,
+      "input.toBookkeeping": 248
+    }
+  ],
+  "inputEvents": [
+    {
+      "samples": {
+        "selectItem": [
+          200,
+          184,
+          192
+        ],
+        "keypadDigit": [
+          240,
+          224,
+          192
+        ],
+        "submit": [
+          192,
+          184,
+          184
+        ],
+        "toOverview": [
+          272,
+          264,
+          264
+        ],
+        "toSettings": [
+          280,
+          280,
+          272
+        ],
+        "toBookkeeping": [
+          248,
+          240,
+          256
+        ]
+      },
+      "topEvent": [
+        {
+          "selectItem": "pointerover",
+          "keypadDigit": "pointerover",
+          "submit": "pointerover",
+          "toOverview": "pointerover",
+          "toSettings": "pointerover",
+          "toBookkeeping": "mouseout"
+        },
+        {
+          "selectItem": "pointerover",
+          "keypadDigit": "mouseout",
+          "submit": "pointerover",
+          "toOverview": "pointerover",
+          "toSettings": "pointerover",
+          "toBookkeeping": "pointerover"
+        },
+        {
+          "selectItem": "pointerover",
+          "keypadDigit": "pointerover",
+          "submit": "pointerover",
+          "toOverview": "pointerover",
+          "toSettings": "pointerover",
+          "toBookkeeping": "pointerover"
+        }
+      ]
+    },
+    {
+      "samples": {
+        "selectItem": [
+          184,
+          200,
+          192
+        ],
+        "keypadDigit": [
+          232,
+          240,
+          248
+        ],
+        "submit": [
+          184,
+          200,
+          192
+        ],
+        "toOverview": [
+          264,
+          272,
+          272
+        ],
+        "toSettings": [
+          264,
+          280,
+          320
+        ],
+        "toBookkeeping": [
+          240,
+          248,
+          256
+        ]
+      },
+      "topEvent": [
+        {
+          "selectItem": "pointerover",
+          "keypadDigit": "pointerover",
+          "submit": "pointerover",
+          "toOverview": "pointerover",
+          "toSettings": "pointerover",
+          "toBookkeeping": "pointerover"
+        },
+        {
+          "selectItem": "pointerover",
+          "keypadDigit": "pointerover",
+          "submit": "pointerover",
+          "toOverview": "pointerover",
+          "toSettings": "pointerover",
+          "toBookkeeping": "pointerover"
+        },
+        {
+          "selectItem": "pointerover",
+          "keypadDigit": "pointerover",
+          "submit": "pointerover",
+          "toOverview": "pointerover",
+          "toSettings": "mouseout",
+          "toBookkeeping": "pointerover"
+        }
+      ]
+    },
+    {
+      "samples": {
+        "selectItem": [
+          192,
+          248,
+          192
+        ],
+        "keypadDigit": [
+          224,
+          240,
+          224
+        ],
+        "submit": [
+          184,
+          200,
+          208
+        ],
+        "toOverview": [
+          272,
+          272,
+          272
+        ],
+        "toSettings": [
+          320,
+          312,
+          280
+        ],
+        "toBookkeeping": [
+          248,
+          256,
+          248
+        ]
+      },
+      "topEvent": [
+        {
+          "selectItem": "pointerover",
+          "keypadDigit": "pointerover",
+          "submit": "pointerover",
+          "toOverview": "pointerover",
+          "toSettings": "mouseout",
+          "toBookkeeping": "mouseout"
+        },
+        {
+          "selectItem": "mouseover",
+          "keypadDigit": "pointerover",
+          "submit": "pointerover",
+          "toOverview": "pointerover",
+          "toSettings": "mouseout",
+          "toBookkeeping": "pointerover"
+        },
+        {
+          "selectItem": "pointerover",
+          "keypadDigit": "pointerover",
+          "submit": "pointerover",
+          "toOverview": "mouseout",
+          "toSettings": "pointerover",
+          "toBookkeeping": "pointerover"
+        }
+      ]
+    }
+  ],
+  "animations": {
+    "bookkeeping": {
+      "animations": [
+        {
+          "name": "uv-glow-breathe",
+          "kind": "CSSAnimation",
+          "props": [
+            "filter"
+          ],
+          "target": "div.uv-glow-bg",
+          "iterations": "infinite"
+        },
+        {
+          "name": "uv-glow-drift",
+          "kind": "CSSAnimation",
+          "props": [
+            "backgroundPositionX",
+            "backgroundPositionY"
+          ],
+          "target": "div.uv-glow-bg::before",
+          "iterations": "infinite"
+        },
+        {
+          "name": "uv-tab-stars-ltr",
+          "kind": "CSSAnimation",
+          "props": [
+            "backgroundPositionX",
+            "backgroundPositionY"
+          ],
+          "target": "div.tabs::before",
+          "iterations": "infinite"
+        },
+        {
+          "name": "uv-tab-glow",
+          "kind": "CSSAnimation",
+          "props": [
+            "backgroundSize"
+          ],
+          "target": "div.tabs::before",
+          "iterations": "infinite"
+        }
+      ],
+      "backdropInView": 6,
+      "backdropRendered": 8,
+      "backdrop": [
+        {
+          "target": "nav#bottomNav",
+          "filter": "url(\"#lg-refract\") blur(0.5px) saturate(1.5) brightness(1.05)"
+        },
+        {
+          "target": "select#monthSelect",
+          "filter": "url(\"#lg-refract\") blur(0.5px) saturate(1.5) brightness(1.05)"
+        },
+        {
+          "target": "div.topbar-btn-group",
+          "filter": "url(\"#lg-refract\") blur(0.5px) saturate(1.5) brightness(1.05)"
+        },
+        {
+          "target": "div.tabs",
+          "filter": "url(\"#lg-refract\") blur(0.5px) saturate(1.5) brightness(1.05)"
+        },
+        {
+          "target": "div.entry.card",
+          "filter": "saturate(1.25) brightness(1.03)"
+        },
+        {
+          "target": "div#toast",
+          "filter": "url(\"#lg-refract\") blur(3px) saturate(1.5) brightness(1.05)"
+        }
+      ]
+    },
+    "overview": {
+      "animations": [
+        {
+          "name": "uv-glow-breathe",
+          "kind": "CSSAnimation",
+          "props": [
+            "filter"
+          ],
+          "target": "div.uv-glow-bg",
+          "iterations": "infinite"
+        },
+        {
+          "name": "uv-glow-drift",
+          "kind": "CSSAnimation",
+          "props": [
+            "backgroundPositionX",
+            "backgroundPositionY"
+          ],
+          "target": "div.uv-glow-bg::before",
+          "iterations": "infinite"
+        },
+        {
+          "name": "uv-card-spin",
+          "kind": "CSSAnimation",
+          "props": [
+            "--uv-card-angle"
+          ],
+          "target": "div.ov-hero::after",
+          "iterations": "infinite"
+        },
+        {
+          "name": "uv-card-spin",
+          "kind": "CSSAnimation",
+          "props": [
+            "--uv-card-angle"
+          ],
+          "target": "div.ov-card::after",
+          "iterations": "infinite"
+        },
+        {
+          "name": "uv-card-spin",
+          "kind": "CSSAnimation",
+          "props": [
+            "--uv-card-angle"
+          ],
+          "target": "div.ov-card::after",
+          "iterations": "infinite"
+        },
+        {
+          "name": "uv-card-spin",
+          "kind": "CSSAnimation",
+          "props": [
+            "--uv-card-angle"
+          ],
+          "target": "div.ov-card::after",
+          "iterations": "infinite"
+        }
+      ],
+      "backdropInView": 9,
+      "backdropRendered": 20,
+      "backdrop": [
+        {
+          "target": "nav#bottomNav",
+          "filter": "url(\"#lg-refract\") blur(0.5px) saturate(1.5) brightness(1.05)"
+        },
+        {
+          "target": "button#overviewSearchOpenBtn",
+          "filter": "url(\"#lg-refract\") blur(0.5px) saturate(1.5) brightness(1.05)"
+        },
+        {
+          "target": "button#overviewRefreshBtn",
+          "filter": "url(\"#lg-refract\") blur(0.5px) saturate(1.5) brightness(1.05)"
+        },
+        {
+          "target": "a.sheet-link-btn",
+          "filter": "blur(0.5px) saturate(1.5) brightness(1.05)"
+        },
+        {
+          "target": "div.overview-month-badge",
+          "filter": "blur(0.5px) saturate(1.5) brightness(1.05)"
+        },
+        {
+          "target": "div.ov-hero",
+          "filter": "saturate(1.25) brightness(1.03)"
+        },
+        {
+          "target": "div.ov-card",
+          "filter": "saturate(1.25) brightness(1.03)"
+        },
+        {
+          "target": "div.ov-card",
+          "filter": "saturate(1.25) brightness(1.03)"
+        },
+        {
+          "target": "div#toast",
+          "filter": "url(\"#lg-refract\") blur(3px) saturate(1.5) brightness(1.05)"
+        }
+      ]
+    },
+    "settings": {
+      "animations": [
+        {
+          "name": "uv-glow-breathe",
+          "kind": "CSSAnimation",
+          "props": [
+            "filter"
+          ],
+          "target": "div.uv-glow-bg",
+          "iterations": "infinite"
+        },
+        {
+          "name": "uv-glow-drift",
+          "kind": "CSSAnimation",
+          "props": [
+            "backgroundPositionX",
+            "backgroundPositionY"
+          ],
+          "target": "div.uv-glow-bg::before",
+          "iterations": "infinite"
+        }
+      ],
+      "backdropInView": 4,
+      "backdropRendered": 4,
+      "backdrop": [
+        {
+          "target": "nav#bottomNav",
+          "filter": "url(\"#lg-refract\") blur(0.5px) saturate(1.5) brightness(1.05)"
+        },
+        {
+          "target": "button#settingsRefreshBtn",
+          "filter": "url(\"#lg-refract\") blur(0.5px) saturate(1.5) brightness(1.05)"
+        },
+        {
+          "target": "div.settings-tabs.lg-seg",
+          "filter": "blur(0.5px) saturate(1.5) brightness(1.05)"
+        },
+        {
+          "target": "div#toast",
+          "filter": "url(\"#lg-refract\") blur(3px) saturate(1.5) brightness(1.05)"
+        }
+      ]
+    }
+  },
+  "screenshots": {
+    "dir": "tools/perf/screens/run1",
+    "files": [
+      "tools/perf/screens/run1/bookkeeping-light.png",
+      "tools/perf/screens/run1/overview-light.png",
+      "tools/perf/screens/run1/settings-light.png",
+      "tools/perf/screens/run1/bookkeeping-dark.png",
+      "tools/perf/screens/run1/overview-dark.png",
+      "tools/perf/screens/run1/settings-dark.png"
+    ]
+  }
+}
