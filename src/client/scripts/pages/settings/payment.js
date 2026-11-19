@@ -27,7 +27,7 @@ function renderPaymentSettingsModule(container) {
                 '<div class="card-item-top">' +
                   '<div class="card-thumb-wrap">' +
                     (imgSrc
-                      ? '<img class="card-thumb-img" src="' + escAttr(imgSrc) + '" alt="' + escAttr(c.name) + '">'
+                      ? '<img class="card-thumb-img" src="' + escAttr(imgSrc) + '" alt="' + escAttr(c.name) + '" width="58" height="38" decoding="async">'
                       : '<span class="card-thumb-fallback" aria-hidden="true">' + iconHtml('credit-card') + '</span>') +
                   '</div>' +
                   '<div class="card-item-info">' +
@@ -255,7 +255,7 @@ function renderPaymentSettingsModule(container) {
       html += '<div class="bank-item-card" data-bid="' + escAttr(b.id) + '">' +
                 '<div class="bank-item-left">' +
                   (logoSrc
-                    ? '<img class="bank-item-logo-thumb" src="' + escAttr(logoSrc) + '" alt="' + escAttr(b.name) + '">'
+                    ? '<img class="bank-item-logo-thumb" src="' + escAttr(logoSrc) + '" alt="' + escAttr(b.name) + '" width="32" height="32" decoding="async">'
                     : '<span class="bank-item-logo-fallback" aria-hidden="true">' + iconHtml('bank') + '</span>') +
                   '<div class="bank-item-name">' + escHtml(b.name) + '</div>' +
                 '</div>' +

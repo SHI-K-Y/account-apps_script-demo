@@ -524,6 +524,7 @@ function renderCreditCardPage() {
 
   if (!allExpenseRecords.length && progress) {
     if (!container.querySelector('.overview-skeleton')) {
+      container._ccRegions = null;
       container.innerHTML =
         '<div class="overview-skeleton">' +
           '<div class="skel-block skel-hero"></div>' +
@@ -568,11 +569,19 @@ function renderCreditCardPage() {
     return true;
   });
 
-  var html = '';
+  // P06：頁面分成幾個區塊，各自只在 HTML 改變時替換；明細列以「月份｜列號」比對，只更新有變化的列。
+  // 點擊與月份選單一律委派到 container（bindCreditCardEvents，只綁一次）。
+  var regions = ensureCcRegions(container);
+  ccState.view = {
+    activeScope: activeScope,
+    activeCardTitle: activeCardTitle,
+    isAllMonths: isAllMonths,
+    selectedMonth: selectedMonth
+  };
 
-  html += '<div class="cc-card-tabs" role="tablist" aria-label="選擇信用卡別">';
+  var tabsHtml = '<div class="cc-card-tabs" role="tablist" aria-label="選擇信用卡別">';
   var isAllActive = (ccState.selectedCard === 'ALL');
-  html += '<button type="button" class="cc-card-tab' + (isAllActive ? ' active' : '') + '" data-card="ALL">' +
+  tabsHtml += '<button type="button" class="cc-card-tab' + (isAllActive ? ' active' : '') + '" data-card="ALL">' +
             (summary.all.count > 0 ? '<span class="cc-tab-dot' + (summary.all.unpaidCount > 0 ? ' has-unpaid' : '') + '"></span>' : '') +
             '<span>全部信用卡</span>' +
           '</button>';
@@ -580,24 +589,25 @@ function renderCreditCardPage() {
   summaryAllMonths.cards.forEach(function(c) {
     var isActive = (ccState.selectedCard === c.cardName);
     var thumbHtml = c.imageSrc
-      ? '<img class="cc-tab-card-img" src="' + escAttr(c.imageSrc) + '" alt="">'
+      ? '<img class="cc-tab-card-img" src="' + escAttr(c.imageSrc) + '" alt="" width="24" height="15" decoding="async">'
       : '';
     // 小圓點反映所選月份：有消費才顯示，有未繳時為紅色
     var scoped = summary.cardMap.get(c.cardName);
     var dotHtml = (scoped && scoped.count > 0)
       ? '<span class="cc-tab-dot' + (scoped.unpaidCount > 0 ? ' has-unpaid' : '') + '"></span>'
       : '';
-    html += '<button type="button" class="cc-card-tab' + (isActive ? ' active' : '') + '" data-card="' + escAttr(c.cardName) + '">' +
+    tabsHtml += '<button type="button" class="cc-card-tab' + (isActive ? ' active' : '') + '" data-card="' + escAttr(c.cardName) + '">' +
               dotHtml +
               thumbHtml +
               '<span>' + escHtml(c.cardName) + '</span>' +
             '</button>';
   });
-  html += '</div>';
+  tabsHtml += '</div>';
+  if (setCcRegion(regions.tabs, tabsHtml)) Motion.segmented(regions.tabs.firstElementChild, '.cc-card-tab');
 
-  html += buildCcMonthBarHtml(selectableMonths);
+  setCcRegion(regions.month, buildCcMonthBarHtml(selectableMonths));
 
-  html += '<div class="cc-summary-bar">' +
+  setCcRegion(regions.summary, '<div class="cc-summary-bar">' +
             '<div class="cc-stat-box">' +
               '<span class="cc-stat-label">消費總額</span>' +
               '<span class="cc-stat-val">$' + ovFmt(activeScope.totalAmount) + '</span>' +
@@ -610,9 +620,9 @@ function renderCreditCardPage() {
               '<span class="cc-stat-label">已繳金額</span>' +
               '<span class="cc-stat-val paid">$' + ovFmt(activeScope.paidAmount) + '</span>' +
             '</div>' +
-          '</div>';
+          '</div>');
 
-  html += '<div class="cc-toolbar">' +
+  var toolbarHtml = '<div class="cc-toolbar">' +
             '<div class="cc-status-filters" role="tablist" aria-label="繳費狀態篩選">' +
               '<button type="button" class="cc-filter-btn' + (ccState.statusFilter === 'all' ? ' active' : '') + '" data-sfilter="all">全部 (' + activeScope.count + ')</button>' +
               '<button type="button" class="cc-filter-btn' + (ccState.statusFilter === 'unpaid' ? ' active' : '') + '" data-sfilter="unpaid">未繳 (' + activeScope.unpaidCount + ')</button>' +
@@ -620,21 +630,23 @@ function renderCreditCardPage() {
             '</div>';
 
   if (activeScope.unpaidCount > 0) {
-    html += '<button type="button" id="ccBatchMarkPaidBtn" class="cc-batch-paid-btn"' + (ccState.batchBusy ? ' disabled' : '') + '>' +
+    toolbarHtml += '<button type="button" id="ccBatchMarkPaidBtn" class="cc-batch-paid-btn"' + (ccState.batchBusy ? ' disabled' : '') + '>' +
               (ccState.batchBusy ? '' : iconHtml('check')) + '<span>' + (ccState.batchBusy ? '更新中…' : '全部標為已繳') + '</span>' +
             '</button>';
   }
-  html += '</div>';
+  toolbarHtml += '</div>';
+  if (setCcRegion(regions.toolbar, toolbarHtml)) Motion.segmented(regions.toolbar.querySelector('.cc-status-filters'), '.cc-filter-btn');
 
   var skippedList = Object.keys(ccState.skippedMonths || {}).sort().reverse();
+  var noteHtml = '';
   if (progress) {
-    html += '<div class="cc-load-note" role="status">正在讀取所有月份的明細…（' + progress.done + '/' + progress.total + '）</div>';
+    noteHtml = '<div class="cc-load-note" role="status">正在讀取所有月份的明細…（' + progress.done + '/' + progress.total + '）</div>';
   } else if (skippedList.length) {
-    html += '<div class="cc-load-note">以下月份的工作表是舊版面，未納入對帳：' + escHtml(skippedList.join('、')) + '</div>';
+    noteHtml = '<div class="cc-load-note">以下月份的工作表是舊版面，未納入對帳：' + escHtml(skippedList.join('、')) + '</div>';
   }
+  setCcRegion(regions.note, noteHtml);
 
-  html += '<div class="ov-card cc-tx-card">';
-
+  var card = regions.card;
   if (!filteredRecords.length) {
     var emptyMsg;
     if (monthLoading) {
@@ -648,118 +660,151 @@ function renderCreditCardPage() {
         ? (isAllMonths ? '目前沒有未繳帳單。' : '這個月份沒有未繳帳單。')
         : '沒有符合的消費明細。';
     }
-    html += '<div class="empty" style="padding:28px 12px;">' + escHtml(emptyMsg) + '</div>';
-  } else {
-    html += '<div class="cc-tx-list">';
-
-    filteredRecords.forEach(function(rec) {
-      var dayText = formatCcDate(rec.month, rec.day);
-      var itemDisplayHtml = rec.item ? itemIconLabelHtml(rec.item) : '未填';
-      var isPaid = rec.isPaid;
-      var isRowBusy = Boolean(ccState.busyRows[ccBusyKey(rec.month, rec.row)]);
-      var hasNote = Boolean(rec.note && String(rec.note).trim() !== '');
-
-      var cardDisplay = rec.ccInfo.cardName;
-      var subText = '';
-      if (ccState.selectedCard === 'ALL') {
-        subText = (rec.ccInfo.channelLabel === '一般刷卡')
-          ? cardDisplay
-          : (rec.ccInfo.channelLabel + '，' + cardDisplay);
-      } else {
-        subText = rec.ccInfo.channelLabel;
-      }
-
-      html += '<div class="cc-tx-item' + (isPaid ? ' is-paid' : '') + '" data-month="' + escAttr(rec.month) + '" data-row="' + rec.row + '">' +
-                '<div class="cc-tx-day">' + escHtml(dayText) + '</div>' +
-                '<div class="cc-tx-main">' +
-                  '<div class="cc-tx-title-row">' +
-                    '<span class="cc-tx-item-name">' + itemDisplayHtml + '</span>' +
-                    (hasNote ? '<span class="cc-tx-note-inline">，' + escHtml(rec.note) + '</span>' : '') +
-                  '</div>' +
-                  '<div class="cc-tx-sub">' + escHtml(subText) + '</div>' +
-                '</div>' +
-                '<div class="cc-tx-right">' +
-                  '<div class="cc-tx-amount">$' + ovFmt(Math.abs(rec.numericAmount)) + '</div>' +
-                  '<button type="button" class="cc-paid-btn' + (isPaid ? ' already-paid' : '') + '" data-month="' + escAttr(rec.month) + '" data-row="' + rec.row + '" data-paid="' + (isPaid ? 'O' : 'X') + '"' + (isRowBusy ? ' disabled' : '') + ' title="' + (isPaid ? '點擊取消已繳費狀態' : '點擊標記為已繳費') + '" aria-label="' + (isPaid ? '已繳費，點擊取消' : '未繳費，點擊標記已繳') + '">' +
-                    '<span class="uv-btn-sign" aria-hidden="true">' +
-                      (isRowBusy
-                        ? '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-dasharray="28" stroke-dashoffset="10" stroke-linecap="round"/></svg>'
-                        : '<svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>') +
-                    '</span>' +
-                    '<span class="uv-btn-text">已繳費</span>' +
-                  '</button>' +
-                '</div>' +
-              '</div>';
-    });
-
-    html += '</div>';
+    setCcRegion(card, '<div class="empty" style="padding:28px 12px;">' + escHtml(emptyMsg) + '</div>');
+    return;
   }
 
-  html += '</div>';
+  var list = card.firstElementChild;
+  if (!list || !list.classList.contains('cc-tx-list')) {
+    card.innerHTML = '<div class="cc-tx-list"></div>';
+    card._ccHtml = null;
+    list = card.firstElementChild;
+  }
+  ListRender.reconcile(list, filteredRecords, {
+    key: function(rec) { return rec.month + '|' + rec.row; },
+    sig: ccTxRowHtml,
+    html: ccTxRowHtml,
+    chunk: { listId: [ccState.selectedCard, selectedMonth, ccState.statusFilter].join('|') }
+  });
+}
 
-  container.innerHTML = html;
+function ccTxRowHtml(rec) {
+  var dayText = formatCcDate(rec.month, rec.day);
+  var itemDisplayHtml = rec.item ? itemIconLabelHtml(rec.item) : '未填';
+  var isPaid = rec.isPaid;
+  var isRowBusy = Boolean(ccState.busyRows[ccBusyKey(rec.month, rec.row)]);
+  var hasNote = Boolean(rec.note && String(rec.note).trim() !== '');
 
-  container.querySelectorAll('.cc-card-tab').forEach(function(tabBtn) {
-    tabBtn.addEventListener('click', function() {
-      ccState.selectedCard = tabBtn.dataset.card || 'ALL';
-      renderCreditCardPage();
-    });
+  var cardDisplay = rec.ccInfo.cardName;
+  var subText = '';
+  if (ccState.selectedCard === 'ALL') {
+    subText = (rec.ccInfo.channelLabel === '一般刷卡')
+      ? cardDisplay
+      : (rec.ccInfo.channelLabel + '，' + cardDisplay);
+  } else {
+    subText = rec.ccInfo.channelLabel;
+  }
+
+  return '<div class="cc-tx-item' + (isPaid ? ' is-paid' : '') + '" data-month="' + escAttr(rec.month) + '" data-row="' + rec.row + '">' +
+            '<div class="cc-tx-day">' + escHtml(dayText) + '</div>' +
+            '<div class="cc-tx-main">' +
+              '<div class="cc-tx-title-row">' +
+                '<span class="cc-tx-item-name">' + itemDisplayHtml + '</span>' +
+                (hasNote ? '<span class="cc-tx-note-inline">，' + escHtml(rec.note) + '</span>' : '') +
+              '</div>' +
+              '<div class="cc-tx-sub">' + escHtml(subText) + '</div>' +
+            '</div>' +
+            '<div class="cc-tx-right">' +
+              '<div class="cc-tx-amount">$' + ovFmt(Math.abs(rec.numericAmount)) + '</div>' +
+              '<button type="button" class="cc-paid-btn' + (isPaid ? ' already-paid' : '') + '" data-month="' + escAttr(rec.month) + '" data-row="' + rec.row + '" data-paid="' + (isPaid ? 'O' : 'X') + '"' + (isRowBusy ? ' disabled' : '') + ' title="' + (isPaid ? '點擊取消已繳費狀態' : '點擊標記為已繳費') + '" aria-label="' + (isPaid ? '已繳費，點擊取消' : '未繳費，點擊標記已繳') + '">' +
+                '<span class="uv-btn-sign" aria-hidden="true">' +
+                  (isRowBusy
+                    ? '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-dasharray="28" stroke-dashoffset="10" stroke-linecap="round"/></svg>'
+                    : '<svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>') +
+                '</span>' +
+                '<span class="uv-btn-text">已繳費</span>' +
+              '</button>' +
+            '</div>' +
+          '</div>';
+}
+
+/** 區塊外殼：display: contents，不影響原本的排版（樣式在 11-credit-card.css）。 */
+function ensureCcRegions(container) {
+  var r = container._ccRegions;
+  if (r && r.tabs.parentNode === container && r.card.parentNode === container) return r;
+  container.innerHTML =
+    '<div class="cc-region"></div><div class="cc-region"></div><div class="cc-region"></div>' +
+    '<div class="cc-region"></div><div class="cc-region"></div><div class="ov-card cc-tx-card"></div>';
+  var kids = container.children;
+  r = { tabs: kids[0], month: kids[1], summary: kids[2], toolbar: kids[3], note: kids[4], card: kids[5] };
+  container._ccRegions = r;
+  bindCreditCardEvents(container);
+  return r;
+}
+
+/** HTML 和上次相同就不動；有替換時回傳 true。 */
+function setCcRegion(el, html) {
+  if (el._ccHtml === html) return false;
+  el._ccHtml = html;
+  el.innerHTML = html;
+  return true;
+}
+
+function bindCreditCardEvents(container) {
+  if (container._ccBound) return;
+  container._ccBound = true;
+
+  container.addEventListener('change', function(e) {
+    var monthSelect = e.target && e.target.closest ? e.target.closest('#ccMonthSelect') : null;
+    if (!monthSelect) return;
+    ccState.selectedMonth = monthSelect.value || 'ALL';
+    renderCreditCardPage();
   });
 
-  var monthSelect = document.getElementById('ccMonthSelect');
-  if (monthSelect) {
-    monthSelect.addEventListener('change', function() {
-      ccState.selectedMonth = monthSelect.value || 'ALL';
+  container.addEventListener('click', function(e) {
+    var t = e.target;
+    if (!t || !t.closest) return;
+    var tabBtn = t.closest('.cc-card-tab');
+    if (tabBtn && container.contains(tabBtn)) {
+      ccState.selectedCard = tabBtn.dataset.card || 'ALL';
       renderCreditCardPage();
-    });
-  }
-
-  container.querySelectorAll('.cc-month-step').forEach(function(stepBtn) {
-    stepBtn.addEventListener('click', function() {
+      return;
+    }
+    var stepBtn = t.closest('.cc-month-step');
+    if (stepBtn && container.contains(stepBtn)) {
       var target = stepBtn.dataset.monthTarget;
       if (!target) return;
       ccState.selectedMonth = target;
       renderCreditCardPage();
-    });
-  });
-
-  container.querySelectorAll('.cc-filter-btn').forEach(function(filterBtn) {
-    filterBtn.addEventListener('click', function() {
+      return;
+    }
+    var filterBtn = t.closest('.cc-filter-btn');
+    if (filterBtn && container.contains(filterBtn)) {
       ccState.statusFilter = filterBtn.dataset.sfilter || 'all';
       renderCreditCardPage();
-    });
-  });
-
-  container.querySelectorAll('.cc-paid-btn').forEach(function(paidBtn) {
-    paidBtn.addEventListener('click', function(e) {
+      return;
+    }
+    var paidBtn = t.closest('.cc-paid-btn');
+    if (paidBtn && container.contains(paidBtn)) {
       e.stopPropagation();
+      if (paidBtn.disabled) return;
       var rowNum = Number(paidBtn.dataset.row);
       var currentPaid = paidBtn.dataset.paid;
       var nextPaid = (currentPaid === 'O') ? 'X' : 'O';
       toggleSingleCreditCardPaid(paidBtn.dataset.month, rowNum, nextPaid);
-    });
-  });
-
-  var batchBtn = document.getElementById('ccBatchMarkPaidBtn');
-  if (batchBtn) {
-    batchBtn.addEventListener('click', function() {
+      return;
+    }
+    var batchBtn = t.closest('#ccBatchMarkPaidBtn');
+    if (batchBtn && container.contains(batchBtn)) {
+      if (batchBtn.disabled) return;
       if (ccState.loadingProgress) {
         showToast('還在讀取其他月份的明細，請稍候再操作', 'error');
         return;
       }
-      var unpaid = (activeScope.records || []).filter(function(r) { return !r.isPaid; });
+      var view = ccState.view || {};
+      var unpaid = ((view.activeScope && view.activeScope.records) || []).filter(function(r) { return !r.isPaid; });
       if (!unpaid.length) return;
       var rowsByMonth = {};
       unpaid.forEach(function(r) {
         (rowsByMonth[r.month] = rowsByMonth[r.month] || []).push(r.row);
       });
-      var scopeText = '「' + activeCardTitle + '」' + (isAllMonths ? '' : formatCcMonthLabel(selectedMonth));
+      var scopeText = '「' + view.activeCardTitle + '」' + (view.isAllMonths ? '' : formatCcMonthLabel(view.selectedMonth));
       if (!confirm('確定要將' + scopeText + '的 ' + unpaid.length + ' 筆未繳明細，全數標記為【已繳費】嗎？')) {
         return;
       }
       batchMarkUnpaidRecords(rowsByMonth);
-    });
-  }
+    }
+  });
 }
 
 // 組出「11/15的午餐共120元」這種描述，讓 toast 指出是哪一筆消費

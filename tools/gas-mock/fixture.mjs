@@ -127,8 +127,28 @@ export function fxSheet(name, opts, records) {
   return s.data;
 }
 
-/** 建立一本測試用的活頁簿（結構同 readXlsx() 的回傳值）。 */
-export function createFixtureWorkbook() {
+/**
+ * 額外的合成支出（P06 的長清單量測與測試用）：照固定規則產生，內容全是編出來的。
+ * 日期落在 1～12 日（不碰「今天」13 日，今日總花費不受影響），依日期排序後接在原本的 8 筆後面。
+ */
+export function syntheticExpenses(count) {
+  const items = ['早餐', '午餐', '晚餐', '飲料', '交通費', '娛樂', '其他'];
+  const payments = [['現金', ''], ['信用卡-測試一卡', 'X'], ['Line Pay-測試一卡', ''], ['信用卡-測試二卡', 'O'], ['簽帳卡-測試簽帳卡', '']];
+  const notes = ['', '', '合成資料', '', '量測用'];
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    const pay = payments[i % payments.length];
+    out.push([1 + (i % 12), items[(i * 3) % items.length], '生活費', pay[0], pay[1], 40 + ((i * 37) % 460), notes[i % notes.length]]);
+  }
+  return out.sort((a, b) => a[0] - b[0]);
+}
+
+/**
+ * 建立一本測試用的活頁簿（結構同 readXlsx() 的回傳值）。
+ * opts.extraExpenses：2026.11 額外加幾筆合成支出（預設 0，維持原本的 8 筆）。
+ */
+export function createFixtureWorkbook(opts) {
+  const extra = syntheticExpenses(Math.max(0, Number(opts && opts.extraExpenses) || 0));
   const nov = monthSheet('2026.11', [
     [1, '午餐', '生活費', '信用卡-測試一卡', 'X', 85, ''],
     [1, '晚餐', '生活費', '現金', '', 175, ''],
@@ -138,7 +158,7 @@ export function createFixtureWorkbook() {
     [6, '交通費', '生活費', 'Line Pay-測試一卡', '', 140, ''],
     [8, '飲料', '生活費', '現金', '', 65, '珍奶'],
     [9, '晚餐', '生活費', '信用卡-測試一卡', 'O', 320, '拉麵'],
-  ], [
+  ].concat(extra), [
     [3, '其他', '生活費', 3000, '租屋補助'],
     [5, '薪資', '存款', 52000, '十一月薪資'],
   ]);

@@ -834,3 +834,8 @@
 #pageSettings .app {
   width: min(880px, 100%);
 }
+
+/* P06：信用卡頁分區更新用的外殼，不產生方框，排版與以前直接放在 .cc-content 底下相同 */
+.cc-region {
+  display: contents;
+}

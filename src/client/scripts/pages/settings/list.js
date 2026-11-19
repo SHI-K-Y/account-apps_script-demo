@@ -42,6 +42,7 @@ function renderSettingsList() {
   var isItemWithEmoji = (tab === 'expenseItems' || tab === 'incomeItems');
 
   if (!items.length) {
+    container._settingsListTab = null;
     container.innerHTML =
       '<div class="settings-empty">' +
         '<div class="settings-empty-icon" aria-hidden="true">' + iconHtml('tray') + '</div>' +
@@ -50,145 +51,174 @@ function renderSettingsList() {
     return;
   }
 
-  var html = '<div class="settings-list-header">' +
-               '<div class="settings-list-title-wrap">' +
-                 '<span class="settings-list-title">' + tabLabel + '</span>' +
-                 '<span class="settings-order-hint">可使用上下箭頭或拖曳自訂順序</span>' +
+  // P06：同一個分頁重繪時只更新有變化的列（排序、改名、新增、刪除），外框與標題不重建；
+  // 按鈕與拖曳一律委派到清單（bindSettingsListEvents／bindSettingsListDrag，只綁一次）。
+  var list = container.querySelector(':scope > #settingsSortableList');
+  if (container._settingsListTab !== tab || !list) {
+    container.innerHTML = '<div class="settings-list-header">' +
+                 '<div class="settings-list-title-wrap">' +
+                   '<span class="settings-list-title">' + tabLabel + '</span>' +
+                   '<span class="settings-order-hint">可使用上下箭頭或拖曳自訂順序</span>' +
+                 '</div>' +
+                 '<span class="settings-list-count"></span>' +
                '</div>' +
-               '<span class="settings-list-count">共 ' + items.length + ' 項</span>' +
-             '</div>' +
-             '<ul class="settings-list" id="settingsSortableList">';
+               '<ul class="settings-list" id="settingsSortableList"></ul>';
+    container._settingsListTab = tab;
+    list = container.querySelector('#settingsSortableList');
+  }
+  ListRender.setText(container.querySelector('.settings-list-count'), '共 ' + items.length + ' 項');
+  bindSettingsListEvents(container);
+  container._settingsList = { tab: tab, count: items.length, isItemWithEmoji: isItemWithEmoji, tabLabel: tabLabel };
 
-  items.forEach(function(item, idx) {
+  var rowHtml = function(item) {
     var itemIcon = isItemWithEmoji ? getItemIcon(item.value) : '';
-    var isFirst = (idx === 0);
-    var isLast = (idx === items.length - 1);
-    html += '<li class="settings-item" draggable="true" data-row="' + item.row + '" data-idx="' + idx + '">' +
+    return '<li class="settings-item" draggable="true" data-row="' + item.row + '">' +
               '<div class="settings-item-main">' +
                 '<span class="settings-drag-handle" title="按住拖曳自訂順序" aria-label="拖曳排序">' + iconHtml('dots-six-vertical') + '</span>' +
-                '<span class="settings-item-order">' + (idx + 1) + '</span>' +
+                '<span class="settings-item-order"></span>' +
                 (itemIcon ? '<span class="settings-item-emoji" aria-hidden="true">' + iconHtml(itemIcon) + '</span>' : '') +
                 '<span class="settings-item-value" id="settingsVal_' + item.row + '">' + escHtml(isItemWithEmoji ? itemDisplayName(item.value) : item.value) + '</span>' +
               '</div>' +
               '<div class="settings-item-actions">' +
-                '<button class="settings-action-btn settings-move-btn settings-move-up-btn" type="button" data-idx="' + idx + '" title="向上移動一位"' + (isFirst ? ' disabled' : '') + '>' +
+                '<button class="settings-action-btn settings-move-btn settings-move-up-btn" type="button" title="向上移動一位">' +
                   iconHtml('caret-up') +
                 '</button>' +
-                '<button class="settings-action-btn settings-move-btn settings-move-down-btn" type="button" data-idx="' + idx + '" title="向下移動一位"' + (isLast ? ' disabled' : '') + '>' +
+                '<button class="settings-action-btn settings-move-btn settings-move-down-btn" type="button" title="向下移動一位">' +
                   iconHtml('caret-down') +
                 '</button>' +
                 '<button class="settings-action-btn settings-edit-btn" type="button" data-row="' + item.row + '" data-value="' + escAttr(item.value) + '" title="修改">' +
-                  '' + iconHtml('note-pencil', 'regular', 'ic-15') + '' +
+                  iconHtml('note-pencil', 'regular', 'ic-15') +
                 '</button>' +
                 '<button class="settings-action-btn settings-delete-btn" type="button" data-row="' + item.row + '" data-value="' + escAttr(item.value) + '" title="刪除">' +
-                  '' + iconHtml('trash', 'regular', 'ic-15') + '' +
+                  iconHtml('trash', 'regular', 'ic-15') +
                 '</button>' +
               '</div>' +
             '</li>';
-  });
-
-  html += '</ul>';
-  container.innerHTML = html;
-
-  container.querySelectorAll('.settings-move-up-btn').forEach(function(btn) {
-    btn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      var idx = Number(btn.dataset.idx);
-      if (idx > 0) {
-        reorderSettingsItem(tab, idx, idx - 1, true);
+  };
+  // 行內編輯中的列：以前重繪會整份重建、順便結束編輯；這裡維持一樣的行為，不沿用那一列
+  list.querySelectorAll('.settings-item.editing').forEach(ListRender.markLeaving);
+  ListRender.reconcile(list, items, {
+    key: function(item) { return item.value; },
+    sig: rowHtml,
+    html: rowHtml,
+    // 跟著位置變的部分（序號、data-idx、上下鈕是否停用）每次都直接更新，其餘內容不動
+    place: function(el, item, idx) {
+      var idxStr = String(idx);
+      if (el.dataset.idx !== idxStr) {
+        el.dataset.idx = idxStr;
+        el.querySelector('.settings-item-order').textContent = String(idx + 1);
+        el.querySelectorAll('.settings-move-btn').forEach(function(btn) { btn.dataset.idx = idxStr; });
       }
-    });
+      var up = el.querySelector('.settings-move-up-btn');
+      var down = el.querySelector('.settings-move-down-btn');
+      if (up.disabled !== (idx === 0)) up.disabled = (idx === 0);
+      if (down.disabled !== (idx === items.length - 1)) down.disabled = (idx === items.length - 1);
+    }
   });
 
-  container.querySelectorAll('.settings-move-down-btn').forEach(function(btn) {
-    btn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      var idx = Number(btn.dataset.idx);
-      if (idx < items.length - 1) {
-        reorderSettingsItem(tab, idx, idx + 1, true);
-      }
-    });
-  });
-
-  bindSettingsListDrag(container.querySelector('#settingsSortableList'), function(from, to) {
+  bindSettingsListDrag(list, function(from, to) {
     reorderSettingsItem(tab, from, to);
   });
+}
 
-  container.querySelectorAll('.settings-edit-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      var row = Number(btn.dataset.row);
-      var oldValue = btn.dataset.value;
-      if (isItemWithEmoji) {
-        openItemEmojiEditModal(tab, row, oldValue);
-      } else {
-        startInlineEdit(row, oldValue);
+function bindSettingsListEvents(container) {
+  if (container._settingsListBound) return;
+  container._settingsListBound = true;
+  container.addEventListener('click', function(e) {
+    var info = container._settingsList;
+    var btn = e.target && e.target.closest ? e.target.closest('.settings-action-btn') : null;
+    if (!info || !btn || !btn.closest('#settingsSortableList') || !container.contains(btn)) return;
+    if (container._settingsListTab !== info.tab || btn.disabled) return;
+    var tab = info.tab;
+    if (btn.classList.contains('settings-move-up-btn') || btn.classList.contains('settings-move-down-btn')) {
+      e.stopPropagation();
+      var idx = Number(btn.dataset.idx);
+      if (btn.classList.contains('settings-move-up-btn')) {
+        if (idx > 0) reorderSettingsItem(tab, idx, idx - 1, true);
+      } else if (idx < info.count - 1) {
+        reorderSettingsItem(tab, idx, idx + 1, true);
       }
-    });
-  });
-
-  container.querySelectorAll('.settings-delete-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      var row = Number(btn.dataset.row);
-      var value = btn.dataset.value;
+      return;
+    }
+    var row = Number(btn.dataset.row);
+    var value = btn.dataset.value;
+    if (btn.classList.contains('settings-edit-btn')) {
+      if (info.isItemWithEmoji) openItemEmojiEditModal(tab, row, value);
+      else startInlineEdit(row, value);
+    } else if (btn.classList.contains('settings-delete-btn')) {
       openSettingsDeleteConfirm({
-        mode: isItemWithEmoji ? 'itemWithEmoji' : 'simpleOption',
+        mode: info.isItemWithEmoji ? 'itemWithEmoji' : 'simpleOption',
         category: tab,
         row: row,
         name: value,
-        label: tabLabel
+        label: info.tabLabel
       });
-    });
+    }
   });
 }
 
 var reorderDebounceTimers = {};
 var reorderSeq = 0;
 
+// 拖曳排序：事件委派到清單本身（P06），列重繪或增減時不必重新綁定；onMove 每次渲染更新。
 function bindSettingsListDrag(sortableList, onMove) {
   if (!sortableList) return;
+  sortableList._settingsDragMove = onMove;
+  if (sortableList._settingsDragBound) return;
+  sortableList._settingsDragBound = true;
   var dragSrcIdx = null;
+  var itemOf = function(e) {
+    var el = e.target && e.target.closest ? e.target.closest('.settings-item') : null;
+    return el && el.parentNode === sortableList ? el : null;
+  };
 
-  sortableList.querySelectorAll('.settings-item').forEach(function(itemEl) {
-    itemEl.addEventListener('dragstart', function(e) {
-      dragSrcIdx = Number(itemEl.dataset.idx);
-      itemEl.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-      try {
-        e.dataTransfer.setData('text/plain', String(dragSrcIdx));
-      } catch (err) {}
-    });
+  sortableList.addEventListener('dragstart', function(e) {
+    var itemEl = itemOf(e);
+    if (!itemEl) return;
+    dragSrcIdx = Number(itemEl.dataset.idx);
+    itemEl.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    try {
+      e.dataTransfer.setData('text/plain', String(dragSrcIdx));
+    } catch (err) {}
+  });
 
-    itemEl.addEventListener('dragover', function(e) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      if (!itemEl.classList.contains('dragging')) {
-        itemEl.classList.add('drag-over');
-      }
-    });
+  sortableList.addEventListener('dragover', function(e) {
+    var itemEl = itemOf(e);
+    if (!itemEl) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!itemEl.classList.contains('dragging')) {
+      itemEl.classList.add('drag-over');
+    }
+  });
 
-    itemEl.addEventListener('dragleave', function() {
-      itemEl.classList.remove('drag-over');
-    });
+  sortableList.addEventListener('dragleave', function(e) {
+    var itemEl = itemOf(e);
+    if (itemEl) itemEl.classList.remove('drag-over');
+  });
 
-    itemEl.addEventListener('drop', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      itemEl.classList.remove('drag-over');
-      var targetIdx = Number(itemEl.dataset.idx);
-      if (dragSrcIdx !== null && targetIdx !== dragSrcIdx && !isNaN(targetIdx)) {
-        var from = dragSrcIdx;
-        dragSrcIdx = null;
-        onMove(from, targetIdx);
-      }
-    });
-
-    itemEl.addEventListener('dragend', function() {
-      itemEl.classList.remove('dragging');
-      sortableList.querySelectorAll('.settings-item').forEach(function(el) {
-        el.classList.remove('drag-over');
-      });
+  sortableList.addEventListener('drop', function(e) {
+    var itemEl = itemOf(e);
+    if (!itemEl) return;
+    e.preventDefault();
+    e.stopPropagation();
+    itemEl.classList.remove('drag-over');
+    var targetIdx = Number(itemEl.dataset.idx);
+    if (dragSrcIdx !== null && targetIdx !== dragSrcIdx && !isNaN(targetIdx)) {
+      var from = dragSrcIdx;
       dragSrcIdx = null;
+      sortableList._settingsDragMove(from, targetIdx);
+    }
+  });
+
+  sortableList.addEventListener('dragend', function(e) {
+    var itemEl = itemOf(e);
+    if (itemEl) itemEl.classList.remove('dragging');
+    sortableList.querySelectorAll('.settings-item').forEach(function(el) {
+      el.classList.remove('drag-over');
     });
+    dragSrcIdx = null;
   });
 }
 

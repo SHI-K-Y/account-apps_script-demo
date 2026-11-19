@@ -231,6 +231,8 @@ const ReminderSettings = (function() {
         '</div>' +
         '<div class="budget-actions meal-actions" data-rmd-actions>' + actionsHtml(hasError, isDirty()) + '</div>' +
       '</div>';
+    // 分段控制由建立它的渲染函式直接啟用（P06）
+    container.querySelectorAll('.pref-segmented').forEach(el => Motion.segmented(el, '.pref-seg-btn'));
   }
 
   /** 只更新會隨時間欄位變動的部分，不重建輸入框，打字時游標不會跳走。 */

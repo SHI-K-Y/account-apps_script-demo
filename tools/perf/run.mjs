@@ -18,6 +18,9 @@
 //
 // P05 新增：「轉場開始」＝按下導覽列到 View Transition 的 ready（動畫真的開始），Event Timing 量不到 update callback；
 //          「動畫期間 Layout」＝新增／刪除紀錄、展開／收合區塊時主執行緒的排版次數（FLIP 之後應該只剩開頭或結尾一次）。
+// P06 新增：「長清單」＝合成資料加長到 30 筆（記一筆支出時 renderRecent／renderRecentList 的腳本時間，
+//          CPU 4 倍降速、記 5 筆取中位數）與 300 筆（載入完整紀錄的腳本時間、在完整紀錄上觸控捲動的幀率）。
+//          --lists-only：只跑長清單這一段（快速比較用，結果不寫入 baseline）。
 // 注意：headless 是軟體繪圖，絕對數字比真機悲觀，只拿來比較「改之前／改之後」的相對變化。
 import fs from 'node:fs';
 import os from 'node:os';
@@ -60,6 +63,7 @@ const OPT = {
   baseline: typeof args.baseline === 'string' ? args.baseline : '',
   autoBaseline: !args['no-baseline'],
   saveBaseline: Boolean(args['save-baseline']),
+  listsOnly: Boolean(args['lists-only']),
 };
 if (args.net && args.net !== 'fast3g') fail('--net 只支援 fast3g');
 
@@ -144,6 +148,13 @@ FLIP_CASES.forEach(c => {
   metric('flip.' + c.key + '.layouts', c.label + ' 動畫期間 Layout', '次', 'down');
   metric('flip.' + c.key + '.frames', c.label + ' 動畫期間幀數', '幀', 'up');
 });
+// 長清單（P06）
+metric('longlist.submitRenderMs', '記一筆支出：renderRecent 腳本時間（30 筆完整清單）', 'ms', 'down');
+metric('longlist.fullRenderMs', '載入 300 筆完整紀錄：renderRecentList 腳本時間', 'ms', 'down');
+metric('longlist.scroll.fps', '300 筆完整紀錄 捲動平均幀率', 'fps', 'up');
+metric('longlist.scroll.slowFrames', '300 筆完整紀錄 捲動超過 50ms 的幀', '幀', 'down');
+metric('longlist.scroll.p95FrameMs', '300 筆完整紀錄 捲動 p95 幀時間', 'ms', 'down');
+metric('longlist.scroll.drawMs', '300 筆完整紀錄 捲動合成器繪製總時間', 'ms', 'down');
 PAGES.forEach(p => {
   metric('static.' + p.key + '.runningAnimations', p.label + ' 執行中動畫數', '個', 'down');
   metric('static.' + p.key + '.backdropInView', p.label + ' 畫面內 backdrop-filter', '個', 'down');
@@ -256,8 +267,8 @@ function stamp(d) {
   return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
 }
 
-async function startApp() {
-  const app = createDevApp({ fixture: true, quiet: true, DateCtor: shiftedDate(FIXED_NOW), root: OPT.dist || undefined });
+async function startApp(fixtureOptions) {
+  const app = createDevApp({ fixture: true, quiet: true, DateCtor: shiftedDate(FIXED_NOW), root: OPT.dist || undefined, fixtureOptions });
   await new Promise(r => app.server.listen(0, '127.0.0.1', r));
   return { url: 'http://127.0.0.1:' + app.server.address().port + '/', close: () => new Promise(r => app.server.close(r)) };
 }
@@ -727,6 +738,109 @@ async function measureFlip(browser) {
   return out;
 }
 
+/* ---------------------------------------------------------------------------
+ * g. 長清單（P06）
+ * ------------------------------------------------------------------------- */
+const LIST_SUBMITS = 5;
+
+/** 包住 renderRecent／renderRecentList（頂層函式宣告就是 window 的屬性），只算最外層那一次的同步執行時間。 */
+function wrapListRenderers() {
+  const P = window.__perf;
+  P.listMs = 0;
+  P.listCalls = 0;
+  let depth = 0;
+  ['renderRecent', 'renderRecentList'].forEach(name => {
+    const orig = window[name];
+    if (typeof orig !== 'function') return;
+    window[name] = function () {
+      const t0 = depth === 0 ? performance.now() : 0;
+      depth++;
+      try { return orig.apply(this, arguments); } finally {
+        depth--;
+        if (depth === 0) { P.listMs += performance.now() - t0; P.listCalls++; }
+      }
+    };
+  });
+}
+
+async function measureLists(browser) {
+  const out = {};
+  // a) 30 筆完整清單，記一筆支出（同步中插入一次、伺服器回來再重繪一次）
+  {
+    const app = await startApp({ extraExpenses: 22 });
+    const { context, page } = await newPage(browser, { throttle: true });
+    try {
+      await boot(page, app.url);
+      await settle(page);
+      await page.evaluate(() => toggleFullRecords('expense'));
+      await settle(page, 1000);
+      await page.evaluate(wrapListRenderers);
+      const samples = [];
+      for (let i = 0; i < LIST_SUBMITS; i++) {
+        await page.locator('#expenseItemChoices .choice').nth(i % 3).tap();
+        await sleep(400);
+        await prepareSubmit(page);
+        await page.locator('#expenseKeypad .key:text-is("1")').tap();
+        await sleep(300);
+        await page.evaluate(() => { window.__perf.listMs = 0; window.__perf.listCalls = 0; });
+        await page.locator('#expenseSubmit').tap();
+        await settle(page, 800);
+        samples.push(await page.evaluate(() => ({ ms: window.__perf.listMs, calls: window.__perf.listCalls,
+          rows: document.querySelectorAll('#recentExpenses .recent-item').length })));
+      }
+      out['longlist.submitRenderMs'] = median(samples.map(x => x.ms));
+      out.submitSamples = samples;
+    } finally {
+      await context.close();
+      await app.close();
+    }
+  }
+  // b) 300 筆完整紀錄：載入的腳本時間與捲動幀率
+  {
+    const app = await startApp({ extraExpenses: 292 });
+    const { context, page, cdp } = await newPage(browser, { throttle: true });
+    try {
+      await boot(page, app.url);
+      await settle(page);
+      await page.evaluate(wrapListRenderers);
+      await page.evaluate(() => { window.__perf.listMs = 0; });
+      await page.evaluate(() => toggleFullRecords('expense'));
+      await settle(page, 1500);
+      out['longlist.fullRenderMs'] = await page.evaluate(() => window.__perf.listMs);
+      out.fullRows = await page.evaluate(() => document.querySelectorAll('#recentExpenses .recent-item').length);
+      // 從完整紀錄的開頭往下捲 4000px 再捲回來
+      await page.evaluate(() => {
+        const list = document.getElementById('recentExpenses');
+        window.scrollTo(0, list.getBoundingClientRect().top + window.scrollY - 120);
+      });
+      await sleep(800);
+      const stopTrace = await startTrace(cdp);
+      const sampler = page.evaluate(() => new Promise(resolve => {
+        const list = [];
+        window.__perfScrollStop = () => resolve(list);
+        const tick = t => { list.push(t); if (window.__perfScrollStop) requestAnimationFrame(tick); };
+        requestAnimationFrame(tick);
+      }));
+      const gesture = { x: VIEWPORT.width / 2, y: VIEWPORT.height * 0.6, speed: SCROLL_SPEED, gestureSourceType: 'touch', preventFling: true };
+      await cdp.send('Input.synthesizeScrollGesture', Object.assign({ yDistance: -4000 }, gesture));
+      await cdp.send('Input.synthesizeScrollGesture', Object.assign({ yDistance: 4000 }, gesture));
+      await page.evaluate(() => { const f = window.__perfScrollStop; window.__perfScrollStop = null; f(); });
+      const ts = await sampler;
+      const trace = summarizeTrace(await stopTrace());
+      const deltas = ts.slice(1).map((t, i) => t - ts[i]);
+      const secs = (ts[ts.length - 1] - ts[0]) / 1000;
+      out['longlist.scroll.fps'] = secs > 0 ? deltas.length / secs : null;
+      out['longlist.scroll.slowFrames'] = deltas.filter(x => x > SLOW_FRAME_MS).length;
+      out['longlist.scroll.p95FrameMs'] = percentile(deltas, 95);
+      out['longlist.scroll.drawMs'] = trace['Display::DrawAndSwap'].us / 1000;
+    } finally {
+      await context.close();
+      await app.close();
+    }
+  }
+  return out;
+}
+
 /** 不降速：盤點動畫與 backdrop-filter，並在淺色、深色各截一張圖。 */
 async function staticPass(browser) {
   const app = await startApp();
@@ -822,6 +936,40 @@ function printInventory(inv) {
   }
 }
 
+/** --lists-only：只印長清單的數字（中位數），並存一份結果檔，可以用 --baseline 指定另一份 lists-only 結果比較。 */
+function printListsOnly(listRuns) {
+  const metrics = {};
+  for (const m of METRICS.filter(x => x.key.startsWith('longlist.'))) {
+    metrics[m.key] = round(median(listRuns.map(r => r[m.key]).filter(v => typeof v === 'number')), 2);
+  }
+  let base = null;
+  if (OPT.baseline) {
+    const f = resolveResultFile(OPT.baseline);
+    if (!f) fail('找不到 --baseline 指定的結果檔：' + OPT.baseline);
+    base = JSON.parse(fs.readFileSync(f, 'utf8'));
+  }
+  console.log('');
+  for (const m of METRICS.filter(x => x.key.startsWith('longlist.'))) {
+    const v = metrics[m.key];
+    let line = padR(m.label, 52) + padL(fmt(v, m.unit), 8) + ' ' + m.unit;
+    const b = base && base.metrics && base.metrics[m.key];
+    if (typeof b === 'number' && typeof v === 'number') {
+      line += '   基準 ' + fmt(b, m.unit) + (b !== 0 ? '（' + (v - b > 0 ? '+' : '') + round((v - b) / Math.abs(b) * 100, 1) + '%）' : '');
+    }
+    console.log(line);
+  }
+  const result = {
+    label: OPT.label, createdAt: new Date().toISOString(), listsOnly: true,
+    conditions: { cpu: OPT.cpu, net: OPT.net, runs: OPT.runs, rasterThreads: OPT.rasterThreads,
+      dist: !OPT.dist ? 'dist' : (path.relative(ROOT, OPT.dist).startsWith('..') ? '(外部) ' + OPT.dist.split(path.sep).slice(-2).join('/') : path.relative(ROOT, OPT.dist)) },
+    metrics, longLists: listRuns,
+  };
+  fs.mkdirSync(RESULTS_DIR, { recursive: true });
+  const outFile = path.join(RESULTS_DIR, stamp(new Date()) + '-' + OPT.label + '.json');
+  fs.writeFileSync(outFile, JSON.stringify(result, null, 2) + '\n');
+  console.log('\n結果：' + path.relative(ROOT, outFile));
+}
+
 function resolveResultFile(name) {
   const candidates = [name, path.join(RESULTS_DIR, name), path.join(RESULTS_DIR, name + '.json'), path.join(PERF_DIR, name)];
   const hit = candidates.find(f => fs.existsSync(f) && fs.statSync(f).isFile());
@@ -850,17 +998,29 @@ async function main() {
   let runs;
   let stat;
   let flip = {};
+  const listRuns = [];
   try {
     console.log('暖機…');
     await warmup(browser);
+    if (OPT.listsOnly) {
+      for (let i = 1; i <= OPT.runs; i++) {
+        listRuns.push(await measureLists(browser));
+        console.log('  長清單第 ' + i + ' 次：記一筆 ' + round(listRuns[i - 1]['longlist.submitRenderMs'], 1) + 'ms、300 筆捲動 ' +
+          round(listRuns[i - 1]['longlist.scroll.fps'], 1) + ' fps');
+      }
+      await browser.close();
+      return printListsOnly(listRuns);
+    }
     runs = [];
     for (let i = 1; i <= OPT.runs; i++) runs.push(await oneRun(browser, i));
     console.log(OPT.screens ? '動畫盤點與截圖（淺色、深色）…' : '動畫盤點…');
     stat = await staticPass(browser);
     console.log('一次性動畫的排版…');
     flip = await measureFlip(browser);
+    console.log('長清單（30 筆記帳、300 筆捲動）…');
+    for (let i = 0; i < OPT.runs; i++) listRuns.push(await measureLists(browser));
   } finally {
-    await browser.close();
+    if (browser.isConnected()) await browser.close();
   }
 
   const metrics = {};
@@ -868,6 +1028,12 @@ async function main() {
   for (const m of METRICS) {
     if (m.key.startsWith('static.')) continue;
     if (m.key.startsWith('flip.')) { metrics[m.key] = flip[m.key] == null ? null : flip[m.key]; continue; }
+    if (m.key.startsWith('longlist.')) {
+      const ys = listRuns.map(r => r[m.key]).filter(v => typeof v === 'number');
+      metrics[m.key] = round(median(ys), 2);
+      if (ys.length > 1) spread[m.key] = [round(Math.min(...ys), 2), round(Math.max(...ys), 2)];
+      continue;
+    }
     const xs = runs.map(r => r.metrics[m.key]).filter(v => typeof v === 'number');
     metrics[m.key] = round(median(xs), 2);
     if (xs.length > 1) spread[m.key] = [round(Math.min(...xs), 2), round(Math.max(...xs), 2)];
@@ -890,6 +1056,7 @@ async function main() {
     metrics,
     spread,
     runs: runs.map(r => r.metrics),
+    longLists: listRuns,
     inputEvents: runs.map(r => r.inputEvents),
     animations: stat.inventory,
     screenshots: { dir: stat.dir, files: stat.files },

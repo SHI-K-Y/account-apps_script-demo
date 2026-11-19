@@ -1194,38 +1194,22 @@ const Motion = (function() {
     schedule(false);
   }
 
-  const SEGMENTED_REGISTRY = [
+  // 寫在靜態 HTML 裡的分段控制：開機時掃描一次。
+  // 由程式渲染出來的分段控制（偏好設定、預算、提醒的 .pref-segmented，信用卡頁的卡別與繳費狀態）
+  // 改由建立它的渲染函式直接呼叫 Motion.segmented(container, itemSel)。
+  // P06：以前在 document.body 開了 subtree 的 MutationObserver，任何清單重繪都要經過它；現在已移除。
+  const SEGMENTED_STATIC = [
     ['.settings-tabs', '.settings-tab'],
     ['.settings-pay-subnav', '.settings-subtab'],
-    ['.pref-segmented', '.pref-seg-btn'],
-    ['.cc-card-tabs', '.cc-card-tab'],
-    ['.cc-status-filters', '.cc-filter-btn'],
     ['.recent-date-chips', '.recent-date-chip'],
     ['.quick-combo-type-tabs', '.tab'],
     ['.emoji-popover-tabs', '.emoji-pop-tab']
   ];
-  // 效能：任何列表重繪都會觸發 body 的 MutationObserver；先用一次合併選擇器快速排除不含分段控制的節點，
-  // 避免每個新增節點都跑 8 次 querySelectorAll。
-  const SEGMENTED_ANY = SEGMENTED_REGISTRY.map(r => r[0]).join(', ');
-  function bindSegmentedAuto() {
-    const scan = root => {
-      if (!root || root.nodeType !== 1) return;
-      if (!(root.matches && root.matches(SEGMENTED_ANY)) && !(root.querySelector && root.querySelector(SEGMENTED_ANY))) return;
-      for (let i = 0; i < SEGMENTED_REGISTRY.length; i++) {
-        const c = SEGMENTED_REGISTRY[i][0];
-        const it = SEGMENTED_REGISTRY[i][1];
-        if (root.matches && root.matches(c)) segmented(root, it);
-        if (root.querySelectorAll) root.querySelectorAll(c).forEach(el => segmented(el, it));
-      }
-    };
-    scan(document.body);
-    if (typeof MutationObserver !== 'function') return;
-    new MutationObserver(records => {
-      for (let i = 0; i < records.length; i++) {
-        const added = records[i].addedNodes;
-        for (let j = 0; j < added.length; j++) scan(added[j]);
-      }
-    }).observe(document.body, { childList: true, subtree: true });
+  function bindSegmentedStatic() {
+    for (let i = 0; i < SEGMENTED_STATIC.length; i++) {
+      const it = SEGMENTED_STATIC[i][1];
+      document.querySelectorAll(SEGMENTED_STATIC[i][0]).forEach(el => segmented(el, it));
+    }
   }
 
   bindPress();
@@ -1233,8 +1217,8 @@ const Motion = (function() {
   bindSpecular();
   bindTriggerCapture();
   initRefraction();
-  if (document.body) bindSegmentedAuto();
-  else document.addEventListener('DOMContentLoaded', bindSegmentedAuto, { once: true });
+  if (document.body) bindSegmentedStatic();
+  else document.addEventListener('DOMContentLoaded', bindSegmentedStatic, { once: true });
 
   if (reduceMql) {
     const onChange = () => {

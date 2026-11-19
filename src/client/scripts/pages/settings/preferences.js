@@ -71,6 +71,8 @@ function renderPreferencesSettings(container) {
       '</div>' +
     '</div>';
 
+  // 分段控制由建立它的渲染函式直接啟用（P06：不再靠 body 層級的 MutationObserver 偵測）
+  container.querySelectorAll('.pref-segmented').forEach(function(el) { Motion.segmented(el, '.pref-seg-btn'); });
   bindPrefSegmented(container, 'data-motion-value', function(value) { Prefs.set({ motion: value }); });
 
   var switchBtn = container.querySelector('.pref-switch');

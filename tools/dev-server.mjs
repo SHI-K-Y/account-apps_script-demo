@@ -64,7 +64,8 @@ export function createDevApp(options) {
   const xlsxPath = options.xlsx ? path.resolve(options.xlsx) : findXlsx(ROOT);
   // 沒有 Excel 匯出檔時，改用內建的合成測試資料（版面相同、內容是假資料）。
   const useFixture = Boolean(options.fixture) || !xlsxPath || !fs.existsSync(xlsxPath);
-  const loadWorkbook = () => (useFixture ? createFixtureWorkbook() : readXlsx(xlsxPath));
+  // fixtureOptions：傳給 createFixtureWorkbook（例如 { extraExpenses: 300 }，P06 的長清單量測用）
+  const loadWorkbook = () => (useFixture ? createFixtureWorkbook(options.fixtureOptions) : readXlsx(xlsxPath));
   const latency = Number(options.latency) || 0;
   const quiet = Boolean(options.quiet);
 

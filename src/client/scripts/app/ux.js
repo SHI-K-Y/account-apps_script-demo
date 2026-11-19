@@ -154,16 +154,24 @@ const UxEnhancements = (function() {
   }
 
   function bindSemantics() {
+    // 導覽與分頁的 active 樣式由各自的程式切換；這裡只跟著同步語意屬性。
+    // P06：只觀察真正會切換 active 的按鈕本身（不再對整個容器開 subtree），
+    // 按鈕裡的圖示、光暈等子節點變動不會再喚醒這兩個觀察者。
     const nav = document.getElementById('bottomNav');
     if (nav) {
       if (!nav.getAttribute('aria-label')) nav.setAttribute('aria-label', '主要頁面');
-      // 導覽與分頁的 active 樣式由各自的程式切換；這裡只跟著同步語意屬性。
-      new MutationObserver(syncNavSemantics).observe(nav, { attributes: true, attributeFilter: ['class'], subtree: true });
+      const navObserver = new MutationObserver(syncNavSemantics);
+      nav.querySelectorAll('.nav-item').forEach(function(btn) {
+        navObserver.observe(btn, { attributes: true, attributeFilter: ['class'] });
+      });
     }
     const tabs = document.querySelector('.tabs[role="tablist"]');
     if (tabs) {
       if (!tabs.getAttribute('aria-label')) tabs.setAttribute('aria-label', '記帳類型');
-      new MutationObserver(syncTabSemantics).observe(tabs, { attributes: true, attributeFilter: ['class'], subtree: true });
+      const tabObserver = new MutationObserver(syncTabSemantics);
+      tabs.querySelectorAll('.tab[data-tab]').forEach(function(tab) {
+        tabObserver.observe(tab, { attributes: true, attributeFilter: ['class'] });
+      });
     }
     syncNavSemantics();
     syncTabSemantics();

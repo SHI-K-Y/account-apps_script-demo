@@ -175,12 +175,67 @@ function playCardSpin(imgEl) {
   imgEl.addEventListener('animationend', () => imgEl.classList.remove('card-spin'), { once: true });
 }
 
+// 選項晶片（P06）：點擊委派到容器，選取變化只切換 selected 與 aria-pressed；
+// 只有選項清單本身（含圖示、卡面、自訂顏色等畫得出來的內容）改變時才整組重建。
+function bindChoiceContainer(container) {
+  if (container._choiceBound) return;
+  container._choiceBound = true;
+  container.addEventListener('click', e => {
+    const button = e.target && e.target.closest ? e.target.closest('.choice') : null;
+    if (!button || !container.contains(button) || !('_choiceValue' in button)) return;
+    const setter = container._choiceSetter;
+    if (!setter) return;
+    const seq = container._choiceSeq;
+    setter(button._choiceValue);
+    // setter 裡重新渲染了同一組選項：畫面已依最新狀態同步，不再手動切換
+    if (container._choiceSeq !== seq) return;
+    ListRender.syncSelected(container, btn => btn === button);
+    const img = button.querySelector('.choice-card-img');
+    if (img) playCardSpin(img);
+  });
+}
+
+/** 共用的前置處理：登記 setter；簽章沒變時只同步選取狀態並回傳 true。 */
+function reuseChoices(container, sig, setter, isSelected) {
+  bindChoiceContainer(container);
+  container._choiceSetter = setter;
+  container._choiceSeq = (container._choiceSeq || 0) + 1;
+  if (!ListRender.sameSig(container, sig)) return false;
+  ListRender.syncSelected(container, isSelected);
+  return true;
+}
+
+function customChannelColor(channel) {
+  if (typeof settingsState === 'undefined' || !settingsState.metadata) return '';
+  const m = settingsState.metadata;
+  if (m.channelColors && m.channelColors[channel]) return m.channelColors[channel];
+  if (Array.isArray(m.channels)) {
+    const chObj = m.channels.find(c => c && c.name === channel);
+    if (chObj && chObj.color) return chObj.color;
+  }
+  return '';
+}
+
 function renderPaymentChoices(containerId, items, selected, setter) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  container.innerHTML = '';
 
-  const groups = parsePaymentMethods(items);
+  const groups = parsePaymentMethods(items).map(group => ({
+    channel: group.channel,
+    channelType: getPaymentType(group.channel),
+    customCol: customChannelColor(group.channel),
+    items: group.items.map(item => ({
+      rawValue: item.rawValue,
+      displayName: item.displayName,
+      payType: getPaymentType(item.rawValue),
+      cardImgSrc: getPaymentCardImage(item.rawValue, item.displayName) || '',
+      bankLogoSrc: getBankLogo(item.rawValue, item.displayName, group.channel) || '',
+    })),
+  }));
+  const sig = 'pay\u0001' + JSON.stringify(groups);
+  if (reuseChoices(container, sig, setter, btn => btn._choiceValue === selected)) return;
+
+  container.innerHTML = '';
   if (!groups.length) return;
 
   const wrap = document.createElement('div');
@@ -190,7 +245,7 @@ function renderPaymentChoices(containerId, items, selected, setter) {
     const groupEl = document.createElement('div');
     groupEl.className = 'pay-group';
 
-    const channelType = getPaymentType(group.channel);
+    const channelType = group.channelType;
     if (channelType) {
       groupEl.dataset.payment = channelType;
     }
@@ -209,15 +264,7 @@ function renderPaymentChoices(containerId, items, selected, setter) {
     }
     badgeEl.textContent = group.channel;
 
-    let customCol = '';
-    if (typeof settingsState !== 'undefined' && settingsState.metadata) {
-      if (settingsState.metadata.channelColors && settingsState.metadata.channelColors[group.channel]) {
-        customCol = settingsState.metadata.channelColors[group.channel];
-      } else if (Array.isArray(settingsState.metadata.channels)) {
-        const chObj = settingsState.metadata.channels.find(c => c && c.name === group.channel);
-        if (chObj && chObj.color) customCol = chObj.color;
-      }
-    }
+    const customCol = group.customCol;
     if (customCol) {
       badgeEl.dataset.customColor = 'true';
       badgeEl.style.setProperty('--custom-ch-color', customCol);
@@ -248,8 +295,9 @@ function renderPaymentChoices(containerId, items, selected, setter) {
       button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
 
       button.dataset.value = item.rawValue;
+      button._choiceValue = item.rawValue;
 
-      const payType = getPaymentType(item.rawValue);
+      const payType = item.payType;
       if (payType) {
         button.classList.add('pay-' + payType);
         button.dataset.payment = payType;
@@ -258,26 +306,30 @@ function renderPaymentChoices(containerId, items, selected, setter) {
         button.dataset.customColor = 'true';
       }
 
-      const cardImgSrc = getPaymentCardImage(item.rawValue, item.displayName);
+      const cardImgSrc = item.cardImgSrc;
       if (cardImgSrc) {
         button.classList.add('has-card-img');
         const imgEl = document.createElement('img');
         imgEl.className = 'choice-card-img';
         imgEl.src = cardImgSrc;
         imgEl.alt = item.displayName;
+        imgEl.width = 76;
+        imgEl.height = 48;
         imgEl.loading = 'lazy';
         imgEl.decoding = 'async';
         imgEl.setAttribute('aria-hidden', 'true');
         button.appendChild(imgEl);
       }
 
-      const bankLogoSrc = getBankLogo(item.rawValue, item.displayName, group.channel);
+      const bankLogoSrc = item.bankLogoSrc;
       if (bankLogoSrc && !cardImgSrc) {
         button.classList.add('has-bank-icon');
         const bankImg = document.createElement('img');
         bankImg.className = 'choice-bank-icon';
         bankImg.src = bankLogoSrc;
         bankImg.alt = '';
+        bankImg.width = 25;
+        bankImg.height = 18;
         bankImg.loading = 'lazy';
         bankImg.decoding = 'async';
         bankImg.setAttribute('aria-hidden', 'true');
@@ -288,17 +340,6 @@ function renderPaymentChoices(containerId, items, selected, setter) {
       textSpan.className = 'choice-text';
       textSpan.textContent = item.displayName;
       button.appendChild(textSpan);
-
-      button.addEventListener('click', () => {
-        setter(item.rawValue);
-        container.querySelectorAll('.choice').forEach(btn => {
-          btn.classList.remove('selected');
-          btn.setAttribute('aria-pressed', 'false');
-        });
-        button.classList.add('selected');
-        button.setAttribute('aria-pressed', 'true');
-        if (cardImgSrc) playCardSpin(button.querySelector('.choice-card-img'));
-      });
 
       gridEl.appendChild(button);
     });
@@ -313,7 +354,6 @@ function renderPaymentChoices(containerId, items, selected, setter) {
 function renderChoices(containerId, items, selected, setter) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  container.innerHTML = '';
   const isPayment = (containerId === 'paymentChoices' || containerId === 'editPaymentChoices');
   const isItem = (containerId === 'expenseItemChoices' || containerId === 'incomeItemChoices' || containerId === 'editItemChoices' || containerId === 'comboItemChoices' || containerId === 'srItemChoices');
   const isCategory = (containerId === 'expenseCategoryChoices' || containerId === 'incomeCategoryChoices' || containerId === 'editCategoryChoices' || containerId === 'comboCategoryChoices' || containerId === 'srCategoryChoices');
@@ -323,19 +363,28 @@ function renderChoices(containerId, items, selected, setter) {
     return;
   }
 
-  (items || []).forEach(value => {
+  const entries = (items || []).map(value => (isItem
+    ? [value, getItemCategory(value) || '', getItemIcon(value) || '', itemDisplayName(value)]
+    : [value]));
+  const sig = (isItem ? 'item' : isCategory ? 'cat' : 'plain') + '\u0001' + JSON.stringify(entries);
+  if (reuseChoices(container, sig, setter, btn => btn._choiceValue === selected)) return;
+  container.innerHTML = '';
+
+  entries.forEach(entry => {
+    const value = entry[0];
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'choice' + (value === selected ? ' selected' : '');
     button.setAttribute('aria-pressed', value === selected ? 'true' : 'false');
     button.dataset.value = value;
+    button._choiceValue = value;
 
     if (isCategory) {
       button.classList.add('category-choice');
     }
 
     if (isItem) {
-      const cat = getItemCategory(value);
+      const cat = entry[1];
       if (cat && cat !== 'default') {
         button.classList.add('cat-' + cat);
         button.dataset.cat = cat;
@@ -347,7 +396,7 @@ function renderChoices(containerId, items, selected, setter) {
     }
 
     if (isItem) {
-      const icon = getItemIcon(value);
+      const icon = entry[2];
       if (icon) {
         button.classList.add('has-emoji');
         const emojiSpan = document.createElement('span');
@@ -357,7 +406,7 @@ function renderChoices(containerId, items, selected, setter) {
 
         const textSpan = document.createElement('span');
         textSpan.className = 'choice-text';
-        textSpan.textContent = itemDisplayName(value);
+        textSpan.textContent = entry[3];
 
         button.appendChild(emojiSpan);
         button.appendChild(textSpan);
@@ -368,12 +417,6 @@ function renderChoices(containerId, items, selected, setter) {
       button.textContent = value;
     }
 
-    button.addEventListener('click', () => {
-      setter(value);
-      container.querySelectorAll('.choice').forEach(x => { x.classList.remove('selected'); x.setAttribute('aria-pressed', 'false'); });
-      button.classList.add('selected');
-      button.setAttribute('aria-pressed', 'true');
-    });
     container.appendChild(button);
   });
 }
@@ -395,13 +438,15 @@ function getPaymentType(value) {
 function renderPaidChoiceGroup(containerId, getValue, setValue, { includeNotApplicable = true } = {}) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  container.innerHTML = '';
   const currentVal = getValue();
   const items = [
     { value: 'O', label: '已繳' },
     { value: 'X', label: '未繳' },
   ];
   if (includeNotApplicable) items.unshift({ value: '', label: '不適用' });
+  const sig = 'paid\u0001' + (includeNotApplicable ? '1' : '0');
+  if (reuseChoices(container, sig, setValue, btn => btn._choiceValue === currentVal)) return;
+  container.innerHTML = '';
   items.forEach(item => {
     const isSelected = (currentVal === item.value);
     const button = document.createElement('button');
@@ -409,15 +454,7 @@ function renderPaidChoiceGroup(containerId, getValue, setValue, { includeNotAppl
     button.className = 'choice' + (isSelected ? ' selected' : '');
     button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
     button.textContent = item.label;
-    button.addEventListener('click', () => {
-      setValue(item.value);
-      container.querySelectorAll('.choice').forEach(x => {
-        x.classList.remove('selected');
-        x.setAttribute('aria-pressed', 'false');
-      });
-      button.classList.add('selected');
-      button.setAttribute('aria-pressed', 'true');
-    });
+    button._choiceValue = item.value;
     container.appendChild(button);
   });
 }

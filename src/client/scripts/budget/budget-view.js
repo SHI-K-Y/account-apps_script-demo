@@ -110,10 +110,11 @@ const BudgetView = (function() {
              '</span>';
     }
 
-    el.innerHTML = html;
-    el.hidden = !html;
-    el.classList.toggle('is-over', warn);
-    if (card) card.classList.toggle('is-budget-over', warn);
+    // 每記一筆都會呼叫：內容沒變就不重建（P06）
+    ListRender.setHtml(el, html);
+    if (el.hidden !== !html) el.hidden = !html;
+    if (el.classList.contains('is-over') !== warn) el.classList.toggle('is-over', warn);
+    if (card && card.classList.contains('is-budget-over') !== warn) card.classList.toggle('is-budget-over', warn);
   }
 
   /* --------------------------- 總覽：預算進度條 --------------------------- */

@@ -776,28 +776,42 @@ const SearchPage = (function () {
     return true;
   }
 
-  function buildSearchItem(rec) {
-    const locked = S.refreshing.has(rec.month) || S.requeryFailed.has(rec.month);
-    const el = buildRecentItem(rec, rec.type, {
+  function searchItemOpts(rec) {
+    return {
       terms: S.query ? S.query.terms : [],
       dateLabel: fullDateLabel(rec),
-      locked: locked,
+      locked: S.refreshing.has(rec.month) || S.requeryFailed.has(rec.month),
       lockedHint: '這個月份正在重新讀取，暫無法修改',
-      onEdit: function (r, type) { if (guardRecordAction(r)) openEditModal(r, type, r.month); },
-      onDelete: function (r, type) { if (guardRecordAction(r)) openDeleteModal(r, type, r.month); },
-    });
+    };
+  }
+
+  function buildSearchItem(rec, i, ident) {
+    const el = buildRecentItem(rec, rec.type, searchItemOpts(rec), ident);
     el.classList.add('sr-item');
     if (rec.type === 'income') el.classList.add('income-rec');
     return el;
   }
 
+  const SEARCH_LIST_HANDLERS = {
+    onEdit: function (r, type) { if (guardRecordAction(r)) openEditModal(r, type, r.month); },
+    onDelete: function (r, type) { if (guardRecordAction(r)) openDeleteModal(r, type, r.month); },
+  };
+
+  // 每個月份的清單以「月份｜類型｜列號」比對（P06）：重新讀取一個月份、刪除一筆時只動有變化的列，
+  // 關鍵字高亮、鎖定狀態都算在簽章裡，有變才更新那一列。
   function fillGroup(section, month) {
-    section.querySelector('.sr-group-head').innerHTML = groupHeadHtml(month);
+    ListRender.setHtml(section.querySelector('.sr-group-head'), groupHeadHtml(month));
     const list = section.querySelector('.sr-list');
-    list.innerHTML = '';
-    const frag = document.createDocumentFragment();
-    recordsOfMonth(month).forEach(function (rec) { frag.appendChild(buildSearchItem(rec)); });
-    list.appendChild(frag);
+    bindRecentList(list, SEARCH_LIST_HANDLERS);
+    ListRender.reconcile(list, recordsOfMonth(month), {
+      key: function (rec) { return recentItemKey(rec, rec.type); },
+      ident: function (rec) { return recentItemIdent(rec, rec.type); },
+      sig: function (rec, i, ident) { return recentItemSig(rec, rec.type, searchItemOpts(rec), ident); },
+      create: buildSearchItem,
+      update: function (el, rec, i, ident) { patchRecentItem(el, rec, rec.type, searchItemOpts(rec), ident); },
+      place: function (el, rec) { el._record = rec; },
+      chunk: { listId: (S.token || 0) + '|' + month },
+    });
     section.classList.toggle('is-refreshing', S.refreshing.has(month));
   }
 

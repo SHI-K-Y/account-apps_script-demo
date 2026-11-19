@@ -570,15 +570,30 @@ const ForeignPage = (function () {
     const key = currentKey();
     const d = fxState.dataById[key];
     if (!d || !Array.isArray(d.records)) {
-      box.innerHTML = loadingOrError(key);
+      ListRender.reconcile(box, [], { empty: loadingOrError(key) });
       $('fxRecentMeta').textContent = '';
       return;
     }
     const list = records.slice(0, RECENT_LIMIT);
-    $('fxRecentMeta').textContent = records.length ? '共 ' + records.length + ' 筆' : '';
-    box.innerHTML = list.length
-      ? list.map(r => recordRowHtml(r, { showDate: true })).join('')
-      : '<div class="empty">這本帳簿還沒有紀錄，從上方開始記第一筆吧。</div>';
+    ListRender.setText($('fxRecentMeta'), records.length ? '共 ' + records.length + ' 筆' : '');
+    reconcileRecordRows(box, list, () => true, '<div class="empty">這本帳簿還沒有紀錄，從上方開始記第一筆吧。</div>');
+  }
+
+  // 明細列以 key（列號或 tempId）比對（P06）：每列的 HTML 就是它的簽章，內容沒變的列完全不動；
+  // ident 讓「同步中 → 已同步」、刪除後列號位移的列沿用原本的節點。
+  function fxRecordKey(r) { return r.isPending ? 't:' + r.tempId : 'r:' + r.row; }
+  function fxRecordIdent(r) {
+    return [r.date || '', r.item || '', r.payment || '', r.currency || '', Number(r.amount) || 0, r.note || ''].join('\u0001');
+  }
+  function reconcileRecordRows(box, list, showDate, empty) {
+    const htmlOf = r => recordRowHtml(r, { showDate: showDate(r) });
+    return ListRender.reconcile(box, list, {
+      key: fxRecordKey,
+      ident: fxRecordIdent,
+      sig: htmlOf,
+      html: htmlOf,
+      empty: empty,
+    });
   }
 
   const TAB_ORDER = ['entry', 'detail', 'stats'];
@@ -673,29 +688,28 @@ const ForeignPage = (function () {
     if (!box) return;
     const items = opts().items.slice();
     if (selected && items.indexOf(selected) === -1) items.push(selected);
+    // 選項沒變時只切換選取狀態（P06），點擊委派到容器（payment-choices.js 的 bindChoiceContainer）
+    const entries = items.map(value => [value, FX_ITEM_CATEGORY[value] || getItemCategory(value) || '', itemIcon(value)]);
+    if (reuseChoices(box, 'fxitem\u0001' + JSON.stringify(entries), setter, b => b._choiceValue === selected)) return;
     box.innerHTML = '';
-    items.forEach(value => {
+    entries.forEach(entry => {
+      const value = entry[0];
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'choice has-emoji' + (value === selected ? ' selected' : '');
       btn.dataset.value = value;
+      btn._choiceValue = value;
       btn.setAttribute('aria-pressed', value === selected ? 'true' : 'false');
-      const cat = FX_ITEM_CATEGORY[value] || getItemCategory(value);
+      const cat = entry[1];
       if (cat && cat !== 'default') { btn.classList.add('cat-' + cat); btn.dataset.cat = cat; }
       const em = document.createElement('span');
       em.className = 'choice-emoji';
       em.setAttribute('aria-hidden', 'true');
-      em.appendChild(iconEl(itemIcon(value)));
+      em.appendChild(iconEl(entry[2]));
       const tx = document.createElement('span');
       tx.className = 'choice-text';
       tx.textContent = value;
       btn.append(em, tx);
-      btn.addEventListener('click', () => {
-        setter(value);
-        box.querySelectorAll('.choice').forEach(x => { x.classList.remove('selected'); x.setAttribute('aria-pressed', 'false'); });
-        btn.classList.add('selected');
-        btn.setAttribute('aria-pressed', 'true');
-      });
       box.appendChild(btn);
     });
   }
@@ -1172,8 +1186,8 @@ const ForeignPage = (function () {
     if (!ledger || !listEl) return;
     const d = fxState.dataById[key];
     if (!d || !Array.isArray(d.records)) {
-      chipsEl.innerHTML = '';
-      listEl.innerHTML = loadingOrError(key);
+      ListRender.setHtml(chipsEl, '');
+      ListRender.reconcile(listEl, [], { empty: loadingOrError(key) });
       return;
     }
     const records = allRecords(key);
@@ -1182,12 +1196,12 @@ const ForeignPage = (function () {
     const itemChips = o.items.filter(i => used.has(i)).concat(Array.from(used).filter(i => o.items.indexOf(i) === -1));
     if (fxState.filter !== 'all' && fxState.filter !== 'today' && !used.has(fxState.filter)) fxState.filter = 'all';
     const chip = (value, label) => '<button type="button" class="fx-chip" data-fx-filter="' + escAttr(value) + '" aria-pressed="' + (fxState.filter === value ? 'true' : 'false') + '">' + label + '</button>';
-    chipsEl.innerHTML = chip('all', '全部') + chip('today', '今天') +
-      itemChips.map(i => chip(i, '<span class="fx-chip-icon" aria-hidden="true">' + iconHtml(itemIcon(i)) + '</span>' + escHtml(i))).join('');
+    ListRender.setHtml(chipsEl, chip('all', '全部') + chip('today', '今天') +
+      itemChips.map(i => chip(i, '<span class="fx-chip-icon" aria-hidden="true">' + iconHtml(itemIcon(i)) + '</span>' + escHtml(i))).join(''));
 
     const list = filteredRecords(records);
     if (!list.length) {
-      listEl.innerHTML = '<div class="empty">' + (records.length ? '沒有符合篩選條件的紀錄。' : '這本帳簿還沒有紀錄。') + '</div>';
+      ListRender.reconcile(listEl, [], { empty: '<div class="empty">' + (records.length ? '沒有符合篩選條件的紀錄。' : '這本帳簿還沒有紀錄。') + '</div>' });
       observeDetail(false);
       return;
     }
@@ -1206,8 +1220,10 @@ const ForeignPage = (function () {
     if (groups.has(preKey)) ordered.push(groups.get(preKey));
     if (groups.has(unknownKey)) ordered.push(groups.get(unknownKey));
 
+    // 每日一組（key＝日期），組內的列再各自以 key 比對（P06）：往下捲動載入更多、記一筆或刪一筆時，
+    // 只新增或移除有變化的節點，已經畫好的組與列不重建。
     let budget = ui.detailCount;
-    let h = '';
+    const blocks = [];
     for (let i = 0; i < ordered.length && budget > 0; i++) {
       const g = ordered[i];
       const rows = g.records.slice(0, budget);
@@ -1219,13 +1235,27 @@ const ForeignPage = (function () {
         const idx = dayIndexLabel(ledger, g.key);
         title = mdLabel(g.key) + (idx ? '，' + idx : '');
       }
-      h += '<section class="fx-day-group"><div class="fx-day-head' + (g.key === preKey ? ' is-pre' : '') + '"><span>' + escHtml(title) + '</span>' +
-        '<small>小計 ' + escHtml(fmtTwd(g.total)) + '</small></div>' +
-        '<div class="fx-rec-list">' + rows.map(r => recordRowHtml(r, { showDate: g.key === preKey })).join('') + '</div></section>';
+      blocks.push({ key: 'g:' + g.key, isPre: g.key === preKey, title: title, total: fmtTwd(g.total), rows: rows });
     }
     const remaining = list.length - Math.min(list.length, ui.detailCount);
-    if (remaining > 0) h += '<div class="fx-detail-more">還有 ' + remaining + ' 筆，往下捲動載入…</div>';
-    listEl.innerHTML = h;
+    if (remaining > 0) blocks.push({ key: 'more', remaining: remaining });
+    const headHtml = b => '<div class="fx-day-head' + (b.isPre ? ' is-pre' : '') + '"><span>' + escHtml(b.title) + '</span>' +
+      '<small>小計 ' + escHtml(b.total) + '</small></div>';
+    ListRender.reconcile(listEl, blocks, {
+      key: b => b.key,
+      sig: b => (b.key === 'more' ? 'more' + b.remaining : headHtml(b)),
+      html: b => (b.key === 'more'
+        ? '<div class="fx-detail-more">還有 ' + b.remaining + ' 筆，往下捲動載入…</div>'
+        : '<section class="fx-day-group">' + headHtml(b) + '<div class="fx-rec-list"></div></section>'),
+      update: (el, b) => {
+        if (b.key === 'more') el.textContent = '還有 ' + b.remaining + ' 筆，往下捲動載入…';
+        else el.firstElementChild.outerHTML = headHtml(b);
+      },
+      place: (el, b) => {
+        if (b.key === 'more') return;
+        reconcileRecordRows(el.querySelector('.fx-rec-list'), b.rows, () => b.isPre, '');
+      },
+    });
     observeDetail(remaining > 0);
   }
 

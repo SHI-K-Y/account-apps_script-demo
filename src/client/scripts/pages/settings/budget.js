@@ -319,6 +319,8 @@ const BudgetSettings = (function() {
         '</div>' +
         historyHtml() +
       '</div>';
+    // 分段控制由建立它的渲染函式直接啟用（P06）
+    container.querySelectorAll('.pref-segmented').forEach(el => Motion.segmented(el, '.pref-seg-btn'));
   }
 
   /* ----------------------------------- 操作 ----------------------------------- */

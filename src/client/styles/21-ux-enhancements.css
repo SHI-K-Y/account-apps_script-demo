@@ -93,3 +93,15 @@ body[data-page="bookkeeping"] .back-to-top-btn.is-visible:active {
   .back-to-top-btn,
   body[data-page="bookkeeping"] .back-to-top-btn.is-visible { transition: opacity var(--dur-fast) linear, visibility 0s; transform: none; }
 }
+
+/* ==========================================================================
+   P06：長清單的分段渲染（core/list-render.js）：超過 300 筆時先畫前 50 筆，
+   清單後面放一個哨兵，捲動接近底部時再補。哨兵不佔版面、不能點。
+   沒有對清單列加 content-visibility: auto——實測 300 筆完整紀錄（CPU 4 倍降速）捲動時，
+   每一幀都要替剛進入畫面的列做 Layout／PrePaint／Paint，幀率從 60 掉到 47；信用卡明細也一樣（60 → 49）。
+   ========================================================================== */
+.lr-sentinel {
+  height: 1px;
+  margin-top: -1px;
+  pointer-events: none;
+}

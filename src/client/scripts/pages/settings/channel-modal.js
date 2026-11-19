@@ -69,7 +69,7 @@ function renderChannelBoundCardsUI() {
 
     var imgSrc = (card.id && cachedImgs[card.id]) || card.customImage || card.image || (card.imageKey && PAYMENT_CARD_IMAGES[card.imageKey]) || '';
     var thumbHtml = imgSrc
-      ? '<img class="card-pill-mini-thumb" src="' + escAttr(imgSrc) + '" alt="">'
+      ? '<img class="card-pill-mini-thumb" src="' + escAttr(imgSrc) + '" alt="" width="22" height="14" decoding="async">'
       : '<span class="card-pill-mini-icon" aria-hidden="true">' + iconHtml(card.type === 'debit' ? 'contactless-payment' : 'credit-card') + '</span>';
 
     lbl.innerHTML =
