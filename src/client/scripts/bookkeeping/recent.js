@@ -380,7 +380,7 @@ function applyRecentDateFilter(type) {
   const sumTotal = filtered.reduce((acc, r) => acc + (Math.abs(parseAmount(r.amount)) || 0), 0);
 
   if (countEl) countEl.textContent = filtered.length;
-  if (totalEl) totalEl.textContent = '$' + sumTotal.toLocaleString('zh-TW');
+  if (totalEl) totalEl.textContent = '$' + Fmt.num(sumTotal);
   if (summary) summary.style.display = 'flex';
 
   const countElHeader = document.getElementById(isExpense ? 'recentExpenseCount' : 'recentIncomeCount');
@@ -640,9 +640,10 @@ function flashSyncedRecentRow(containerId, form) {
   const row = Array.prototype.find.call(container.querySelectorAll('.recent-item'), el => same(el._record));
   if (!row) return;
   clearTimeout(row._syncTimer);
-  row.classList.remove('sync-ok');
-  void row.offsetWidth;
-  row.classList.add('sync-ok');
+  // 重新觸發 ::after 的閃光：已經在閃時換成同內容的另一組 keyframes（換名字就會重播），
+  // 不必先拿掉 class 再強制重算（這個頁面有 size container，重算樣式也會連帶排版）
+  if (row.classList.contains('sync-ok')) row.classList.toggle('sync-alt');
+  else row.classList.add('sync-ok');
   const strong = row.querySelector('.recent-main strong');
   let check = row.querySelector('.recent-sync-check');
   if (strong && !check) {
@@ -657,7 +658,7 @@ function flashSyncedRecentRow(containerId, form) {
     }, { duration: Motion.dur('slow'), easing: Motion.ease('spring') });
   }
   row._syncTimer = setTimeout(() => {
-    row.classList.remove('sync-ok');
+    row.classList.remove('sync-ok', 'sync-alt');
     if (check && check.isConnected) {
       Motion.animate(check, [{ opacity: 1 }, { opacity: 0 }], { duration: Motion.dur('base'), fill: 'forwards' })
         .then(() => check.remove());
@@ -776,7 +777,7 @@ function buildRecentItem(record, type, opts) {
   const amount = document.createElement('div');
   amount.className = 'recent-amount';
   const num = parseAmount(record.amount);
-  const absFormatted = Math.abs(num).toLocaleString('zh-TW');
+  const absFormatted = Fmt.num(Math.abs(num));
   const sign = num < 0 ? '-' : (type === 'income' ? '+' : '');
   amount.textContent = `${sign}$${absFormatted}`;
   right.appendChild(amount);

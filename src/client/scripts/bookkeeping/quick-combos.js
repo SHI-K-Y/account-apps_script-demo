@@ -22,7 +22,7 @@ function getQuickComboIssues(combo) {
 }
 
 function formatQuickComboAmount(amount) {
-  return '$' + new Intl.NumberFormat('zh-TW').format(Number(amount));
+  return '$' + Fmt.num(Number(amount));
 }
 
 function setQuickComboMenuOpen(isOpen, animate = true) {

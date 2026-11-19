@@ -204,7 +204,7 @@ function openDeleteModal(record, type, monthArg) {
   if (itemEl) itemEl.innerHTML = itemIconLabelHtml(record.item);
 
   const num = parseAmount(record.amount);
-  const absFormatted = Math.abs(num).toLocaleString('zh-TW');
+  const absFormatted = Fmt.num(Math.abs(num));
   const sign = num < 0 ? '-' : (isExpense ? '' : '+');
   const amountEl = document.getElementById('deletePreviewAmount');
   if (amountEl) {

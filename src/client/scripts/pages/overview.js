@@ -5,15 +5,29 @@ if (overviewRefreshBtn) {
   });
 }
 
-function loadOverview(forceRefresh) {
+// opts.defer（頁面切換時由 router 傳入）：圖表的渲染比較重，交給 PageWork 在轉場動畫開始後再做；
+// 卡片本身用 LocalCache 的資料直接畫（圖表區先是骨架）。
+function loadOverview(forceRefresh, opts) {
   var container = document.getElementById('overviewContent');
   if (!container) return;
+  var defer = opts && typeof opts.defer === 'function' ? opts.defer : null;
 
   var cachedOv = !forceRefresh ? LocalCache.getOverview() : null;
   var chartsStarted = false;
+  var chartsJob = null;
   if (cachedOv) {
     renderOverview(cachedOv);
-    OverviewCharts.loadForOverview(cachedOv.month, forceRefresh);
+    if (defer) {
+      chartsJob = { cancelled: false };
+      var job = chartsJob;
+      defer(function() {
+        if (job.cancelled) return;
+        chartsJob = null;
+        OverviewCharts.loadForOverview(cachedOv.month, forceRefresh);
+      });
+    } else {
+      OverviewCharts.loadForOverview(cachedOv.month, forceRefresh);
+    }
     chartsStarted = true;
   } else {
     container.innerHTML =
@@ -34,7 +48,12 @@ function loadOverview(forceRefresh) {
       var hadSkeleton = Boolean(container.querySelector('.overview-skeleton'));
       renderOverview(data);
       if (hadSkeleton) Motion.revealCards(container);
-      if (data && (!chartsStarted || OverviewCharts.needsReloadFor(data.month))) {
+      if (chartsJob) {
+        // 延後的圖表工作還沒輪到：直接用最新的月份載入，原本那件取消
+        chartsJob.cancelled = true;
+        chartsJob = null;
+        if (data) OverviewCharts.loadForOverview(data.month, forceRefresh);
+      } else if (data && (!chartsStarted || OverviewCharts.needsReloadFor(data.month))) {
         OverviewCharts.loadForOverview(data.month, forceRefresh);
       }
       if (forceRefresh) {

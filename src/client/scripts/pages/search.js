@@ -55,10 +55,11 @@ const SearchPage = (function () {
     recentList: [],
   };
 
+  const MONEY_DIGITS = { maximumFractionDigits: 2 };
   function money(n, withPlus) {
     const v = Number(n) || 0;
     const sign = v < 0 ? '-' : (withPlus ? '+' : '');
-    return sign + '$' + Math.abs(v).toLocaleString('zh-TW', { maximumFractionDigits: 2 });
+    return sign + '$' + Fmt.num(Math.abs(v), MONEY_DIGITS);
   }
 
   function typeMoney(type, n) {

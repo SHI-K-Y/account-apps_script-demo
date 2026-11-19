@@ -69,6 +69,11 @@ const Motion = (function() {
     }
   }
 
+  /** 只重算樣式、不排版：重新觸發 CSS 動畫或轉場時用來取代 void el.offsetWidth。 */
+  function flushStyle(el) {
+    if (el) void getComputedStyle(el).opacity;
+  }
+
   function haptic(type) {
     try {
       if (typeof navigator.vibrate === 'function') {
@@ -341,6 +346,17 @@ const Motion = (function() {
     }, { duration: lv === 'full' ? 520 : dur('base'), easing: ease('out') }).then(() => layer.remove());
   }
 
+  // countUp 每幀改 textContent：跑動期間把寬度鎖在「頭尾兩個數字比較長的那個」，數字變短時容器不會跟著縮，
+  // 外面的排版不受影響（數字是 tabular-nums，同樣字數寬度相同；用 ch 估寬度，不必先量測、不會強制排版）。
+  // 外層的 contain: layout paint 在 16-motion-prefs.css（.count-num 與各個數字容器）。
+  function lockCountWidth(el, a, b) {
+    const chars = Math.max(String(a).length, String(b).length);
+    el.style.minWidth = 'min(' + chars + 'ch, 100%)';
+  }
+  function unlockCountWidth(el) {
+    if (el.style.minWidth) el.style.minWidth = '';
+  }
+
   function countUp(el, from, to, opts) {
     if (!el) return Promise.resolve();
     const options = opts || {};
@@ -355,6 +371,7 @@ const Motion = (function() {
       el._countRaf = 0;
       el._countCurrent = target;
       el.textContent = format(target);
+      unlockCountWidth(el);
     };
     const lv = level();
     if (lv === 'off' || start === target) {
@@ -368,6 +385,7 @@ const Motion = (function() {
     const duration = options.duration || 600;
     const t0 = performance.now();
     el._countCurrent = start;
+    lockCountWidth(el, format(start), format(target));
     el.textContent = format(start);
     return new Promise(resolve => {
       const step = now => {
@@ -412,19 +430,121 @@ const Motion = (function() {
     staggerIn(list, { max: 8, stagger: 40, distance: 12 });
   }
 
+  /* ---------------------------------------------------------------------------
+   * FLIP：高度變化只用 transform／opacity 補間（P05）
+   * 以前 expandIn／collapseOut／toggleHidden 直接動 height、padding、border-width，每一幀都要重新排版整頁。
+   * 現在排版只在開始（或結束）時變一次，視覺上的「長高／縮短」由後方元素的位移補出來：
+   *   - 「後方元素」：同一層後面的兄弟，加上每一層祖先後面的兄弟，直到頁面容器（卡片下方的按鈕、下一張卡片都會跟著動）。
+   *   - 位移用獨立的 translate 屬性，不會蓋掉元素本身的 transform（傾斜玻璃、進場動畫、按壓縮放都不受影響）。
+   *   - 同一個元素同時被兩段 FLIP 推動時，後來的那段用 composite: 'add' 疊加，各自結束、各自取消都不會跳。
+   * 只讀排版（getBoundingClientRect）一次、全部讀完才寫，不會在迴圈裡交錯讀寫。
+   * 已知差異：包住清單的卡片本身（背景與邊框）在開始（展開）或結束（收合）時一次變到新高度，
+   * 不能像以前那樣逐幀長高——那正是逐幀排版的來源；卡片內、卡片下方的內容仍然連續移動。
+   * ------------------------------------------------------------------------- */
+  const FLIP_PROP = (() => {
+    try { return typeof CSS !== 'undefined' && CSS.supports('translate', '0px 1px') ? 'translate' : 'transform'; } catch (e) { return 'transform'; }
+  })();
+  const FLIP_BOUNDARY = '.page-container, .modal-card, .modal-backdrop, body';
+
+  function flipValue(y) {
+    const v = (Math.abs(y) < 0.05 ? 0 : y).toFixed(2) + 'px';
+    return FLIP_PROP === 'translate' ? '0px ' + v : 'translateY(' + v + ')';
+  }
+
+  function displayed(node) {
+    return node && node.getClientRects().length > 0;
+  }
+
+  /** el 在排版中佔的高度（含與下一個元素之間的間距）；元素已在最終位置時量。 */
+  function flowSpan(el) {
+    const r = el.getBoundingClientRect();
+    let next = el.nextElementSibling;
+    while (next && !displayed(next)) next = next.nextElementSibling;
+    if (next) return next.getBoundingClientRect().top - r.top;
+    let prev = el.previousElementSibling;
+    while (prev && !displayed(prev)) prev = prev.previousElementSibling;
+    if (prev) return r.bottom - prev.getBoundingClientRect().bottom;
+    return r.height;
+  }
+
+  /** 會因 el 的高度改變而位移、而且位移前後至少有一刻在畫面內的元素。 */
+  function flipFollowers(el, span) {
+    const out = [];
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    const reach = Math.abs(span);
+    let node = el;
+    while (node && node.parentElement) {
+      for (let s = node.nextElementSibling; s; s = s.nextElementSibling) {
+        if (!displayed(s)) continue;
+        const pos = getComputedStyle(s).position;
+        if (pos === 'fixed' || pos === 'absolute') continue;
+        const r = s.getBoundingClientRect();
+        if (r.top - reach > vh || r.bottom + reach < 0) continue;
+        out.push(s);
+      }
+      const parent = node.parentElement;
+      if (parent.matches(FLIP_BOUNDARY)) break;
+      node = parent;
+    }
+    return out;
+  }
+
+  /** 讓 nodes 從 from 位移到 to（px，相對於目前排版位置）。keyframes 可以是 [from, to] 或逐格的位移陣列。 */
+  function shiftNodes(nodes, offsets, timing) {
+    const anims = [];
+    nodes.forEach(node => {
+      const active = node._lgFlips || (node._lgFlips = new Set());
+      const frames = offsets.map(y => ({ [FLIP_PROP]: flipValue(y) }));
+      const opts = Object.assign({}, timing);
+      if (active.size) opts.composite = 'add';
+      let anim = null;
+      try { anim = node.animate(frames, opts); } catch (e) { anim = null; }
+      if (!anim) return;
+      active.add(anim);
+      const done = () => { active.delete(anim); };
+      anim.finished.then(done, done);
+      anims.push(anim);
+    });
+    return anims;
+  }
+
+  function cancelAll(anims) {
+    anims.forEach(a => {
+      const node = a.effect && a.effect.target;
+      if (node && node._lgFlips) node._lgFlips.delete(a);
+      try { a.cancel(); } catch (e) {}
+    });
+  }
+
+  /**
+   * 量測一律放到下一個 requestAnimationFrame：呼叫端通常剛改完 DOM（渲染清單、更新金額、顯示提示），
+   * 在點擊處理函式裡量會強制同步排版，之後的寫入又讓瀏覽器再排一次。rAF 在這一幀繪製之前執行，
+   * 量測就和這一幀本來就要做的排版合併成一次，畫面上也不會先閃出沒有動畫的那一幀。
+   */
+  function beforePaint(fn) {
+    return new Promise(resolve => requestAnimationFrame(() => resolve(fn())));
+  }
+
   function expandIn(el) {
     const lv = level();
     if (!el || !el.isConnected || lv === 'off') return Promise.resolve();
-    el.getAnimations && el.getAnimations().forEach(a => a.cancel());
-    if (lv === 'lite') return animate(el, [{ opacity: 0 }, { opacity: 1 }], { duration: dur('base'), easing: 'ease-out' });
-    const cs = getComputedStyle(el);
-    const h = el.offsetHeight;
-    const prevOverflow = el.style.overflow;
-    el.style.overflow = 'hidden';
-    return animate(el, [
-      { height: '0px', paddingTop: '0px', paddingBottom: '0px', opacity: 0, transform: 'translateY(-10px)' },
-      { height: h + 'px', paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, opacity: 1, transform: 'none' }
-    ], { duration: dur('slow'), easing: ease('out') }).then(() => { el.style.overflow = prevOverflow; });
+    if (lv === 'lite') {
+      el.getAnimations && el.getAnimations().forEach(a => a.cancel());
+      return animate(el, [{ opacity: 0 }, { opacity: 1 }], { duration: dur('base'), easing: 'ease-out' });
+    }
+    return beforePaint(() => {
+      if (!el.isConnected) return null;
+      el.getAnimations && el.getAnimations().forEach(a => a.cancel());
+      // 元素已經以最終高度插入（呼叫端剛渲染好）：量出它佔的空間，後方元素從「它還不存在」的位置補間回來
+      const span = flowSpan(el);
+      const followers = span > 0.5 ? flipFollowers(el, span) : [];
+      const timing = { duration: dur('slow'), easing: ease('out') };
+      shiftNodes(followers, [-span, 0], timing);
+      return animate(el, [
+        { opacity: 0, transform: 'translateY(-10px)' },
+        { opacity: 1, transform: 'none' }
+      ], timing);
+    });
   }
 
   function collapseOut(el) {
@@ -439,26 +559,58 @@ const Motion = (function() {
       return animate(el, [{ opacity: 1 }, { opacity: 0 }], { duration: dur('base'), easing: 'ease-out', fill: 'forwards' })
         .then(() => el.remove());
     }
-    const cs = getComputedStyle(el);
-    const h = el.offsetHeight;
-    el.style.overflow = 'hidden';
-    const slide = animate(el, [
-      { transform: 'translateX(0)', opacity: 1 },
-      { transform: 'translateX(-56px)', opacity: 0 }
-    ], { duration: dur('base'), easing: ease('in-out'), fill: 'forwards' });
-    const collapse = animate(el, [
-      { height: h + 'px', paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, borderTopWidth: cs.borderTopWidth },
-      { height: '0px', paddingTop: '0px', paddingBottom: '0px', borderTopWidth: '0px' }
-    ], { duration: dur('base'), delay: dur('fast'), easing: ease('out'), fill: 'forwards' });
-    return Promise.all([slide, collapse]).then(() => el.remove());
+    // 先量測；元素留在排版裡淡出滑走，後方元素往上補位，全部結束時才移除元素（同一個工作裡取消位移，不會跳一下）
+    return beforePaint(() => {
+      if (!el.isConnected) return null;
+      const span = flowSpan(el);
+      const followers = span > 0.5 ? flipFollowers(el, span) : [];
+      const slide = animate(el, [
+        { transform: 'translateX(0)', opacity: 1 },
+        { transform: 'translateX(-56px)', opacity: 0 }
+      ], { duration: dur('base'), easing: ease('in-out'), fill: 'forwards' });
+      const shifts = shiftNodes(followers, [0, -span], { duration: dur('base'), delay: dur('fast'), easing: ease('out'), fill: 'forwards' });
+      const settled = shifts.map(a => a.finished.catch(() => {}));
+      return Promise.all([slide].concat(settled)).then(() => {
+        el.remove();
+        cancelAll(shifts);
+      });
+    });
+  }
+
+  // burst 的顏色：每次送出都 getComputedStyle(documentElement) 會強制重算整頁樣式；改成主題切換時才重新讀
+  const burstColorCache = new Map();
+  function burstColors(palette) {
+    const key = palette.join('|');
+    let colors = burstColorCache.get(key);
+    if (!colors) {
+      const rootStyle = getComputedStyle(document.documentElement);
+      colors = palette.map(name => rootStyle.getPropertyValue(name).trim()).filter(Boolean);
+      if (colors.length) burstColorCache.set(key, colors);
+    }
+    return colors;
+  }
+  function bindColorCacheReset() {
+    const reset = () => burstColorCache.clear();
+    if (typeof MutationObserver === 'function') {
+      new MutationObserver(reset).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    }
+    try {
+      const mql = window.matchMedia('(prefers-color-scheme: dark)');
+      if (mql.addEventListener) mql.addEventListener('change', reset);
+      else if (mql.addListener) mql.addListener(reset);
+    } catch (e) {}
   }
 
   function burst(originEl, palette) {
     if (level() !== 'full' || !originEl) return;
+    // 送出時呼叫端剛改完 DOM：位置留到繪製前再量（見 beforePaint）
+    requestAnimationFrame(() => { if (originEl.isConnected) burstNow(originEl, palette); });
+  }
+
+  function burstNow(originEl, palette) {
     const rect = originEl.getBoundingClientRect();
     if (!rect.width) return;
-    const rootStyle = getComputedStyle(document.documentElement);
-    const colors = (palette || []).map(name => rootStyle.getPropertyValue(name).trim()).filter(Boolean);
+    const colors = burstColors(palette || []);
     if (!colors.length) return;
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
@@ -841,6 +993,59 @@ const Motion = (function() {
     });
   }
 
+  /** 用瀏覽器自己算緩動曲線（cubic-bezier 與 linear() 都適用），取 n+1 個點；同一條曲線只算一次。 */
+  const easingSamples = new Map();
+  function sampleEasing(easing, n) {
+    const key = easing + '|' + n;
+    if (easingSamples.has(key)) return easingSamples.get(key);
+    const out = [];
+    let probe = null;
+    try {
+      probe = document.createElement('div').animate({ opacity: [0, 1] }, { duration: 1000, easing: easing, fill: 'both' });
+      probe.pause();
+    } catch (e) { probe = null; }
+    for (let i = 0; i <= n; i++) {
+      let p = i / n;
+      if (probe) {
+        probe.currentTime = 1000 * i / n;
+        const t = probe.effect.getComputedTiming().progress;
+        if (typeof t === 'number' && isFinite(t)) p = t;
+      }
+      out.push(p);
+    }
+    if (probe) probe.cancel();
+    easingSamples.set(key, out);
+    return out;
+  }
+
+  function scaleYOf(el) {
+    const tf = getComputedStyle(el).transform;
+    if (!tf || tf === 'none') return 1;
+    const m = tf.match(/^matrix\(([^)]+)\)$/);
+    if (!m) return 1;
+    const v = m[1].split(',').map(Number);
+    return isFinite(v[3]) ? v[3] : 1;
+  }
+
+  const OPEN_MIN_SCALE = 0.01;
+  function stopOpen(el) {
+    const run = el._lgOpen;
+    if (!run) return null;
+    el._lgOpen = null;
+    const state = { scale: scaleYOf(el), opacity: parseFloat(getComputedStyle(el).opacity), span: run.span };
+    cancelAll(run.anims);
+    run.restore();
+    return state;
+  }
+
+  /**
+   * 展開／收合區塊（P05 改成只動 transform／opacity）：
+   *   外層 scaleY（transform-origin 在頂端，overflow: hidden 當成會長高的裁切框），
+   *   內層 .lg-collapse-inner 反向縮放 1/scale，文字不變形；後方元素依 (scale − 1) × 高度 位移。
+   *   彈簧曲線事先取樣成逐格的 keyframes（linear 補間），外層、內層、後方元素用同一組進度，乘起來永遠是 1。
+   *   展開時排版一開始就變成最終高度；收合時排版維持到結束才 hidden，兩種情況都只排版一次。
+   *   Chrome 與 Safari 都只在合成器上補間 transform／translate／opacity，沒有逐幀排版或重繪。
+   */
   function toggleHidden(el, show) {
     if (!el) return Promise.resolve();
     const target = Boolean(show);
@@ -848,38 +1053,69 @@ const Motion = (function() {
     if (current === target) return Promise.resolve();
     el._lgOpenTarget = target;
     const lv = level();
-    let startH = null;
-    let startOpacity = null;
-    if (el._lgOpenAnim) {
-      const cs = getComputedStyle(el);
-      startH = parseFloat(cs.height);
-      startOpacity = parseFloat(cs.opacity);
-      el._lgOpenAnim.cancel();
-      el._lgOpenAnim = null;
-    }
+    const from = stopOpen(el);
     if (lv === 'off' || !el.isConnected) { el.hidden = !target; return Promise.resolve(); }
     if (target) el.hidden = false;
-    const full = el.scrollHeight;
-    const fromH = startH !== null ? startH : (target ? 0 : full);
-    const toH = target ? full : 0;
-    const fromO = startOpacity !== null ? startOpacity : (target ? 0 : 1);
+    const fromO = from ? from.opacity : (target ? 0 : 1);
     const toO = target ? 1 : 0;
-    const s = lv === 'lite' ? spring('reduced') : spring('tap');
-    const frames = lv === 'lite'
-      ? [{ opacity: fromO }, { opacity: toO }]
-      : [{ height: fromH + 'px', opacity: fromO }, { height: toH + 'px', opacity: toO }];
-    const prevOverflow = el.style.overflow;
+
+    const finishWith = (anims, restore, span) => {
+      const run = { anims: anims, restore: restore, span: span };
+      el._lgOpen = run;
+      return Promise.all(anims.map(a => a.finished)).then(() => {
+        if (el._lgOpen !== run) return;
+        el._lgOpen = null;
+        el.hidden = !target;
+        cancelAll(anims);
+        restore();
+      }, () => {});
+    };
+
+    if (lv === 'lite') {
+      const r = spring('reduced');
+      let anim = null;
+      try { anim = el.animate([{ opacity: fromO }, { opacity: toO }], { duration: r.duration, easing: r.easing, fill: 'forwards' }); } catch (e) { anim = null; }
+      if (!anim) { el.hidden = !target; return Promise.resolve(); }
+      return finishWith([anim], () => {}, 0);
+    }
+
+    const s = spring('tap');
+    // 量測（只讀）：區塊本身的高度與後方元素；之後才寫入
+    const span = from && from.span ? from.span : el.offsetHeight;
+    const followers = span > 0.5 ? flipFollowers(el, span) : [];
+    const inner = el.querySelector(':scope > .lg-collapse-inner');
+    // 外層可以縮到 0（後方元素剛好補滿整個高度）；只有內層的反向縮放要避開除以 0
+    const fromS = from ? Math.max(0, from.scale) : (target ? 0 : 1);
+    const toS = target ? 1 : 0;
+    const steps = Math.max(12, Math.ceil(s.duration / 16));
+    const curve = sampleEasing(s.easing, steps);
+    const scales = curve.map(p => fromS + (toS - fromS) * p);
+    if (target) scales[scales.length - 1] = 1;
+    const outerFrames = scales.map((k, i) => ({ transform: 'scaleY(' + k.toFixed(4) + ')', opacity: fromO + (toO - fromO) * curve[i] }));
+    const innerFrames = scales.map(k => ({ transform: 'scaleY(' + (1 / Math.max(OPEN_MIN_SCALE, k)).toFixed(4) + ')' }));
+    const timing = { duration: s.duration, easing: 'linear', fill: target ? 'none' : 'forwards' };
+
+    const prev = { overflow: el.style.overflow, origin: el.style.transformOrigin, innerOrigin: inner ? inner.style.transformOrigin : '' };
     el.style.overflow = 'hidden';
-    let anim = null;
-    try { anim = el.animate(frames, { duration: s.duration, easing: s.easing }); } catch (e) { anim = null; }
-    if (!anim) { el.style.overflow = prevOverflow; el.hidden = !target; return Promise.resolve(); }
-    el._lgOpenAnim = anim;
-    return anim.finished.then(() => {
-      if (el._lgOpenAnim !== anim) return;
-      el._lgOpenAnim = null;
-      el.style.overflow = prevOverflow;
+    el.style.transformOrigin = '50% 0';
+    if (inner) inner.style.transformOrigin = '50% 0';
+    const restore = () => {
+      el.style.overflow = prev.overflow;
+      el.style.transformOrigin = prev.origin;
+      if (inner) inner.style.transformOrigin = prev.innerOrigin;
+    };
+    const anims = [];
+    try {
+      anims.push(el.animate(outerFrames, timing));
+      if (inner) anims.push(inner.animate(innerFrames, timing));
+    } catch (e) {
+      cancelAll(anims);
+      restore();
       el.hidden = !target;
-    }, () => {});
+      return Promise.resolve();
+    }
+    shiftNodes(followers, scales.map(k => (k - 1) * span), timing).forEach(a => anims.push(a));
+    return finishWith(anims, restore, span);
   }
 
   const PAGE_CARD_SELECTOR = '.ov-hero, .ov-card, .st-date-card, .st-diff-card, .cc-tx-card, .settings-list-container, .sr-sum-card, .sr-group, .fx-ledger-card, .fx-stat-card, .card';
@@ -993,6 +1229,7 @@ const Motion = (function() {
   }
 
   bindPress();
+  bindColorCacheReset();
   bindSpecular();
   bindTriggerCapture();
   initRefraction();
@@ -1019,6 +1256,7 @@ const Motion = (function() {
     scrollToSection: scrollToSection,
     cancelScroll: cancelScroll,
     haptic: haptic,
+    flushStyle: flushStyle,
     dur: dur,
     ease: ease,
     shake: shake,

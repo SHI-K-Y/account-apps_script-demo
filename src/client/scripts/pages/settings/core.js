@@ -578,9 +578,18 @@ function renderEmojiPopoverContent() {
   });
 }
 
-function loadSettings(forceRefresh) {
+var SETTINGS_SKELETON_HTML =
+  '<div class="overview-skeleton">' +
+    '<div class="skel-block skel-row"></div>' +
+    '<div class="skel-block skel-row"></div>' +
+    '<div class="skel-block skel-row"></div>' +
+  '</div>';
+
+// opts.defer（頁面切換時由 router 傳入）：已有資料時，長清單交給 PageWork 在轉場動畫開始後再畫，先放骨架。
+function loadSettings(forceRefresh, opts) {
   var container = document.getElementById('settingsListContainer');
   if (!container) return;
+  var defer = opts && typeof opts.defer === 'function' ? opts.defer : null;
 
   ensureMetadataInitialized();
   updateSettingsTopControls();
@@ -590,19 +599,19 @@ function loadSettings(forceRefresh) {
   if (forceRefresh) ReminderSettings.invalidate();
 
   if (!forceRefresh && settingsState.data) {
-    renderSettingsList();
+    if (defer && !container.children.length) {
+      container.innerHTML = SETTINGS_SKELETON_HTML;
+      defer(renderSettingsList);
+    } else {
+      renderSettingsList();
+    }
     return;
   }
 
   if (isSettingsPanelTab(settingsState.currentTab)) {
     renderSettingsList();
   } else {
-    container.innerHTML =
-      '<div class="overview-skeleton">' +
-        '<div class="skel-block skel-row"></div>' +
-        '<div class="skel-block skel-row"></div>' +
-        '<div class="skel-block skel-row"></div>' +
-      '</div>';
+    container.innerHTML = SETTINGS_SKELETON_HTML;
   }
 
   settingsState.loading = true;

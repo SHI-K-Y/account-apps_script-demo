@@ -77,13 +77,8 @@ const ForeignPage = (function () {
     };
   }
 
-  const nfCache = {};
   function nf(minFrac, maxFrac) {
-    const key = minFrac + '_' + maxFrac;
-    if (!nfCache[key]) {
-      nfCache[key] = new Intl.NumberFormat('zh-TW', { minimumFractionDigits: minFrac, maximumFractionDigits: maxFrac });
-    }
-    return nfCache[key];
+    return Fmt.nf({ minimumFractionDigits: minFrac, maximumFractionDigits: maxFrac });
   }
   function decimalsOf(cur) { return NO_DECIMAL_CURRENCIES.indexOf(cur) === -1 ? 2 : 0; }
   function symOf(cur) { return CUR_SYMBOL[cur] || (cur ? cur + ' ' : ''); }
@@ -107,7 +102,7 @@ const ForeignPage = (function () {
     if (!r) return '無匯率';
     if (r >= 100) return nf(0, 2).format(r);
     if (r >= 1) return nf(0, 4).format(r);
-    return new Intl.NumberFormat('zh-TW', { maximumSignificantDigits: 4 }).format(r);
+    return Fmt.num(r, { maximumSignificantDigits: 4 });
   }
   function fmtClock(ts) {
     if (!ts) return '';

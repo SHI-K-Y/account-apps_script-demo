@@ -62,7 +62,12 @@ function renderLiveAmount(el, text, change) {
   el.dataset.amountText = text;
 
   const paint = t => {
-    el.getAnimations && el.getAnimations().forEach(a => a.cancel());
+    // 只有 'clear' 會在 el 本身留下動畫（逐字的 span 會整批換掉）；沒有時不呼叫 getAnimations()，
+    // 它要先算好樣式，在這個頁面（有 size container）會連帶強制排版
+    if (el._amtOwnAnim) {
+      el._amtOwnAnim = false;
+      el.getAnimations && el.getAnimations().forEach(a => a.cancel());
+    }
     el.textContent = '';
     Array.from(t).forEach(ch => {
       const span = document.createElement('span');
@@ -106,12 +111,14 @@ function renderLiveAmount(el, text, change) {
   }
 
   if (change === 'clear') {
+    el._amtOwnAnim = true;
     Motion.animate(el, {
       full: [{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(0.6)', opacity: 0 }],
       lite: [{ opacity: 1 }, { opacity: 0 }]
     }, { duration: Motion.dur('base'), easing: Motion.ease('in-out'), fill: 'forwards' }).then(() => {
       if (el._amtToken !== token) return;
       paint(text);
+      el._amtOwnAnim = true;
       Motion.animate(el, [{ opacity: 0 }, { opacity: 1 }], { duration: Motion.dur('fast'), easing: 'ease-out' });
     });
     return;
@@ -123,7 +130,7 @@ function renderLiveAmount(el, text, change) {
 function renderAmount(type, change) {
   const raw = state[type].amount;
   const value = Number(raw || 0);
-  const formatted = new Intl.NumberFormat('zh-TW').format(value);
+  const formatted = Fmt.num(value);
 
   const barAmount = document.getElementById(type + 'Amount');
   if (barAmount) barAmount.textContent = formatted;
@@ -154,7 +161,7 @@ const FinanceUtils = {
   format: function(val, opts) {
     const options = opts || {};
     const num = typeof val === 'number' ? val : this.parse(val);
-    const absFormatted = Math.abs(num).toLocaleString('zh-TW');
+    const absFormatted = Fmt.num(Math.abs(num));
     if (options.signed) {
       const prefix = num > 0 ? '+' : (num < 0 ? '-' : '');
       return prefix + absFormatted;

@@ -35,18 +35,28 @@ function showToast(message, type = '') {
   const wasShown = toast.classList.contains('show');
   msgEl.textContent = message;
   iconBox.innerHTML = iconHtml(TOAST_ICONS[type] || TOAST_ICONS.info);
-  // 收起後的 toast 是 display: none（06-today-recent.css）：先以收起狀態出現、算一次樣式，再加 .show，淡入才有起點
-  clearTimeout(toast._parkTimer);
-  if (!wasShown && !toast.classList.contains('is-animating')) {
-    toast.classList.add('is-animating');
-    void toast.offsetWidth;
-  }
-  toast.className = `toast show ${type}`;
   toast.style.setProperty('--toast-ms', TOAST_DURATION + 'ms');
+  // 收起後的 toast 是 display: none（06-today-recent.css）：先以收起狀態出現、算一次樣式，再加 .show，淡入才有起點。
+  // 這一次重算放到繪製前的 requestAnimationFrame：呼叫端（送出、刪除）通常剛改完 DOM，
+  // 在這裡算會強制同步排版，rAF 裡則和這一幀本來就要做的排版合併。
+  clearTimeout(toast._parkTimer);
+  toast._type = type;
+  const reveal = () => { toast.className = `toast show ${toast._type}`; };
+  if (toast._revealRaf) {
+    // 已排定在下一幀顯示：那一次會用最新的類型
+  } else if (!wasShown && !toast.classList.contains('is-animating')) {
+    toast.classList.add('is-animating');
+    toast._revealRaf = requestAnimationFrame(() => {
+      toast._revealRaf = 0;
+      Motion.flushStyle(toast);
+      reveal();
+    });
+  } else {
+    reveal();
+  }
 
-  progressEl.style.animation = 'none';
-  void progressEl.offsetWidth;
-  progressEl.style.animation = '';
+  // 已經在顯示：進度條換成同內容的另一組 keyframes 重跑（16-motion-prefs.css），不必強制重算樣式
+  if (wasShown) progressEl.classList.toggle('is-alt');
 
   if (wasShown) {
     Motion.animate(msgEl, [{ opacity: 0.25 }, { opacity: 1 }], { duration: Motion.dur('base'), easing: 'ease-out' });

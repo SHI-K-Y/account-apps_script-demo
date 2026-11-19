@@ -177,8 +177,9 @@ const UxEnhancements = (function() {
 
     function sync() {
       ticking = false;
-      const y = window.pageYOffset || document.documentElement.scrollTop || 0;
-      const show = document.body.dataset.page === 'bookkeeping' && y > SHOW_AFTER;
+      // 不在記帳頁時不必讀捲動位置（換頁時讀會強制排版新頁面）
+      const show = document.body.dataset.page === 'bookkeeping' &&
+        (window.pageYOffset || document.documentElement.scrollTop || 0) > SHOW_AFTER;
       if (btn.classList.contains('is-visible') === show) return;
       btn.classList.toggle('is-visible', show);
       btn.tabIndex = show ? 0 : -1;

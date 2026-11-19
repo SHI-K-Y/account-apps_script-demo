@@ -16,6 +16,8 @@
 // 偏好設定一律用 App 的預設值（動畫效果：完整）。P04 移除裝置分級之後所有裝置都是同一套高畫質動畫，
 // 不用再預先指定等級；舊結果檔記的 prefs: 'high'（P03 以前強制高畫質）視為同一個量測條件。
 //
+// P05 新增：「轉場開始」＝按下導覽列到 View Transition 的 ready（動畫真的開始），Event Timing 量不到 update callback；
+//          「動畫期間 Layout」＝新增／刪除紀錄、展開／收合區塊時主執行緒的排版次數（FLIP 之後應該只剩開頭或結尾一次）。
 // 注意：headless 是軟體繪圖，絕對數字比真機悲觀，只拿來比較「改之前／改之後」的相對變化。
 import fs from 'node:fs';
 import os from 'node:os';
@@ -82,9 +84,9 @@ const ACTIONS = [
   { key: 'selectItem', label: '點支出項目', sel: '#expenseItemChoices .choice' },
   { key: 'keypadDigit', label: '按數字鍵', sel: '#expenseKeypad .key:text-is("1")', prepare: prepareSubmit },
   { key: 'submit', label: '按送出', sel: '#expenseSubmit' },
-  { key: 'toOverview', label: '切到總覽', sel: '#navOverview' },
-  { key: 'toSettings', label: '切到設定', sel: '#navSettings' },
-  { key: 'toBookkeeping', label: '回到記帳', sel: '#navBookkeeping' },
+  { key: 'toOverview', label: '切到總覽', sel: '#navOverview', vt: true },
+  { key: 'toSettings', label: '切到設定', sel: '#navSettings', vt: true },
+  { key: 'toBookkeeping', label: '回到記帳', sel: '#navBookkeeping', vt: true },
 ];
 
 /* ---------------------------------------------------------------------------
@@ -125,6 +127,23 @@ SCROLL_PAGES.forEach(p => {
   metric(k + 'drawMs', p.label + ' 捲動合成器繪製總時間', 'ms', 'down');
 });
 ACTIONS.forEach(a => metric('input.' + a.key, '互動延遲：' + a.label, 'ms', 'down'));
+// 頁面切換（P05 起）：Event Timing 只量到「點擊後的第一次繪製」，View Transitions 的 update callback 在那之後才執行，
+// 所以另外量「按下 → transition.ready（轉場動畫開始）」與 update callback 本身花的時間。
+ACTIONS.filter(a => a.vt).forEach(a => {
+  metric('vt.' + a.key + '.ready', '轉場開始：' + a.label, 'ms', 'down');
+  metric('vt.' + a.key + '.update', '轉場 update callback：' + a.label, 'ms', 'down');
+});
+// 一次性動畫期間主執行緒的 Layout 次數（P05）：高度變化改用 FLIP 之後，動畫期間只剩開頭（或結尾）一次排版，不再逐幀排版
+const FLIP_CASES = [
+  { key: 'expand', label: '新增紀錄（expandIn）' },
+  { key: 'collapse', label: '刪除紀錄（collapseOut）' },
+  { key: 'toggleOpen', label: '展開區塊（toggleHidden）' },
+  { key: 'toggleClose', label: '收合區塊（toggleHidden）' },
+];
+FLIP_CASES.forEach(c => {
+  metric('flip.' + c.key + '.layouts', c.label + ' 動畫期間 Layout', '次', 'down');
+  metric('flip.' + c.key + '.frames', c.label + ' 動畫期間幀數', '幀', 'up');
+});
 PAGES.forEach(p => {
   metric('static.' + p.key + '.runningAnimations', p.label + ' 執行中動畫數', '個', 'down');
   metric('static.' + p.key + '.backdropInView', p.label + ' 畫面內 backdrop-filter', '個', 'down');
@@ -176,7 +195,28 @@ function pageInstrument(cfg) {
     }).observe({ type: 'event', durationThreshold: 16, buffered: true });
   } catch (e) {}
 
-  // 5. 追蹤進行中的 google.script.run（本機替身走 fetch('/__rpc')），用來判斷資料載完了沒
+  // 5. View Transitions：記錄每次 startViewTransition 的 update callback 時間與 ready（動畫開始）的時間，
+  //    以及最近一次 pointerdown 的時間戳（和 performance.now() 同一個時間軸）
+  P.vts = [];
+  P.lastDown = null;
+  window.addEventListener('pointerdown', e => { P.lastDown = e.timeStamp; }, { capture: true, passive: true });
+  const realVT = Document.prototype.startViewTransition;
+  if (typeof realVT === 'function') {
+    Document.prototype.startViewTransition = function (arg) {
+      const rec = { called: performance.now(), down: P.lastDown, updateStart: null, updateEnd: null, ready: null };
+      P.vts.push(rec);
+      const cb = typeof arg === 'function' ? arg : (arg && arg.update);
+      const wrapped = function () {
+        rec.updateStart = performance.now();
+        try { return cb ? cb.apply(this, arguments) : undefined; } finally { rec.updateEnd = performance.now(); }
+      };
+      const t = realVT.call(this, (arg && typeof arg === 'object') ? Object.assign({}, arg, { update: wrapped }) : wrapped);
+      t.ready.then(() => { rec.ready = performance.now(); }, () => {});
+      return t;
+    };
+  }
+
+  // 6. 追蹤進行中的 google.script.run（本機替身走 fetch('/__rpc')），用來判斷資料載完了沒
   const realFetch = window.fetch;
   window.fetch = function (input) {
     const isRpc = String(input && input.url || input).indexOf('/__rpc') !== -1;
@@ -421,9 +461,17 @@ async function measureInputs(page) {
   }
   await sleep(1000);   // Event Timing 會在下一次繪製後才送出，多等一下把最後一筆收齊
   const events = await page.evaluate(() => window.__perf.events.slice());
+  const vts = await page.evaluate(() => window.__perf.vts.slice());
   const out = {};
   const detail = {};
   for (const w of windows) {
+    const action = ACTIONS.find(a => a.key === w.key);
+    if (action && action.vt) {
+      const vt = vts.find(v => v.called >= w.t0 && v.called < w.t1);
+      const ok = vt && !w.failed && vt.ready != null && vt.down != null && vt.down >= w.t0 - 50;
+      out['vt.' + w.key + '.ready'] = ok ? vt.ready - vt.down : null;
+      out['vt.' + w.key + '.update'] = vt && vt.updateEnd != null ? vt.updateEnd - vt.updateStart : null;
+    }
     const hits = events.filter(e => e.start >= w.t0 && e.start < w.t1);
     const top = hits.reduce((a, e) => (!a || e.dur > a.dur ? e : a), null);
     out[w.key] = w.failed ? null : (top ? top.dur : 0);
@@ -606,6 +654,12 @@ async function oneRun(browser, index) {
     inputs.samples[a.key] = rounds.map(x => x.values[a.key]);
     inputs.values[a.key] = median(inputs.samples[a.key]);
     flat['input.' + a.key] = inputs.values[a.key];
+    if (!a.vt) continue;
+    for (const part of ['ready', 'update']) {
+      const k = 'vt.' + a.key + '.' + part;
+      inputs.samples[k] = rounds.map(x => x.values[k]);
+      flat[k] = median(inputs.samples[k]);
+    }
   }
 
   console.log('  第 ' + index + ' 次：boot-ready ' + round(bootStats.bootReady) + 'ms、記帳頁閒置 ' + idle.bookkeeping.frames +
@@ -617,6 +671,60 @@ async function warmup(browser) {
   const app = await startApp();
   const { context, page } = await newPage(browser, { throttle: true });
   try { await boot(page, app.url); await settle(page, 500); } finally { await context.close(); await app.close(); }
+}
+
+/* ---------------------------------------------------------------------------
+ * f. 一次性動畫的排版（P05）：直接對真實的清單列與搜尋頁的「更多篩選」呼叫 Motion，錄 trace 數主執行緒的 Layout
+ * ------------------------------------------------------------------------- */
+const FLIP_CATS = ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'disabled-by-default-devtools.timeline.frame'];
+function countInTrace(buf) {
+  const ev = JSON.parse(buf.toString()).traceEvents;
+  const main = ev.find(e => e.name === 'thread_name' && e.args && e.args.name === 'CrRendererMain');
+  const mark = n => ev.find(e => e.name === 'TimeStamp' && e.args && e.args.data && e.args.data.message === n);
+  const a = mark('perf-flip-start');
+  const b = mark('perf-flip-end');
+  if (!main || !a || !b) return { layouts: null, frames: null };
+  const win = e => e.ts >= a.ts && e.ts <= b.ts;
+  const layouts = ev.filter(e => win(e) && e.pid === main.pid && e.tid === main.tid && e.name === 'Layout' && (e.ph === 'X' || e.ph === 'B'));
+  const frames = ev.filter(e => win(e) && (e.name === 'DrawFrame' || e.name === 'Graphics.Pipeline.DrawAndSwap' || e.name === 'Display::DrawAndSwap'));
+  return { layouts: layouts.length, frames: frames.length };
+}
+
+async function measureFlip(browser) {
+  const app = await startApp();
+  const { context, page } = await newPage(browser, { throttle: true });
+  const out = {};
+  try {
+    await boot(page, app.url);
+    await settle(page);
+    const one = async (key, act, waitMs) => {
+      await sleep(400);
+      await browser.startTracing(page, { categories: FLIP_CATS });
+      await page.evaluate(() => console.timeStamp('perf-flip-start'));
+      await page.evaluate(act);
+      await sleep(waitMs);
+      await page.evaluate(() => console.timeStamp('perf-flip-end'));
+      const r = countInTrace(await browser.stopTracing());
+      out['flip.' + key + '.layouts'] = r.layouts;
+      out['flip.' + key + '.frames'] = r.frames;
+    };
+    await page.evaluate(() => document.getElementById('recentExpenses').scrollIntoView({ block: 'start' }));
+    await one('expand', () => {
+      const list = document.getElementById('recentExpenses');
+      const row = list.children[0].cloneNode(true);
+      list.insertBefore(row, list.firstChild);
+      Motion.expandIn(row);
+    }, 700);
+    await one('collapse', () => { Motion.collapseOut(document.getElementById('recentExpenses').children[1]); }, 700);
+    await page.evaluate(() => switchPage('search'));
+    await settle(page, 1000);
+    await one('toggleOpen', () => { Motion.toggleHidden(document.getElementById('srMorePanel'), true); }, 800);
+    await one('toggleClose', () => { Motion.toggleHidden(document.getElementById('srMorePanel'), false); }, 800);
+  } finally {
+    await context.close();
+    await app.close();
+  }
+  return out;
 }
 
 /** 不降速：盤點動畫與 backdrop-filter，並在淺色、深色各截一張圖。 */
@@ -741,6 +849,7 @@ async function main() {
 
   let runs;
   let stat;
+  let flip = {};
   try {
     console.log('暖機…');
     await warmup(browser);
@@ -748,6 +857,8 @@ async function main() {
     for (let i = 1; i <= OPT.runs; i++) runs.push(await oneRun(browser, i));
     console.log(OPT.screens ? '動畫盤點與截圖（淺色、深色）…' : '動畫盤點…');
     stat = await staticPass(browser);
+    console.log('一次性動畫的排版…');
+    flip = await measureFlip(browser);
   } finally {
     await browser.close();
   }
@@ -756,6 +867,7 @@ async function main() {
   const spread = {};
   for (const m of METRICS) {
     if (m.key.startsWith('static.')) continue;
+    if (m.key.startsWith('flip.')) { metrics[m.key] = flip[m.key] == null ? null : flip[m.key]; continue; }
     const xs = runs.map(r => r.metrics[m.key]).filter(v => typeof v === 'number');
     metrics[m.key] = round(median(xs), 2);
     if (xs.length > 1) spread[m.key] = [round(Math.min(...xs), 2), round(Math.max(...xs), 2)];

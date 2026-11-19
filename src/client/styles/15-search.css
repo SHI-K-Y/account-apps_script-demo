@@ -307,10 +307,13 @@
 }
 
 .sr-more-panel {
-  display: grid;
-  gap: 16px;
   margin-top: 6px;
   padding-top: 10px;
+}
+/* 內層：展開／收合時反向縮放（Motion.toggleHidden），文字才不會被外層的 scaleY 壓扁 */
+.sr-more-inner {
+  display: grid;
+  gap: 16px;
 }
 
 .sr-field { min-width: 0; }

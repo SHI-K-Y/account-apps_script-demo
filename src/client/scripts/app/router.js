@@ -14,6 +14,45 @@ document.querySelectorAll('.nav-item').forEach(function(btn) {
   });
 });
 
+/* 頁面切換時的重工作（P05）：View Transitions 要等 update callback 做完才開始拍新畫面、開始動畫，
+ * 所以 callback 裡只切 class、用 LocalCache 或骨架做輕量渲染；圖表、長清單交給 PageWork.defer()，
+ * 等 transition.ready（動畫已經開始）之後一幀做一件。沒有轉場時（動畫關閉、不支援）立刻執行，行為和以前一樣。
+ * 之後的「閒置預先渲染」也可以直接把工作丟進 PageWork.defer()。 */
+var PageWork = (function() {
+  var queue = [];
+  var gate = null;
+  var raf = 0;
+  function pump() {
+    raf = 0;
+    if (gate) return;
+    var job = queue.shift();
+    if (job) {
+      try { job(); } catch (e) { console.error(e); }
+    }
+    if (queue.length) raf = requestAnimationFrame(pump);
+  }
+  function kick() {
+    if (!raf && !gate && queue.length) raf = requestAnimationFrame(pump);
+  }
+  return {
+    /** 轉場開始前呼叫：之後 defer 的工作要等 release() 之後才開始跑。 */
+    hold: function() {
+      var token = {};
+      gate = token;
+      return function release() {
+        if (gate !== token) return;
+        gate = null;
+        kick();
+      };
+    },
+    defer: function(fn) {
+      if (!gate) { fn(); return; }
+      queue.push(fn);
+    },
+    pending: function() { return queue.length + (gate ? 1 : 0); },
+  };
+})();
+
 var PAGE_NAV_ORDER = ['settlement', 'bookkeeping', 'overview', 'settings'];
 
 function getPageNavIndex(page) {
@@ -72,6 +111,7 @@ function switchPage(page) {
     var leaving = document.querySelector('.page-container.active');
     document.querySelectorAll('.page-container.vt-page-leaving').forEach(function(p) { p.classList.remove('vt-page-leaving'); });
     if (leaving) leaving.classList.add('vt-page-leaving');
+    var release = PageWork.hold();
     var transition = Motion.viewTransition(function() {
       applyPageSwitch(page);
     }, level === 'full' ? 'page-' + dir : 'page-fade');
@@ -80,8 +120,16 @@ function switchPage(page) {
       if (nav) nav.classList.remove('pill-instant');
       bounceActiveNavIcon();
     };
-    if (transition) transition.finished.then(settle, settle);
-    else settle();
+    if (transition) {
+      // 動畫一開始（ready）就放行重工作；轉場失敗或被跳過時，最晚在 update callback 完成後放行
+      transition.ready.then(release, function() {
+        Promise.resolve(transition.updateCallbackDone).then(release, release);
+      });
+      transition.finished.then(settle, settle);
+    } else {
+      release();
+      settle();
+    }
     return;
   }
 
@@ -90,6 +138,7 @@ function switchPage(page) {
   if (dir) bounceActiveNavIcon();
 }
 
+// 先做完所有寫入（切 class、輕量渲染），最後才讀排版（導覽列指示器的位置、捲回頂端），整個切換只排版一次。
 function applyPageSwitch(page) {
   var navPageKey = (page === 'creditcard') ? 'settlement'
     : (page === 'search') ? SearchPage.getOrigin()
@@ -98,7 +147,6 @@ function applyPageSwitch(page) {
   document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
   var activeNav = document.querySelector('.nav-item[data-page="' + navPageKey + '"]');
   if (activeNav) activeNav.classList.add('active');
-  updateNavPill();
 
   document.querySelectorAll('.page-container').forEach(function(p) { p.classList.remove('active'); });
   var pageMap = {
@@ -115,7 +163,6 @@ function applyPageSwitch(page) {
 
   document.body.dataset.page = page;
   Motion.cancelScroll();
-  window.scrollTo({ top: 0 });
   document.querySelectorAll('.head, .overview-head, .settlement-head, .settings-head, .cc-head, .fx-head').forEach(function(h) { h.classList.remove('head-hidden'); });
   closeCalendar('expense');
   closeCalendar('income');
@@ -127,7 +174,7 @@ function applyPageSwitch(page) {
   }
 
   if (page === 'overview' && !overviewLoaded) {
-    loadOverview(false);
+    loadOverview(false, { defer: PageWork.defer });
   }
   if (page === 'settlement' && !settlementLoaded) {
     loadSettlement(false);
@@ -141,7 +188,10 @@ function applyPageSwitch(page) {
     SearchPage.onLeave();
   }
   if (page === 'settings' && !settingsLoaded) {
-    loadSettings(false);
+    loadSettings(false, { defer: PageWork.defer });
     settingsLoaded = true;
   }
+
+  updateNavPill();
+  window.scrollTo({ top: 0 });
 }

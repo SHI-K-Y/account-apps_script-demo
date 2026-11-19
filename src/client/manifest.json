@@ -28,6 +28,7 @@
   ],
   "scripts": [
     "core/env.js",
+    "core/fmt.js",
     "core/api.js",
     "core/theme.js",
     "core/prefs.js",

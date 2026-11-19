@@ -537,6 +537,14 @@ body[data-mode="income"] .tabs > .tabs-indicator {
 .toast.show .toast-progress {
   animation: toastProgress var(--toast-ms, 2800ms) linear forwards;
 }
+/* 提示還在顯示時又來一則：切換成同內容的第二組 keyframes 讓進度條重跑（showToast），不必強制重算樣式 */
+.toast.show .toast-progress.is-alt {
+  animation-name: toastProgressAlt;
+}
+@keyframes toastProgressAlt {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
 
 .amount-preview-num {
   position: relative;
@@ -611,6 +619,15 @@ body[data-mode="income"] .tabs > .tabs-indicator {
   25% { opacity: 1; }
   100% { opacity: 0; }
 }
+/* 同內容的第二組：連續觸發時切換 animation-name 讓動畫重播，不必強制重算樣式 */
+.recent-item.sync-ok.sync-alt::after {
+  animation-name: syncFlashAlt;
+}
+@keyframes syncFlashAlt {
+  0% { opacity: 0; }
+  25% { opacity: 1; }
+  100% { opacity: 0; }
+}
 .recent-sync-check {
   display: inline-flex;
   align-items: center;
@@ -647,6 +664,13 @@ body[data-mode="income"] .tabs > .tabs-indicator {
 }
 :root[data-motion="lite"] .toast.show .toast-progress {
   animation-name: toastProgressLite;
+}
+:root[data-motion="lite"] .toast.show .toast-progress.is-alt {
+  animation-name: toastProgressLiteAlt;
+}
+@keyframes toastProgressLiteAlt {
+  from { transform: scaleX(1); opacity: 1; }
+  to { transform: scaleX(1); opacity: 0.1; }
 }
 :root[data-motion="lite"] .page-container.page-enter-forward,
 :root[data-motion="lite"] .page-container.page-enter-back {
@@ -735,4 +759,20 @@ body[data-page="foreign"] {
   --accent-glow: var(--fx-glow);
   --accent-border: var(--fx-border);
   --step-glow: var(--fx-soft);
+}
+
+/* countUp 的數字容器（P05）：數字等寬，跑動時 Motion.countUp 會把 min-width 鎖在最長的那個數字；
+ * contain: layout paint 讓每幀改字只影響容器內部。今日總花費的金額和「NT$」用 baseline 對齊，
+ * layout containment 會讓元素失去 baseline，所以那一組加在外層的 .today-expense-amount-wrap。 */
+.today-expense-amount,
+.ov-hero-amount,
+.ov-mini-val,
+.fx-summary-val {
+  font-variant-numeric: tabular-nums;
+}
+.today-expense-amount-wrap,
+.ov-hero-amount,
+.ov-mini-val,
+.fx-summary-val {
+  contain: layout paint;
 }

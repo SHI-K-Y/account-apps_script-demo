@@ -106,7 +106,7 @@ function submitExpense() {
       flashSyncedRecentRow('recentExpenses', form);
       LocalCache.saveItemPref(form.item, { payment: form.payment, category: form.category });
       if (state.expense.item === form.item) applyExpenseItemPrefs(form.item);
-      const displayAmount = '$' + fAmt.toLocaleString('zh-TW');
+      const displayAmount = '$' + Fmt.num(fAmt);
       showToast(`記帳完成 ${form.item} ${displayAmount}`, 'success');
     })
     .withFailureHandler(error => {
@@ -213,7 +213,7 @@ function submitIncome() {
       }
       handleMutationRecentUpdate(result, form.month);
       flashSyncedRecentRow('recentIncomes', form);
-      const displayAmount = '$' + fAmt.toLocaleString('zh-TW');
+      const displayAmount = '$' + Fmt.num(fAmt);
       showToast(`記帳完成 ${displayAmount}`, 'success');
     })
     .withFailureHandler(error => {
