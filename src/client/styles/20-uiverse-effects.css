@@ -467,6 +467,9 @@
   transform: none;
 }
 
+/* 送出鈕的外框流光圖層（<span class="uv-btn-ring">，由 UvFx 插入）：不支援 color-mix 時不顯示 */
+.submit-btn > .uv-btn-ring { display: none; }
+
 @supports (color: color-mix(in srgb, red 50%, blue)) {
   .submit-btn {
     --uv-fill: var(--lg-tint);
@@ -483,26 +486,52 @@
     );
 
     position: relative;
-    isolation: isolate;           
+    isolation: isolate;
+    /* 外框 2px 改由 .uv-btn-ring 畫：按鈕本身不留邊框（多 2px 內距補回原本的大小），
+       overflow 裁切因此落在外緣，外框圖層才畫得進那 2px；星點與光暈被不透明的外框蓋住，看起來仍只在內側。 */
     overflow: hidden;
-    border: 2px solid transparent; 
-    padding-inline: 22px;          
-    background-color: transparent;
-    background-image: linear-gradient(var(--uv-fill), var(--uv-fill)), var(--uv-ring);
-    background-origin: border-box;
-    background-clip: padding-box, border-box;
-    background-size: 100% 100%, 300% 300%;
+    border: 0;
+    padding: 2px 24px;
+    background: var(--uv-fill);
+    /* 原本有 2px 邊框，內緣高光（--lg-rim，inset box-shadow）畫在邊框內側；現在沒有邊框，改用往內 2px 的版本，位置才相同 */
+    --lg-rim: var(--lg-rim-in2);
+  }
+  .fx-empty .submit-btn { padding: 2px 22px; }   /* 17-foreign.css 的 padding: 0 22px 比較具體，要整個蓋掉 */
+
+  /* 外框流光：容器是靜態的 2px 環形遮罩；裡面 3 倍寬、3 倍高的漸層層用 translateX 往返
+     （等同原本 300% 漸層的 background-position 0% 50% ↔ 100% 50%：往左移 2 個按鈕寬，垂直置中）。 */
+  .submit-btn > .uv-btn-ring {
+    display: block;
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    padding: 2px;
+    border-radius: inherit;
+    pointer-events: none;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+  .submit-btn > .uv-btn-ring > span {
+    position: absolute;
+    top: -100%;
+    left: 0;
+    width: 300%;
+    height: 300%;
+    background: var(--uv-ring);
     animation: uv-btn-ring 5s ease infinite;
   }
-  .fx-empty .submit-btn { padding-inline: 20px; }   
+
+  /* 星點與光暈：位置以原本的內側（距外緣 2px）為準 */
   .submit-btn::before {
     content: "";
     position: absolute;
     z-index: -1;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: calc(100% + 24px);
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    height: calc(100% + 20px);
     pointer-events: none;
     background-color: transparent;
     background-image:
@@ -516,21 +545,22 @@
     transition: opacity 0.5s var(--ease-out), background-color 0.5s var(--ease-out);
   }
 
+  /* 下方光暈：原本是兩塊半寬的色塊加 filter: blur(14px)；改成本身就柔和的 radial-gradient，只做 scale。 */
   .submit-btn::after {
     -webkit-mask-image: linear-gradient(to bottom, transparent 0 70%, var(--mask-solid) 92%);
     mask-image: linear-gradient(to bottom, transparent 0 70%, var(--mask-solid) 92%);
     content: "";
     position: absolute;
     z-index: -1;
-    left: 0;
-    right: 0;
-    bottom: -35%;
-    height: 70%;
+    left: 2px;
+    right: 2px;
+    /* 原本：內側高度的 bottom: -35%、height: 70%（內側高度 = 100% - 4px） */
+    bottom: calc(2px - (100% - 4px) * 0.35);
+    height: calc((100% - 4px) * 0.7);
     pointer-events: none;
     background:
-      linear-gradient(var(--uv-glow-a), var(--uv-glow-a)) left / 50% 100% no-repeat,
-      linear-gradient(var(--uv-glow-b), var(--uv-glow-b)) right / 50% 100% no-repeat;
-    filter: blur(14px);
+      radial-gradient(closest-side, var(--uv-glow-a), transparent) left / 50% 100% no-repeat,
+      radial-gradient(closest-side, var(--uv-glow-b), transparent) right / 50% 100% no-repeat;
     animation: uv-btn-pulse 4s infinite;
     transition: opacity 0.5s var(--ease-out);
   }
@@ -560,17 +590,17 @@
     --uv-ring: linear-gradient(var(--accent), var(--accent));
     --uv-glow-a: var(--accent-glow);
     --uv-glow-b: var(--accent-glow);
-    animation: none;
     box-shadow: var(--lg-rim), 0 2px 8px var(--accent-glow), 0 0 0 3px var(--accent-soft);
   }
+  .submit-btn:active:not(:disabled) > .uv-btn-ring > span { animation: none; }
 
-  .submit-btn:disabled { animation: none; }
   .submit-btn:disabled::before,
-  .submit-btn:disabled::after { display: none; }
+  .submit-btn:disabled::after,
+  .submit-btn:disabled > .uv-btn-ring { display: none; }
 
   @keyframes uv-btn-ring {
-    0%, 100% { background-position: 0 0, 0% 50%; }
-    50%      { background-position: 0 0, 100% 50%; }
+    0%, 100% { transform: translateX(0); }
+    50%      { transform: translateX(calc(-200% / 3)); }
   }
   @keyframes uv-btn-stars {
     from { transform: translateY(0); }
@@ -584,30 +614,48 @@
   @media (prefers-reduced-motion: reduce) {
     .submit-btn,
     .submit-btn::before,
-    .submit-btn::after {
+    .submit-btn::after,
+    .submit-btn > .uv-btn-ring > span {
       animation: none !important;
       transition-duration: 0.01ms !important;
     }
     .submit-btn:hover:not(:disabled) { transform: none; }
+    .submit-btn > .uv-btn-ring > span { top: 0; }
   }
   :root[data-motion="off"] .submit-btn,
   :root[data-motion="off"] .submit-btn::before,
   :root[data-motion="off"] .submit-btn::after,
+  :root[data-motion="off"] .submit-btn > .uv-btn-ring > span,
   :root[data-motion="lite"] .submit-btn,
   :root[data-motion="lite"] .submit-btn::before,
-  :root[data-motion="lite"] .submit-btn::after {
+  :root[data-motion="lite"] .submit-btn::after,
+  :root[data-motion="lite"] .submit-btn > .uv-btn-ring > span {
     animation: none !important;
     transition-duration: 0.01ms !important;
   }
   :root[data-motion="off"] .submit-btn:hover:not(:disabled),
   :root[data-motion="lite"] .submit-btn:hover:not(:disabled) { transform: none; }
+  /* 不播放時沿用舊版的靜止畫面：漸層停在 background-position 0 0（左上那一格），不是置中 */
+  :root[data-motion="off"] .submit-btn > .uv-btn-ring > span,
+  :root[data-motion="lite"] .submit-btn > .uv-btn-ring > span { top: 0; }
 
   @media (forced-colors: active) {
-    .submit-btn { border-color: ButtonText; }
+    .submit-btn {
+      border: 2px solid ButtonText;
+      padding: 0 22px;
+    }
+    .fx-empty .submit-btn { padding-inline: 20px; }
     .submit-btn::before,
-    .submit-btn::after { display: none; }
+    .submit-btn::after,
+    .submit-btn > .uv-btn-ring { display: none; }
   }
 }
+
+/* 記帳頁「支出／收入」分頁列的指示器：<span class="tabs-indicator">（pages/bookkeeping.html）。
+   指示器本身只負責位置（18-glass-chrome.css 的 translate 轉場）與 lgIndicatorStretch；
+   星點與光暈是子元素，只做 transform，由指示器的圓角裁切。子元素由下往上：光暈 B、光暈 A、星點 3、2、1
+   （與原本 background-image 的疊放順序相同）。 */
+.tabs-indicator > span { display: none; }
 
 @supports (color: color-mix(in srgb, red 50%, blue)) {
   .head .tabs {
@@ -618,64 +666,93 @@
   }
   body[data-mode="income"] .head .tabs { --uv-flow: uv-tab-stars-rtl; }
 
-  .head .tabs::before {
-    background-image:
-      radial-gradient(circle at 4px 4px, var(--uv-star) 0 1px, transparent 1.7px),
-      radial-gradient(circle at 4px 4px, var(--uv-star) 0 0.75px, transparent 1.4px),
-      radial-gradient(circle at 4px 4px, var(--uv-star) 0 0.6px, transparent 1.2px),
-      radial-gradient(closest-side, var(--uv-glow-a), transparent),
-      radial-gradient(closest-side, var(--uv-glow-b), transparent);
-    background-repeat: repeat, repeat, repeat, no-repeat, no-repeat;
-    background-size: 24px 24px, 24px 24px, 24px 24px, 46% 50%, 46% 50%;
-    background-position: 0 0, 13px 7px, 5px 16px, 0% calc(100% + 14px), 100% calc(100% + 14px);
-    animation: var(--uv-flow) 4s linear infinite, uv-tab-glow 4s ease-in-out infinite;
-    will-change: transform; /* 效能：星點流動只重繪指示器本身，不連帶重繪整個毛玻璃分頁列 */
+  .head .tabs > .tabs-indicator {
+    overflow: hidden;
   }
-  .head .tabs.is-lg-moving::before {
-    animation: lgIndicatorStretch var(--lg-dur-snappy) both, var(--uv-flow) 4s linear infinite, uv-tab-glow 4s ease-in-out infinite;
+  .head .tabs > .tabs-indicator > span {
+    display: block;
+    position: absolute;
+    pointer-events: none;
+  }
+
+  /* 星點：靜態平鋪（24px 一格），整層每 4 秒往右（收入往左）移動剛好一格，無縫循環。
+     左右各多鋪 3 格（72px，是格寬的整數倍，所以星點的相位不變），移動時邊緣才不會露空。
+     第 2 層原本 4 秒走 48px（兩格）：用 2 秒走一格，畫面完全相同。 */
+  .head .tabs > .tabs-indicator > .uv-tab-stars {
+    top: 0;
+    bottom: 0;
+    left: -72px;
+    right: -72px;
+    background-size: 24px 24px;
+    animation: var(--uv-flow) 4s linear infinite;
+  }
+  .head .tabs > .tabs-indicator > .uv-tab-stars-1 {
+    background-image: radial-gradient(circle at 4px 4px, var(--uv-star) 0 1px, transparent 1.7px);
+    background-position: 0 0;
+  }
+  .head .tabs > .tabs-indicator > .uv-tab-stars-2 {
+    background-image: radial-gradient(circle at 4px 4px, var(--uv-star) 0 0.75px, transparent 1.4px);
+    background-position: 13px 7px;
+    animation-duration: 2s;
+  }
+  .head .tabs > .tabs-indicator > .uv-tab-stars-3 {
+    background-image: radial-gradient(circle at 4px 4px, var(--uv-star) 0 0.6px, transparent 1.2px);
+    background-position: 5px 16px;
+  }
+
+  /* 光暈：原本是 46%×50% 的 radial-gradient(closest-side)，左／右下角對齊指示器的左／右下角再往下 14px，
+     background-size 在 46%×50% ↔ 60%×62% 之間縮放。改成各一個元素，以那個角為 transform-origin 做 scale。 */
+  .head .tabs > .tabs-indicator > .uv-tab-glow {
+    bottom: -14px;
+    width: 46%;
+    height: 50%;
+    animation: uv-tab-glow 4s ease-in-out infinite;
+  }
+  .head .tabs > .tabs-indicator > .uv-tab-glow-a {
+    left: 0;
+    transform-origin: 0 100%;
+    background: radial-gradient(closest-side, var(--uv-glow-a), transparent);
+  }
+  .head .tabs > .tabs-indicator > .uv-tab-glow-b {
+    right: 0;
+    transform-origin: 100% 100%;
+    background: radial-gradient(closest-side, var(--uv-glow-b), transparent);
   }
 
   @keyframes uv-tab-stars-ltr {
-    from { background-position: 0 0, 13px 7px, 5px 16px, 0% calc(100% + 14px), 100% calc(100% + 14px); }
-    to   { background-position: 24px 0, 61px 7px, 29px 16px, 0% calc(100% + 14px), 100% calc(100% + 14px); }
+    from { transform: translateX(0); }
+    to   { transform: translateX(24px); }
   }
   @keyframes uv-tab-stars-rtl {
-    from { background-position: 0 0, 13px 7px, 5px 16px, 0% calc(100% + 14px), 100% calc(100% + 14px); }
-    to   { background-position: -24px 0, -35px 7px, -19px 16px, 0% calc(100% + 14px), 100% calc(100% + 14px); }
+    from { transform: translateX(0); }
+    to   { transform: translateX(-24px); }
   }
   @keyframes uv-tab-glow {
-    0%, 100% { background-size: 24px 24px, 24px 24px, 24px 24px, 46% 50%, 46% 50%; }
-    70%      { background-size: 24px 24px, 24px 24px, 24px 24px, 60% 62%, 60% 62%; }
+    0%, 100% { transform: scale(1); }
+    70%      { transform: scale(calc(60 / 46), calc(62 / 50)); }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .head .tabs::before { animation: none !important; }
+    .head .tabs > .tabs-indicator,
+    .head .tabs > .tabs-indicator > span { animation: none !important; }
   }
-  :root[data-motion="off"] .head .tabs:not(.is-lg-moving)::before,
-  :root[data-motion="lite"] .head .tabs:not(.is-lg-moving)::before { animation: none; }
+  :root[data-motion="off"] .head .tabs > .tabs-indicator > span,
+  :root[data-motion="lite"] .head .tabs > .tabs-indicator > span { animation: none; }
 
   @media (forced-colors: active) {
-    .head .tabs::before { background-image: none; }
+    .head .tabs > .tabs-indicator > span { display: none; }
   }
 }
 
-@property --uv-card-angle {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0deg;
-}
-@property --uv-card-float {
-  syntax: "<number>";
-  inherits: false;
-  initial-value: 0;
-}
+/* 卡片旋轉光環：<span class="uv-ring" aria-hidden="true"><span></span></span>（UvFx.cardRing，由建立卡片的程式插入）。
+   外層 .uv-ring 是靜態的環形遮罩（1.5px 寬，底色 --uv-card-ring-base）；裡面的 span 是固定角度的 conic-gradient 扇形，
+   以卡片中心為 transform-origin 做 rotate —— 等同原本每幀改 conic-gradient 的起始角度，但不必每幀重繪。
+   扇形只有 0 ～ 0.3 圈有顏色，所以 span 只蓋住那一塊：寬 R、高 R × (1 + sin 18°)，R ＝ 卡片半對角線
+   （環上每一點離中心都不超過 R，轉到哪個角度都蓋得到）。 */
+.uv-ring { display: none; }
 
 @keyframes uv-card-spin {
-  to { --uv-card-angle: 360deg; }
-}
-@keyframes uv-card-float {
-  0%, 100% { --uv-card-float: 0; }
-  50%      { --uv-card-float: 1; }
+  to { transform: rotate(360deg); }
 }
 
 :is(
@@ -702,7 +779,13 @@
   #pageOverview .ov-hero,
   #pageOverview .ov-card:not(.oc-error),
   #pageForeign .fx-stat-card
-)::before {
+)::before,
+:is(
+  #todayExpenseCard,
+  #pageOverview .ov-hero,
+  #pageOverview .ov-card:not(.oc-error),
+  #pageForeign .fx-stat-card
+)::after {
   display: none;
 }
 
@@ -711,27 +794,49 @@
   #pageOverview .ov-hero,
   #pageOverview .ov-card:not(.oc-error),
   #pageForeign .fx-stat-card
-)::after {
-  content: "";
+) > .uv-ring {
+  display: block;
   position: absolute;
   inset: 0;
-  width: auto;
-  height: auto;
-  margin: 0;
   z-index: -1;
   box-sizing: border-box;
   padding: var(--uv-card-ring-w);
   border-radius: inherit;
   pointer-events: none;
-  background:
-    conic-gradient(from var(--uv-card-angle), transparent 0turn, var(--uv-card-ring) 0.12turn, transparent 0.3turn),
-    linear-gradient(var(--uv-card-ring-base), var(--uv-card-ring-base));
+  background: var(--uv-card-ring-base);
   -webkit-mask: linear-gradient(currentColor 0 0) content-box, linear-gradient(currentColor 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(currentColor 0 0) content-box, linear-gradient(currentColor 0 0);
   mask-composite: exclude;
-  will-change: transform; /* 效能：光環每幀重繪時只重繪這一層，不連帶重繪整張卡片內容 */
+  /* 讓裡面的扇形用 cqw／cqh 量到卡片大小；容器本身是 inset: 0 的絕對定位，尺寸不受內容影響，size containment 沒有副作用 */
+  container-type: size;
+}
+:is(
+  #todayExpenseCard,
+  #pageOverview .ov-hero,
+  #pageOverview .ov-card:not(.oc-error),
+  #pageForeign .fx-stat-card
+) > .uv-ring > span {
+  /* 半對角線：cqw／cqh 量的是 .uv-ring 的內容框（扣掉環寬），所以各加回一個環寬 */
+  --uv-ring-r: calc(50cqw + 50cqh + 2 * var(--uv-card-ring-w));   /* 不支援 hypot() 時取較大的上界 */
+  position: absolute;
+  left: 50%;
+  top: calc(50% - var(--uv-ring-r));
+  width: var(--uv-ring-r);
+  height: calc(var(--uv-ring-r) * 1.30902);   /* 1 + sin 18°：0.3 圈＝108°，扇形最低點在中心下方 R·sin 18° */
+  transform-origin: 0 var(--uv-ring-r);
+  background: conic-gradient(from 0deg at 0 var(--uv-ring-r), transparent 0turn, var(--uv-card-ring) 0.12turn, transparent 0.3turn);
   animation: uv-card-spin var(--uv-card-spin) linear infinite;
+}
+@supports (width: hypot(1px, 1px)) {
+  :is(
+    #todayExpenseCard,
+    #pageOverview .ov-hero,
+    #pageOverview .ov-card:not(.oc-error),
+    #pageForeign .fx-stat-card
+  ) > .uv-ring > span {
+    --uv-ring-r: hypot(calc(50cqw + var(--uv-card-ring-w)), calc(50cqh + var(--uv-card-ring-w)));
+  }
 }
 
 /* 效能：捲出畫面暫停已改由 app.html 的 Perf 統一調度（對所有 ambient 動畫生效）；
@@ -741,8 +846,8 @@
   #pageOverview .ov-hero,
   #pageOverview .ov-card,
   #pageForeign .fx-stat-card
-).uv-offscreen::after,
-.submit-btn.uv-offscreen,
+).uv-offscreen > .uv-ring > span,
+.submit-btn.uv-offscreen > .uv-btn-ring > span,
 .submit-btn.uv-offscreen::before,
 .submit-btn.uv-offscreen::after {
   animation-play-state: paused;
@@ -776,47 +881,27 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #todayExpenseCard::before,
-  #todayExpenseCard::after,
-  #todayExpenseCard:is(:hover, :has(:focus-visible))::before,
-  #pageOverview .ov-hero::before,
-  #pageOverview .ov-hero::after,
-  #pageOverview .ov-hero:is(:hover, :has(:focus-visible))::before,
-  #pageOverview .ov-card:not(.oc-error)::before,
-  #pageOverview .ov-card:not(.oc-error)::after,
-  #pageOverview .ov-card:not(.oc-error):is(:hover, :has(:focus-visible))::before,
-  #pageForeign .fx-stat-card::before,
-  #pageForeign .fx-stat-card::after,
-  #pageForeign .fx-stat-card:is(:hover, :has(:focus-visible))::before {
-    animation: none !important;   
+  :is(
+    #todayExpenseCard,
+    #pageOverview .ov-hero,
+    #pageOverview .ov-card:not(.oc-error),
+    #pageForeign .fx-stat-card
+  ) > .uv-ring > span {
+    animation: none !important;
   }
 }
-:root[data-motion="lite"] #todayExpenseCard::before,
-:root[data-motion="lite"] #todayExpenseCard::after,
-:root[data-motion="lite"] #todayExpenseCard:is(:hover, :has(:focus-visible))::before,
-:root[data-motion="lite"] #pageOverview .ov-hero::before,
-:root[data-motion="lite"] #pageOverview .ov-hero::after,
-:root[data-motion="lite"] #pageOverview .ov-hero:is(:hover, :has(:focus-visible))::before,
-:root[data-motion="lite"] #pageOverview .ov-card:not(.oc-error)::before,
-:root[data-motion="lite"] #pageOverview .ov-card:not(.oc-error)::after,
-:root[data-motion="lite"] #pageOverview .ov-card:not(.oc-error):is(:hover, :has(:focus-visible))::before,
-:root[data-motion="lite"] #pageForeign .fx-stat-card::before,
-:root[data-motion="lite"] #pageForeign .fx-stat-card::after,
-:root[data-motion="lite"] #pageForeign .fx-stat-card:is(:hover, :has(:focus-visible))::before {
-  animation: none !important;
-}
-:root[data-motion="off"] #todayExpenseCard::before,
-:root[data-motion="off"] #todayExpenseCard::after,
-:root[data-motion="off"] #todayExpenseCard:is(:hover, :has(:focus-visible))::before,
-:root[data-motion="off"] #pageOverview .ov-hero::before,
-:root[data-motion="off"] #pageOverview .ov-hero::after,
-:root[data-motion="off"] #pageOverview .ov-hero:is(:hover, :has(:focus-visible))::before,
-:root[data-motion="off"] #pageOverview .ov-card:not(.oc-error)::before,
-:root[data-motion="off"] #pageOverview .ov-card:not(.oc-error)::after,
-:root[data-motion="off"] #pageOverview .ov-card:not(.oc-error):is(:hover, :has(:focus-visible))::before,
-:root[data-motion="off"] #pageForeign .fx-stat-card::before,
-:root[data-motion="off"] #pageForeign .fx-stat-card::after,
-:root[data-motion="off"] #pageForeign .fx-stat-card:is(:hover, :has(:focus-visible))::before {
+:root[data-motion="lite"] :is(
+  #todayExpenseCard,
+  #pageOverview .ov-hero,
+  #pageOverview .ov-card:not(.oc-error),
+  #pageForeign .fx-stat-card
+) > .uv-ring > span,
+:root[data-motion="off"] :is(
+  #todayExpenseCard,
+  #pageOverview .ov-hero,
+  #pageOverview .ov-card:not(.oc-error),
+  #pageForeign .fx-stat-card
+) > .uv-ring > span {
   animation: none !important;
 }
 

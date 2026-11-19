@@ -367,24 +367,24 @@ const OverviewCharts = (function() {
     const title = ctx.isCurrent ? '本月支出' : ctx.monthNum + ' 月支出';
 
     let h = '<div class="oc-summary">';
-    h += '<div class="ov-card oc-card oc-stat">' +
+    h += '<div class="ov-card oc-card oc-stat">' + UvFx.cardRing +
            '<span class="oc-stat-label">' + escHtml(title) + '</span>' +
            '<span class="oc-stat-val">' + fmtMoney(v.total) + '</span>' +
            deltaHtml(pct, ctx.isCurrent ? '比上月同期' : '比上月', false) +
          '</div>';
-    h += '<div class="ov-card oc-card oc-stat">' +
+    h += '<div class="ov-card oc-card oc-stat">' + UvFx.cardRing +
            '<span class="oc-stat-label">日均花費</span>' +
            '<span class="oc-stat-val">' + fmtMoney(avg) + '</span>' +
            '<span class="oc-stat-sub">' + (ctx.isCurrent ? '已過 ' + ctx.elapsedDays + ' 天' : '共 ' + ctx.elapsedDays + ' 天') + '</span>' +
          '</div>';
-    h += '<div class="ov-card oc-card oc-stat">' +
+    h += '<div class="ov-card oc-card oc-stat">' + UvFx.cardRing +
            '<span class="oc-stat-label">花最多的項目</span>' +
            (top
              ? '<span class="oc-stat-val oc-stat-item">' + itemLabelHtml(top.name) + '</span>' +
                '<span class="oc-stat-sub">' + fmtMoney(top.total) + '，' + (ctx.sliceTotal > 0 ? Math.round(top.total / ctx.sliceTotal * 100) : 0) + '%</span>'
              : '<span class="oc-stat-val">無</span><span class="oc-stat-sub">尚無紀錄</span>') +
          '</div>';
-    h += '<div class="ov-card oc-card oc-stat">' +
+    h += '<div class="ov-card oc-card oc-stat">' + UvFx.cardRing +
            '<span class="oc-stat-label">最大單筆</span>' +
            (maxRec
              ? '<span class="oc-stat-val">' + fmtMoney(maxRec.amount) + '</span>' +
@@ -411,7 +411,7 @@ const OverviewCharts = (function() {
   }
 
   function donutCardHtml(ctx) {
-    let h = '<div class="ov-card oc-card oc-donut-card">';
+    let h = '<div class="ov-card oc-card oc-donut-card">' + UvFx.cardRing;
     h += '<div class="oc-card-head"><span class="oc-card-title">項目占比</span>' +
            '<span class="oc-card-sub">' + escHtml(ctx.filterLabel) + '</span></div>';
     if (!ctx.slices.length) {
@@ -463,7 +463,7 @@ const OverviewCharts = (function() {
 
   function dailyCardHtml(ctx) {
     const v = ctx.view;
-    let h = '<div class="ov-card oc-card oc-daily-card">';
+    let h = '<div class="ov-card oc-card oc-daily-card">' + UvFx.cardRing;
     h += '<div class="oc-card-head"><span class="oc-card-title">每日花費</span>' +
            '<div class="oc-seg" role="group" aria-label="每日或累計">' +
              '<button type="button" data-oc-action="mode" data-value="daily" aria-pressed="' + (st.dailyMode === 'daily') + '">每日</button>' +
@@ -571,7 +571,7 @@ const OverviewCharts = (function() {
 
   function trendCardHtml(ctx) {
     const trend = Array.isArray(ctx.data.trend) ? ctx.data.trend : [];
-    let h = '<div class="ov-card oc-card oc-trend-card">';
+    let h = '<div class="ov-card oc-card oc-trend-card">' + UvFx.cardRing;
     h += '<div class="oc-card-head"><span class="oc-card-title">近 ' + trend.length + ' 個月收支</span>' +
            '<span class="oc-card-sub">點選月份可切換</span></div>';
     h += '<div class="mc-chart oc-trend-chart"></div>';

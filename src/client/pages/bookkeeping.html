@@ -22,6 +22,8 @@
           </button>
         </div>
         <div class="tabs" role="tablist">
+          <!-- 選中分頁的指示器（真實元素：星點與光暈是只做 transform 的子元素，見 20-uiverse-effects.css） -->
+          <span class="tabs-indicator" aria-hidden="true"><span class="uv-tab-glow uv-tab-glow-b"></span><span class="uv-tab-glow uv-tab-glow-a"></span><span class="uv-tab-stars uv-tab-stars-3"></span><span class="uv-tab-stars uv-tab-stars-2"></span><span class="uv-tab-stars uv-tab-stars-1"></span></span>
           <button class="tab active" type="button" data-tab="expense">支出</button>
           <button class="tab" type="button" data-tab="income">收入</button>
         </div>
@@ -95,12 +97,13 @@
               </div>
               <div id="expenseAmount" class="amount">0</div>
             </div>
-            <button id="expenseSubmit" class="submit-btn" type="button">＋ 確認記帳</button>
+            <button id="expenseSubmit" class="submit-btn" type="button"><span class="uv-btn-ring" aria-hidden="true"><span></span></span>＋ 確認記帳</button>
           </div>
         </div>
 
         <div class="side-col">
           <div class="today-expense card" id="todayExpenseCard">
+            <span class="uv-ring" aria-hidden="true"><span></span></span>
             <div class="today-expense-header">
               <div class="today-expense-title-wrap">
                 <div class="today-expense-icon-box" aria-hidden="true">
@@ -214,7 +217,7 @@
               </div>
               <div id="incomeAmount" class="amount">0</div>
             </div>
-            <button id="incomeSubmit" class="submit-btn" type="button">＋ 確認收入</button>
+            <button id="incomeSubmit" class="submit-btn" type="button"><span class="uv-btn-ring" aria-hidden="true"><span></span></span>＋ 確認收入</button>
           </div>
         </div>
         <div class="recent card income-rec">

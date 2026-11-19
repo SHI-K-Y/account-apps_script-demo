@@ -84,13 +84,23 @@
   border-style: dashed;
   border-color: var(--exp);
 }
-.quick-combo-chip.just-applied {
+/* 套用組合後閃一下：疊一層 --accent-soft 的 ::after，只動 opacity（原本是晶片本身的 background-color 動畫）。
+   非空白晶片在 19-glass-components.css 換成 brightness 效果的疊色（沿用這裡的位置與時間）。
+   ::after 平常是 20-uiverse-effects.css 的滑鼠移上去時的感應區，選擇器要比那條（:root×5 ＋ #uv-pill）更具體才蓋得過。 */
+:root:root:root:root:root :is(.quick-combo-chip, #uv-pill).just-applied::after {
+  content: "";
+  position: absolute;
+  inset: -1px;   /* 連 1px 邊框一起蓋住（原本的 filter 也會作用在邊框上） */
+  height: auto;
+  border-radius: inherit;
+  background: var(--accent-soft);
+  opacity: 0;
+  pointer-events: none;
   animation: quickComboChipFlash calc(var(--dur-base) * 2.5) var(--ease-out);
 }
 @keyframes quickComboChipFlash {
-  0% { background-color: var(--glass-chip); }
-  30% { background-color: var(--accent-soft); }
-  100% { background-color: var(--glass-chip); }
+  0%, 100% { opacity: 0; }
+  30% { opacity: 1; }
 }
 .quick-combo-chip-title {
   overflow: hidden;

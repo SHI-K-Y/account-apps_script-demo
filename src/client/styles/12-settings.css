@@ -1562,27 +1562,30 @@
   to { opacity: 1; }
 }
 
-#paymentChoices .choice.auto-applied ,
-#fxPaymentChoices .choice.auto-applied{
-  outline: 3px solid transparent;
+/* 自動帶入支付方式時閃一下：原本是按鈕本身 outline-color 透明 → 主題色 → 透明。
+   改成 ::after 疊在按鈕上（圓角相同），外框畫在 ::after 的 outline（同樣 3px、外推 2px），只動 opacity。
+   ::after 平常是 20-uiverse-effects.css 的滑鼠移上去時的感應區，選擇器要比那條（:root×5 ＋ #uv-pill）更具體才蓋得過。 */
+:root:root:root:root:root :is(#paymentChoices, #fxPaymentChoices) :is(.choice, #uv-pill).auto-applied::after {
+  content: "";
+  position: absolute;
+  inset: -1px;   /* 對齊按鈕的邊框外緣（1px 邊框），outline-offset 才和原本一樣從外緣算起 */
+  height: auto;
+  border-radius: inherit;
+  outline: 3px solid var(--accent);
   outline-offset: 2px;
+  opacity: 0;
+  pointer-events: none;
   animation: choiceAutoAppliedFlash calc(var(--dur-base) * 2.5) var(--ease-out);
 }
 @keyframes choiceAutoAppliedFlash {
-  0% { outline-color: transparent; }
-  30% { outline-color: var(--accent); }
-  100% { outline-color: transparent; }
+  0%, 100% { opacity: 0; }
+  30% { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .choice-suggest-badge,
-  #paymentChoices .choice.auto-applied ,
-  #fxPaymentChoices .choice.auto-applied{
+  :root:root:root:root:root :is(#paymentChoices, #fxPaymentChoices) :is(.choice, #uv-pill).auto-applied::after {
     animation: none;
-  }
-  #paymentChoices .choice.auto-applied ,
-  #fxPaymentChoices .choice.auto-applied{
-    outline: none;
   }
 }
 

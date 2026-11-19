@@ -87,22 +87,50 @@
   padding: 0 14px;
 }
 
+/* 骨架閃光：漸層畫在 ::after 上，用 translateX 從左掃到右（不再每幀改 background-position）。
+   原本是寬 250%（一格 = 2.5 個區塊寬）、重複平鋪的漸層，background-position 250% → -250%，
+   也就是往右移 7.5 個區塊寬（剛好 3 格），一輪內光帶掃過 3 次。
+   ::after 寬 350%（3.5 個區塊寬 ＝ 一格＋一個區塊，任何位置都蓋滿區塊），同樣平鋪；
+   位移只取「除以一格的餘數」，每移滿一格就瞬間跳回一格前 —— 圖樣每格重複，跳回前後畫面完全相同。 */
 .skel-block {
-  background: linear-gradient(110deg, var(--glass-chip) 25%, color-mix(in srgb, var(--hl) 45%, transparent) 50%, var(--glass-chip) 75%);
-  background-size: 250% 100%;
+  --skel-gradient: linear-gradient(110deg, var(--glass-chip) 25%, color-mix(in srgb, var(--hl) 45%, transparent) 50%, var(--glass-chip) 75%);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   border-radius: var(--lg-radius-card);
 }
+.skel-block::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 350%;
+  background: var(--skel-gradient) 0 0 / calc(100% * 5 / 7) 100% repeat-x;   /* 一格 = 2.5 ÷ 3.5 */
+  pointer-events: none;
+}
 
-.page-container.active .skel-block {
-  animation: skelShimmer calc(var(--dur-slow) * 4) var(--ease-in-out) infinite;
+.page-container.active .skel-block::after {
+  animation: skelShimmer calc(var(--dur-slow) * 4) linear infinite;
 }
 
 .skel-hero { height: 160px; margin-bottom: 14px; }
 .skel-row { height: 110px; margin-bottom: 12px; }
 
+/* 原本整段用 var(--ease-in-out)＝cubic-bezier(0.65, 0, 0.35, 1)。這裡把那條曲線在「每移滿一格」的三個點
+   （進度 1/6、1/2、5/6）切開，每段用切出來的子曲線，所以每個時間點的位置都和原本相同；
+   --ease-in-out 改了的話要重算這四條子曲線與切點。
+   位移單位是 ::after 自身寬度（3.5 個區塊寬）：一格 = 71.4286%，起點（原本的 250%）= -1.25 個區塊寬 = -35.7143%。 */
 @keyframes skelShimmer {
-  0% { background-position: 250% 0; }
-  100% { background-position: -250% 0; }
+  0%      { transform: translateX(-35.7143%); animation-timing-function: cubic-bezier(0.4854, 0, 0.787, 0.4029); }
+  34.701% { transform: translateX(0);         animation-timing-function: step-end; }
+  34.702% { transform: translateX(-71.4286%); animation-timing-function: cubic-bezier(0.449, 0.2774, 0.7245, 0.6387); }
+  50%     { transform: translateX(0);         animation-timing-function: step-end; }
+  50.001% { transform: translateX(-71.4286%); animation-timing-function: cubic-bezier(0.2755, 0.3613, 0.551, 0.7226); }
+  65.299% { transform: translateX(0);         animation-timing-function: step-end; }
+  65.3%   { transform: translateX(-71.4286%); animation-timing-function: cubic-bezier(0.213, 0.5971, 0.5146, 1); }
+  100%    { transform: translateX(-35.7143%); }
 }
 
 .overview-month-badge {

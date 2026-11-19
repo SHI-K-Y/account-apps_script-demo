@@ -41,6 +41,8 @@ table.full_size td { padding:0!important; }
   --lg-blur: blur(0.5px) saturate(150%) brightness(1.05);
   --lg-blur-thick: blur(3px) saturate(150%) brightness(1.05);
   --lg-rim: inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 -1px 0 rgba(28, 28, 30, 0.06);
+  /* 同一道內緣高光，但畫在距外緣 2px 的內側（spread 2px）：給外框由子元素畫的送出鈕用（20-uiverse-effects.css） */
+  --lg-rim-in2: inset 0 1px 0 2px rgba(255, 255, 255, 0.8), inset 0 -1px 0 2px rgba(28, 28, 30, 0.06);
   --lg-ring: inset 0 0 0 0.5px rgba(255, 255, 255, 0.55);
   --lg-edge: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.60) 16%, rgba(255, 255, 255, 0.10) 40%, rgba(255, 255, 255, 0.10) 62%, rgba(255, 255, 255, 0.70) 100%);
   --lg-edge-width: 1.25px;
@@ -684,6 +686,7 @@ body[data-mode="income"] #pageBookkeeping,
   --lg-blur: blur(0.5px) saturate(150%) brightness(0.94);
   --lg-blur-thick: blur(3px) saturate(160%) brightness(0.88);
   --lg-rim: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+  --lg-rim-in2: inset 0 1px 0 2px rgba(255, 255, 255, 0.14), inset 0 -1px 0 2px rgba(0, 0, 0, 0.35);
   --lg-ring: inset 0 0 0 0.5px rgba(255, 255, 255, 0.18);
   --lg-edge: linear-gradient(135deg, rgba(255, 255, 255, 0.80) 0%, rgba(255, 255, 255, 0.32) 16%, rgba(255, 255, 255, 0.04) 40%, rgba(255, 255, 255, 0.04) 62%, rgba(255, 255, 255, 0.36) 100%);
   --lg-sheen: linear-gradient(to bottom, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.02) 42%, rgba(255, 255, 255, 0) 68%);

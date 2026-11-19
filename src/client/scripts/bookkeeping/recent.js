@@ -678,7 +678,10 @@ function playSubmitConfirm(btn) {
   if (!label) {
     label = document.createElement('span');
     label.className = 'submit-label';
-    while (btn.firstChild) label.appendChild(btn.firstChild);
+    // 外框流光圖層（.uv-btn-ring，UvFx）要留在按鈕的第一層，絕對定位才會以按鈕為準
+    Array.from(btn.childNodes).forEach(n => {
+      if (!(n.nodeType === 1 && n.classList.contains('uv-btn-ring'))) label.appendChild(n);
+    });
     btn.appendChild(label);
   }
   let check = btn.querySelector('.submit-check');

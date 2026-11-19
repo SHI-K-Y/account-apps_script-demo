@@ -597,6 +597,7 @@ button.sr-bar-row:hover { background: var(--glass-chip); }
 .sr-results:empty { display: none; }
 
 .sr-group {
+  position: relative;   /* 閃一下的外框（::after）以群組為準 */
   background: var(--glass-surface);
   border: 1px solid var(--glass-border);
   border-radius: var(--lg-radius-card);
@@ -651,11 +652,22 @@ button.sr-bar-row:hover { background: var(--glass-chip); }
   color: var(--muted);
 }
 
-.sr-group.is-flash { animation: srGroupFlash calc(var(--dur-slow) * 3) var(--ease-in-out); }
+/* 跳到這個群組時閃一下：3px 外框畫在 ::after，只動 opacity（原本是群組本身的 box-shadow 動畫）。
+   ::after 蓋住整個邊框盒（inset: -1px 抵掉 1px 邊框），外框是往外擴 3px 的 box-shadow，不會蓋到內容。 */
+.sr-group.is-flash::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--lg-radius-card);
+  box-shadow: 0 0 0 3px var(--accent-border);
+  opacity: 0;
+  pointer-events: none;
+  animation: srGroupFlash calc(var(--dur-slow) * 3) var(--ease-in-out);
+}
 
 @keyframes srGroupFlash {
-  0%, 100% { box-shadow: var(--shadow-card); }
-  30% { box-shadow: 0 0 0 3px var(--accent-border), var(--shadow-card); }
+  0%, 100% { opacity: 0; }
+  30% { opacity: 1; }
 }
 
 .sr-results.is-stale .recent-actions {
@@ -731,7 +743,7 @@ mark.sr-mark {
   .sr-submit-btn,
   .sr-more-caret,
   .sr-progress-track > i { transition: none; }
-  .sr-group.is-flash { animation: none; }
+  .sr-group.is-flash::after { animation: none; }
 }
 
 /* =============================================================================

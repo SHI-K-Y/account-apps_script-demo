@@ -340,7 +340,7 @@ const ForeignPage = (function () {
     if (!ledgers.length && !fxState.ledgersLoaded) {
       body.innerHTML = errorText
         ? '<div class="card fx-empty"><h2 class="fx-empty-title">讀取失敗</h2><p class="fx-empty-desc">' + escHtml(errorText) + '</p>' +
-          '<button type="button" class="submit-btn" data-fx-action="reload-list">重新讀取</button></div>'
+          '<button type="button" class="submit-btn" data-fx-action="reload-list">' + UvFx.btnRing + '重新讀取</button></div>'
         : '<div class="overview-skeleton fx-list-loading"><div class="skel-block skel-hero"></div><div class="skel-block skel-row"></div></div>';
       return;
     }
@@ -348,7 +348,7 @@ const ForeignPage = (function () {
       body.innerHTML = '<div class="card fx-empty">' + EMPTY_ART +
         '<h2 class="fx-empty-title">還沒有國外帳簿</h2>' +
         '<p class="fx-empty-desc">出國前先建立一本帳簿，再開始記錄旅途花費。國外帳簿獨立計算，不會併入每月帳本。</p>' +
-        '<button type="button" class="submit-btn" data-fx-action="add-ledger">＋ 新增第一本帳簿</button></div>';
+        '<button type="button" class="submit-btn" data-fx-action="add-ledger">' + UvFx.btnRing + '＋ 新增第一本帳簿</button></div>';
       Motion.revealCards(body, '.fx-empty');
       return;
     }
@@ -360,7 +360,7 @@ const ForeignPage = (function () {
     } else {
       h += '<div class="card fx-empty"><h2 class="fx-empty-title">沒有使用中的帳簿</h2>' +
         '<p class="fx-empty-desc">下一趟旅行前，新增一本帳簿就能開始記帳。封存的帳簿收在下方。</p>' +
-        '<button type="button" class="submit-btn" data-fx-action="add-ledger">＋ 新增帳簿</button></div>';
+        '<button type="button" class="submit-btn" data-fx-action="add-ledger">' + UvFx.btnRing + '＋ 新增帳簿</button></div>';
     }
     if (archived.length) {
       h += '<details class="fx-archived" id="fxArchivedBox"' + (ui.archivedOpen ? ' open' : '') + '>' +
@@ -1301,7 +1301,7 @@ const ForeignPage = (function () {
     let maxDay = null;
     Object.keys(byDay).forEach(day => { if (!maxDay || byDay[day].total > byDay[maxDay].total) maxDay = day; });
 
-    let h = '<div class="card fx-stat-card"><h2 class="fx-stat-title">總覽<small>以換算台幣計算</small></h2><div class="fx-kpis">' +
+    let h = '<div class="card fx-stat-card">' + UvFx.cardRing + '<h2 class="fx-stat-title">總覽<small>以換算台幣計算</small></h2><div class="fx-kpis">' +
       kpi('總花費', fmtTwd(sum.total), '', true) +
       kpi('筆數', sum.count + ' 筆', '') +
       kpi('日均', sum.avg == null ? '無資料' : fmtTwd(sum.avg), sum.elapsed ? '旅行第 1～' + sum.elapsed + ' 天' : (hasPeriod(ledger) ? '尚未出發' : '期間未設定')) +
@@ -1319,7 +1319,7 @@ const ForeignPage = (function () {
       slices.push({ label: '其餘（' + rest.length + ' 項）', value: rest.reduce((a, it) => a + it.total, 0), count: rest.reduce((a, it) => a + it.count, 0), className: 'fx-c-rest', isOther: true });
     }
     slices = slices.map(sl => Object.assign(sl, { pct: itemTotal > 0 ? Math.round(sl.value / itemTotal * 1000) / 10 : 0 }));
-    h += '<div class="card fx-stat-card"><h2 class="fx-stat-title">交易項目分布<small>對應試算表「各細項總覽」</small></h2>';
+    h += '<div class="card fx-stat-card">' + UvFx.cardRing + '<h2 class="fx-stat-title">交易項目分布<small>對應試算表「各細項總覽」</small></h2>';
     if (items.length) {
       h += '<div class="oc-donut-wrap"><div class="mc-chart oc-donut-chart" id="fxDonut"></div><ul class="fx-stat-list">' +
         items.map(it => {
@@ -1354,7 +1354,7 @@ const ForeignPage = (function () {
         dayValues.push(round2(byDay[iso] ? byDay[iso].total : 0));
       }
     }
-    h += '<div class="card fx-stat-card"><h2 class="fx-stat-title">每日花費<small>' + escHtml(periodRange(ledger)) + '</small></h2>';
+    h += '<div class="card fx-stat-card">' + UvFx.cardRing + '<h2 class="fx-stat-title">每日花費<small>' + escHtml(periodRange(ledger)) + '</small></h2>';
     if (dayIsos.length) {
       h += '<div class="mc-chart" id="fxDailyChart"></div><div class="oc-chart-legend">' +
         '<span class="oc-key"><i class="oc-key-line is-avg"></i>日均線</span>' +
@@ -1371,7 +1371,7 @@ const ForeignPage = (function () {
 
     const pays = Object.keys(byPayment).map(n => ({ name: n, total: byPayment[n].total, count: byPayment[n].count }))
       .sort((a, b) => b.total - a.total);
-    h += '<div class="card fx-stat-card"><h2 class="fx-stat-title">交易方式</h2><ul class="fx-stat-list">' +
+    h += '<div class="card fx-stat-card">' + UvFx.cardRing + '<h2 class="fx-stat-title">交易方式</h2><ul class="fx-stat-list">' +
       pays.map(p => {
         const pct = sum.total > 0 ? Math.round(p.total / sum.total * 1000) / 10 : 0;
         return '<li class="fx-stat-row"><span></span><span class="fx-stat-name">' + escHtml(p.name) + '</span>' +
@@ -1381,7 +1381,7 @@ const ForeignPage = (function () {
       }).join('') + '</ul></div>';
 
     const curs = Object.keys(byCurrency).sort((a, b) => byCurrency[b].total - byCurrency[a].total);
-    h += '<div class="card fx-stat-card"><h2 class="fx-stat-title">幣別</h2><ul class="fx-stat-list">' +
+    h += '<div class="card fx-stat-card">' + UvFx.cardRing + '<h2 class="fx-stat-title">幣別</h2><ul class="fx-stat-list">' +
       curs.map(c => {
         const v = byCurrency[c];
         return '<li class="fx-stat-row"><span></span><span class="fx-stat-name">' + escHtml(c) + '，' + escHtml(fmtLocal(v.local, c)) + '</span>' +

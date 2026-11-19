@@ -669,11 +669,23 @@ const Motion = (function() {
     return anim.finished.then(() => { if (el._lgStretchAnim === anim) el._lgStretchAnim = null; }, () => {});
   }
 
+  // 選中分頁的指示器：多數分頁列畫在 ::before；記帳頁的分頁列是真實元素 .tabs-indicator（星點與光暈是它的子元素）。
+  // 兩者都由容器的 .is-lg-moving 觸發 lgIndicatorStretch（lite 是 motionLiteFadeIn）。
+  // 真實元素正在播時直接把那段動畫倒回開頭；沒在播時加上 class 就會開始，兩種情況都不必強制重新排版。
   function replayIndicator(tabs) {
     if (!tabs || level() === 'off') return;
-    tabs.classList.remove('is-lg-moving');
-    void tabs.offsetWidth;
-    tabs.classList.add('is-lg-moving');
+    const indicator = tabs.querySelector(':scope > .tabs-indicator');
+    if (indicator) {
+      const moving = tabs.classList.contains('is-lg-moving') && indicator.getAnimations
+        ? indicator.getAnimations().filter(a => a.animationName === 'lgIndicatorStretch' || a.animationName === 'motionLiteFadeIn')
+        : [];
+      if (moving.length) moving.forEach(a => { a.currentTime = 0; a.play(); });
+      else tabs.classList.add('is-lg-moving');
+    } else {
+      tabs.classList.remove('is-lg-moving');
+      void tabs.offsetWidth;
+      tabs.classList.add('is-lg-moving');
+    }
     clearTimeout(tabs._lgMoveTimer);
     tabs._lgMoveTimer = setTimeout(() => tabs.classList.remove('is-lg-moving'), spring('snappy').duration + 60);
   }

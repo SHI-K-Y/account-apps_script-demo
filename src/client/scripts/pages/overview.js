@@ -74,7 +74,7 @@ function renderOverview(d) {
   var expNum = ovParseNum(d.totalExpense);
   var balNum = ovParseNum(d.monthBalance);
 
-  html += '<div class="ov-hero">' +
+  html += '<div class="ov-hero">' + UvFx.cardRing +
             '<div class="ov-hero-label">資產總餘額</div>' +
             '<div class="ov-hero-amount">' + ovFmt(totalNum) + '</div>' +
             '<div class="ov-hero-sub">含所有帳戶累計餘額</div>' +
@@ -135,7 +135,7 @@ function renderOverview(d) {
 
   html += '<h3 class="ov-section-title"><span class="ov-icon-box is-pay" aria-hidden="true">' + iconHtml('credit-card') + '</span>支付方式分析</h3>';
   html += '<div class="ov-cards">';
-  html += '<div class="ov-card">';
+  html += '<div class="ov-card">' + UvFx.cardRing;
   html += '<div class="ov-pay-grid">';
   html += buildPayItem('現金支出', d.cashExpense, false);
   html += buildPayItem('Line Pay 支出', d.linePayExpense, false);
@@ -200,7 +200,7 @@ function buildCategoryCard(cfg) {
   var badgeCls = bal > 0 ? 'positive' : (bal < 0 ? 'negative' : 'neutral');
   var badgeText = bal > 0 ? '盈餘' : (bal < 0 ? '虧損' : '持平');
 
-  var h = '<div class="ov-card">';
+  var h = '<div class="ov-card">' + UvFx.cardRing;
   h += '<div class="ov-card-head">';
   h += '<div class="ov-card-icon ' + escAttr(cfg.iconClass) + '" aria-hidden="true">' + iconHtml(cfg.icon) + '</div>';
   h += '<span class="ov-card-title">' + escHtml(cfg.title) + '</span>';

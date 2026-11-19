@@ -138,7 +138,8 @@
 .tabs {
   transition: --lg-tint var(--lg-dur-tap) var(--ease-out);
 }
-.tabs::before {
+.tabs::before,
+.tabs > .tabs-indicator {
   border-radius: var(--lg-radius-capsule);
   background: var(--lg-tint);
   box-shadow: var(--lg-rim), 0 4px 12px -4px var(--accent-glow);
@@ -146,7 +147,8 @@
   translate: 0 0;
   transition: translate var(--lg-dur-tap) var(--lg-spring-tap);
 }
-body[data-mode="income"] .tabs::before {
+body[data-mode="income"] .tabs::before,
+body[data-mode="income"] .tabs > .tabs-indicator {
   transform: none;
   translate: calc(100% + 4px) 0;
 }
@@ -485,13 +487,16 @@ body::after {
   28% { scale: 1.2 0.94; animation-timing-function: var(--lg-spring-snappy); }
   100% { scale: 1 1; }
 }
-:is(.tabs, .lg-seg).is-lg-moving::before {
+:is(.tabs, .lg-seg).is-lg-moving::before,
+.tabs.is-lg-moving > .tabs-indicator {
   animation: lgIndicatorStretch var(--lg-dur-snappy) both;
 }
-:root[data-motion="lite"] :is(.tabs, .lg-seg).is-lg-moving::before {
+:root[data-motion="lite"] :is(.tabs, .lg-seg).is-lg-moving::before,
+:root[data-motion="lite"] .tabs.is-lg-moving > .tabs-indicator {
   animation: motionLiteFadeIn var(--lg-dur-reduced) var(--lg-ease-reduced) both;
 }
-:root[data-motion="off"] :is(.tabs, .lg-seg).is-lg-moving::before {
+:root[data-motion="off"] :is(.tabs, .lg-seg).is-lg-moving::before,
+:root[data-motion="off"] .tabs.is-lg-moving > .tabs-indicator {
   animation: none;
 }
 

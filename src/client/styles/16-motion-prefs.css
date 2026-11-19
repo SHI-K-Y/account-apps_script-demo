@@ -16,7 +16,8 @@
 :root[data-motion="lite"] :focus-visible {
   transition-property: opacity, color, background-color, border-color !important;
 }
-:root[data-motion="lite"] .skel-block {
+:root[data-motion="lite"] .skel-block,
+:root[data-motion="lite"] .skel-block::after {
   animation: none !important;
 }
 @keyframes motionLiteFadeIn {
@@ -315,7 +316,10 @@
 .tabs {
   position: relative;
 }
-.tabs::before {
+/* 指示器：預設是 ::before；記帳頁分頁列改用真實元素 .tabs-indicator（星點與光暈要放子元素，見 20-uiverse-effects.css），
+   兩者樣式相同，有真實元素時就不畫 ::before。 */
+.tabs::before,
+.tabs > .tabs-indicator {
   content: "";
   position: absolute;
   top: 4px;
@@ -329,8 +333,12 @@
   transition: transform var(--dur-slow) var(--ease-out);
   pointer-events: none;
 }
-body[data-mode="income"] .tabs::before {
+body[data-mode="income"] .tabs::before,
+body[data-mode="income"] .tabs > .tabs-indicator {
   transform: translateX(calc(100% + 4px));
+}
+.tabs:has(> .tabs-indicator)::before {
+  content: none;
 }
 .tab {
   position: relative;

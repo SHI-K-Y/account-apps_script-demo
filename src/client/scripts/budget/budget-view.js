@@ -133,14 +133,14 @@ const BudgetView = (function() {
     if (!b || (!isFresh(b) && b.mode === 'current')) return '';
     if (!b.configured) {
       if (b.mode === 'past') return '';
-      return '<div class="ov-card oc-card oc-budget is-empty">' + guideHtml(monthLabel(b.month) + '還沒有設定預算，前往設定') + '</div>';
+      return '<div class="ov-card oc-card oc-budget is-empty">' + UvFx.cardRing + guideHtml(monthLabel(b.month) + '還沒有設定預算，前往設定') + '</div>';
     }
     if (b.awaitingIncome) {
-      return '<div class="ov-card oc-card oc-budget is-empty"><span class="budget-line-muted">' +
+      return '<div class="ov-card oc-card oc-budget is-empty">' + UvFx.cardRing + '<span class="budget-line-muted">' +
                escHtml(monthLabel(b.month)) + '預算來自生活費收入，目前還沒有記錄</span></div>';
     }
     if (b.awaitingBalance) {
-      return '<div class="ov-card oc-card oc-budget is-empty"><span class="budget-line-muted">' +
+      return '<div class="ov-card oc-card oc-budget is-empty">' + UvFx.cardRing + '<span class="budget-line-muted">' +
                escHtml(monthLabel(b.month)) + '預算來自生活費餘額，' + (b.mode === 'future' ? '到這個月份才會算出' : '目前讀不到餘額') + '</span></div>';
     }
 
@@ -165,7 +165,7 @@ const BudgetView = (function() {
     const aria = label + '，已花 ' + money(spent) + '，預算 ' + money(amount) +
       (showMarker ? '，以今天的日期應花到 ' + money(b.expected) : '');
 
-    return '<div class="ov-card oc-card oc-budget' + (over ? ' is-over' : '') + '">' +
+    return '<div class="ov-card oc-card oc-budget' + (over ? ' is-over' : '') + '">' + UvFx.cardRing +
              '<div class="oc-budget-head">' +
                '<span class="oc-stat-label">' + escHtml(label) + '</span>' +
                '<span class="oc-budget-nums"><b>' + money(spent) + '</b> / ' + money(amount) + '</span>' +

@@ -33,6 +33,7 @@
     "core/prefs.js",
     "core/perf.js",
     "core/motion.js",
+    "core/uv-fx.js",
     "core/background.js",
     "core/press-feedback.js",
     "core/local-cache.js",

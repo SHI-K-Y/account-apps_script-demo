@@ -42,6 +42,8 @@ const Perf = (function() {
   // 依「動得多快」決定：動得越慢，降低更新頻率越看不出來。high 一律不設上限（完全原樣）。
   //   （整頁背景光暈已改由 core/background.js 繪製、只動 opacity，不在這裡調度，也不能被降頻。）
   //   分頁星點：每秒只移動 6px，10fps 時每步 0.6px。
+  //   （P02 起這些都只動 transform：分頁星點／光暈、送出鈕外框、卡片光環都改成子元素，見 core/uv-fx.js 與 20-uiverse-effects.css；
+  //    名稱沒變，這張表照常適用。）
   const RATES = {
     'uv-tab-stars-ltr': { mid: 20, low: 10 },
     'uv-tab-stars-rtl': { mid: 20, low: 10 },

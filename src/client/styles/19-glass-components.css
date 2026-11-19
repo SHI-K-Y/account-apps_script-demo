@@ -313,9 +313,16 @@
 }
 
 .skel-block {
-  background: linear-gradient(110deg, var(--lg-group-bg) 25%, var(--lg-group-bg-pressed) 50%, var(--lg-group-bg) 75%);
-  background-size: 250% 100%;
+  --skel-gradient: linear-gradient(110deg, var(--lg-group-bg) 25%, var(--lg-group-bg-pressed) 50%, var(--lg-group-bg) 75%);
+}
+/* 鏡面描邊要蓋在閃光（::after，z-index: -1）上面，所以畫在 ::before，不放在區塊本身的 box-shadow */
+.skel-block::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
   box-shadow: var(--lg-content-lens);
+  pointer-events: none;
 }
 
 
@@ -817,12 +824,18 @@
 :root:root:root:root .quick-combo-chip:not(.is-empty):not(.selected) .quick-combo-chip-amount {
   color: color-mix(in srgb, var(--combo-chip-ink) 72%, transparent) !important;
 }
-:root:root:root:root .quick-combo-chip.just-applied:not(.is-empty) {
-  animation: quickComboChipGradFlash calc(var(--dur-base) * 2.5) var(--ease-out);
+/* 套用組合後閃一下：原本是晶片本身 filter: brightness(1 → 1.18 → 1)。改成疊一層 color-dodge 的灰色 ::after，只動 opacity：
+   color-dodge 的結果是「底色 ÷ (1 − 疊色)」，疊色取 1 − 1/1.18 ＝ 15.2542% 灰，就是每個色版 × 1.18（與 brightness(1.18) 相同），
+   透明度 α 時則是 × (1 + 0.18α)，所以 opacity 0 → 1 → 0 等同原本的 brightness 1 → 1.18 → 1。
+   ::after 平常是 20-uiverse-effects.css 的滑鼠移上去時的感應區，選擇器要比那條（:root×5 ＋ #uv-pill）更具體才蓋得過。 */
+:root:root:root:root:root :is(.quick-combo-chip, #uv-pill).just-applied:not(.is-empty)::after {
+  background: rgb(15.2542% 15.2542% 15.2542%);
+  mix-blend-mode: color-dodge;
+  animation-name: quickComboChipGradFlash;
 }
 @keyframes quickComboChipGradFlash {
-  0%, 100% { filter: brightness(1); }
-  30% { filter: brightness(1.18); }
+  0%, 100% { opacity: 0; }
+  30% { opacity: 1; }
 }
 
 i.ph,

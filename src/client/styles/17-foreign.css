@@ -1064,5 +1064,6 @@
 @supports not (color: color-mix(in srgb, red 50%, blue)) {
   :is(.submit-btn, .modal-submit-btn, .sr-submit-btn) { background: var(--accent-gradient); }
   .modal-delete-btn { background: var(--exp-gradient); }
-  .tabs::before { background: var(--accent-gradient) !important; }
+  .tabs::before,
+  .tabs > .tabs-indicator { background: var(--accent-gradient) !important; }
 }
