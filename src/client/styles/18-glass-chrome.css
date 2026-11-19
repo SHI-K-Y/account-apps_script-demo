@@ -1,7 +1,73 @@
+/* ===========================================================================
+ * 毛玻璃只留在浮動層（P03）：全站的 backdrop-filter 只在這裡宣告，其他檔案不要再寫。
+ * 第一類（浮在捲動內容上方、背後畫面會移動）→ 真正的 backdrop-filter，支援時再疊 SVG 折射：
+ *   黏頂 header 的膠囊、底部導覽列、回到頂部按鈕、toast、彈窗卡片、日曆／emoji／fx 選單、說明提示框。
+ * 第二類（只在頁面背景上，不會被內容穿過）→ 靜態底色（--glass-static-*，見 01-tokens-base.css）：
+ *   內容卡片、清單容器、頁內膠囊（設定分頁、信用卡卡別、月份徽章、試算表連結…）與膠囊／卡片裡的子元素。
+ * 巢狀規則：header 膠囊裡的按鈕、彈窗卡片裡的元件一律不另外加，交給外層那一層處理。
+ * 新增浮動元件時把選擇器加進下面三組之一；只出現在頁面背景上的元件用靜態底色，不要加 backdrop-filter。
+ * ========================================================================= */
+:is(
+  .bottom-nav,
+  .back-to-top-btn,
+  .head .month-select,
+  .topbar-btn-group,
+  .head .tabs,
+  .fx-head .tabs,
+  .overview-head .icon-btn:not(.theme-toggle-btn),
+  .fx-head .icon-btn:not(.theme-toggle-btn),
+  .overview-head .cc-back-btn,
+  .fx-head .cc-back-btn
+) {
+  -webkit-backdrop-filter: var(--glass-live);
+  backdrop-filter: var(--glass-live);
+}
+:is(
+  .toast,
+  .calendar-popover:not(.recent-calendar-popover),
+  .emoji-picker-popover,
+  .fx-menu
+) {
+  -webkit-backdrop-filter: var(--glass-live-thick);
+  backdrop-filter: var(--glass-live-thick);
+}
+:is(
+  .modal-card,
+  .recent-calendar-popover,
+  .info-tip-bubble
+) {
+  -webkit-backdrop-filter: var(--glass-live-sheet);
+  backdrop-filter: var(--glass-live-sheet);
+}
+/* 邊緣折射：透明款玻璃看得到背後的畫面，折射才有意義（Chromium；由 core/perf.js 加上 lg-can-refract） */
+@supports (backdrop-filter: url(#lg-refract)) {
+  @media (prefers-reduced-transparency: no-preference) {
+    :root.lg-can-refract {
+      --glass-live: url(#lg-refract) var(--lg-blur);
+      --glass-live-thick: url(#lg-refract) var(--lg-blur-thick);
+    }
+  }
+}
+/* 第二類：原本用 blur(0.5px) saturate(150%) brightness(1.05) 的頁內膠囊，改成較厚的同色靜態底
+ * （它們的底色都是 rgb(var(--lg-glass-rgb) / var(--lg-a, var(--lg-alpha)))，改 --lg-a 連 :hover 一起生效） */
+:is(
+  .settings-tabs,
+  .settings-pay-subnav,
+  .settings-add-bar,
+  .settings-pay-action-bar,
+  .sheet-link-btn,
+  .st-clear-btn,
+  .cc-card-tabs,
+  .cc-summary-bar,
+  .overview-month-badge,
+  .month-select,
+  .cc-back-btn
+):not(.head *, .overview-head *, .fx-head *) {
+  --lg-a: var(--glass-static-chip-a);
+}
+
 :is(.head, .overview-head, .fx-head) {
   background: transparent;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
   border: 0;
   box-shadow: none;
   will-change: auto;
@@ -32,8 +98,6 @@
   transform: translateX(-50%);
   background: var(--lg-head-scrolled-bg);
   /* 透明款：捲動邊緣只用漸層淡出讓內容退開，不再疊毛玻璃 */
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
   -webkit-mask-image: linear-gradient(to bottom, var(--mask-fill) 0, var(--mask-fill) calc(100% - 16px), transparent 100%);
   mask-image: linear-gradient(to bottom, var(--mask-fill) 0, var(--mask-fill) calc(100% - 16px), transparent 100%);
   opacity: 0;
@@ -81,8 +145,6 @@
   position: relative;
   isolation: isolate;
   background: transparent;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
   border: 0;
   box-shadow: none;
   color: var(--lg-ink-secondary);
@@ -236,8 +298,6 @@ body::after {
 :is(.calendar-popover, .emoji-picker-popover, .fx-menu) {
   background-color: rgb(var(--lg-glass-rgb) / var(--lg-a, var(--lg-alpha-thick)));
   background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: var(--lg-blur-thick);
-  backdrop-filter: var(--lg-blur-thick);
   border-radius: var(--lg-radius-popover);
   box-shadow: var(--lg-lens), var(--lg-ring), var(--lg-shadow-float);
 }
@@ -291,8 +351,6 @@ body::after {
 .modal-backdrop,
 .modal-backdrop.show {
   background: transparent;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
   opacity: 1;
 }
 .modal-backdrop {
@@ -307,8 +365,6 @@ body::after {
   inset: 0;
   background: var(--lg-backdrop-dim);
   /* 透明款：背景只調暗、不霧化 */
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
   opacity: 0;
   transition: opacity var(--dur-base) var(--ease-out);
   pointer-events: none;
@@ -322,8 +378,6 @@ body::after {
 .modal-card {
   background-color: rgb(var(--lg-glass-rgb) / var(--lg-a, var(--lg-alpha-thick)));
   background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: var(--lg-blur-thick);
-  backdrop-filter: var(--lg-blur-thick);
   border: 0;
   border-radius: var(--lg-radius-sheet);
   box-shadow: var(--lg-lens), var(--lg-ring), var(--lg-shadow-float);
@@ -369,26 +423,6 @@ body::after {
   box-shadow: var(--lg-lens), var(--lg-ring);
   color: var(--lg-ink-secondary);
 }
-
-:is(
-  .card,
-  .ov-card,
-  .ov-hero,
-  .ov-mini-card,
-  .sr-sum-card,
-  .st-diff-card,
-  .settings-list-container,
-  .bar,
-  .tabs
-) {
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-.head .tabs,
-.fx-head .tabs {
-  -webkit-backdrop-filter: var(--lg-blur);
-  backdrop-filter: var(--lg-blur);
-}
 .bar {
   background: var(--glass-chip);
   border-top: 1px solid var(--hairline);
@@ -411,7 +445,7 @@ body::after {
   :root:not([data-theme="light"]) {
     --lg-content-alpha: 0.96;
     --lg-content-sheen: none;
-    --lg-content-blur: none;
+    --glass-static-content-lift: 0;
     --lg-row-hover: var(--lg-group-bg-hover);
   }
   :root,
@@ -554,7 +588,7 @@ body::after {
   .fx-detail-card,
   .fx-stat-card
 ) {
-  background-color: var(--lg-content-bg);
+  background-color: var(--glass-static-content);
   background-image: var(--lg-content-sheen);
   border-color: transparent;
   box-shadow: var(--lg-content-lens), var(--lg-content-shadow);
@@ -826,8 +860,6 @@ body::after {
 ) {
   background-color: rgb(var(--lg-glass-rgb) / var(--lg-a, var(--lg-alpha)));
   background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: var(--lg-blur);
-  backdrop-filter: var(--lg-blur);
   border-color: transparent;
   box-shadow: var(--lg-lens), var(--lg-ring), var(--lg-shadow);
   isolation: isolate;
@@ -846,14 +878,6 @@ body::after {
   .st-clear-btn
 ).is-lg-pressed {
   box-shadow: var(--lg-lens-pressed), var(--lg-ring), var(--lg-shadow);
-}
-@supports (backdrop-filter: url(#lg-refract)) {
-  @media (prefers-reduced-transparency: no-preference) {
-    :root.lg-can-refract :is(.settings-tabs, .settings-pay-subnav, .cc-card-tabs, .sr-head) {
-      -webkit-backdrop-filter: url(#lg-refract) var(--lg-blur);
-      backdrop-filter: url(#lg-refract) var(--lg-blur);
-    }
-  }
 }
 
 :is(

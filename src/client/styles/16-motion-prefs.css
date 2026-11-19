@@ -680,11 +680,6 @@ body[data-mode="income"] .tabs > .tabs-indicator {
   --fx-glow: var(--theme-glow);
   --fx-border: var(--theme-border);
   --fx-ink: var(--theme-text);
-  --fx-bg-gradient:
-    radial-gradient(circle at 12% 10%, rgba(47, 127, 168, 0.12) 0%, transparent 45%),
-    radial-gradient(circle at 88% 20%, rgba(95, 176, 217, 0.10) 0%, transparent 45%),
-    radial-gradient(circle at 15% 80%, rgba(215, 186, 150, 0.14) 0%, transparent 50%),
-    #faf6ef;
   --burst-fx-1: #2f7fa8;
   --burst-fx-2: #5fb0d9;
   --burst-fx-3: #f5b841;
@@ -710,11 +705,6 @@ body[data-mode="income"] .tabs > .tabs-indicator {
   --fx-glow: var(--theme-glow);
   --fx-border: var(--theme-border);
   --fx-ink: var(--theme-text);
-  --fx-bg-gradient:
-    radial-gradient(circle at 12% 10%, rgba(79, 163, 207, 0.20) 0%, transparent 45%),
-    radial-gradient(circle at 88% 20%, rgba(95, 176, 217, 0.14) 0%, transparent 45%),
-    radial-gradient(circle at 15% 80%, rgba(215, 186, 150, 0.10) 0%, transparent 50%),
-    #1c1c1e;
   --burst-fx-1: #4fa3cf;
   --burst-fx-2: #8fd0f0;
   --burst-fx-3: #f2c35e;
@@ -748,5 +738,4 @@ body[data-page="foreign"] {
   --accent-glow: var(--fx-glow);
   --accent-border: var(--fx-border);
   --step-glow: var(--fx-soft);
-  --bg-gradient: var(--fx-bg-gradient);
 }

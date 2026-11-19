@@ -95,8 +95,6 @@
   max-width: 100%;
   box-sizing: border-box;
   background: var(--glass-surface);
-  backdrop-filter: var(--blur-lg);
-  -webkit-backdrop-filter: var(--blur-lg);
   border: 1px solid var(--glass-border);
   border-radius: var(--lg-radius-card);
   box-shadow: var(--shadow-float);

@@ -77,8 +77,6 @@
   padding: 26px 22px 22px;
   border-radius: var(--lg-radius-card);
   background: var(--ov-hero-bg);
-  backdrop-filter: var(--blur-md);
-  -webkit-backdrop-filter: var(--blur-md);
   color: var(--ink);
   box-shadow: var(--ov-hero-shadow);
   border: 1px solid var(--glass-border);
@@ -157,8 +155,6 @@
 .ov-mini-card {
   flex: 1;
   background: var(--ov-mini-bg);
-  backdrop-filter: var(--blur-sm);
-  -webkit-backdrop-filter: var(--blur-sm);
   border: 1px solid var(--glass-border-subtle);
   border-radius: var(--lg-radius-control);
   padding: 10px 12px;
@@ -301,8 +297,6 @@
 
 .ov-card {
   background: var(--glass-surface);
-  backdrop-filter: var(--blur-md);
-  -webkit-backdrop-filter: var(--blur-md);
   border: 1px solid var(--glass-border);
   border-radius: var(--lg-radius-card);
   padding: 18px;

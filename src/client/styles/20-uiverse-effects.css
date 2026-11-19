@@ -48,8 +48,6 @@
 
   background: var(--uv-track);
   background-image: none;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
   text-shadow: none;
   box-shadow:
     0 -0.062em 0.062em var(--uv-edge-shadow),
@@ -354,8 +352,6 @@
   padding: 12px 10px;
   overflow: visible;
   position: relative;
-  -webkit-backdrop-filter: var(--lg-blur);
-  backdrop-filter: var(--lg-blur);
 }
 
 #pageSettings .settings-tabs::before,

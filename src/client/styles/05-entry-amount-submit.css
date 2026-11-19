@@ -122,8 +122,6 @@
   padding: 14px 20px;
   border-radius: 0 0 var(--lg-radius-card) var(--lg-radius-card);
   background: var(--glass-bar);
-  backdrop-filter: var(--blur-lg);
-  -webkit-backdrop-filter: var(--blur-lg);
   border-top: 1px solid var(--glass-border);
   box-shadow: var(--shadow-dock);
 }
@@ -202,8 +200,6 @@
   justify-content: space-between;
   gap: 12px;
   background: var(--glass-surface);
-  backdrop-filter: var(--blur-md);
-  -webkit-backdrop-filter: var(--blur-md);
   border: 1px solid var(--glass-border);
   border-radius: var(--lg-radius-control);
   padding: 13px 18px 13px 16px;

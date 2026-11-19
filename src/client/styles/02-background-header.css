@@ -112,8 +112,6 @@ button {
   margin: 10px 12px 16px;
   padding: calc(12px + env(safe-area-inset-top)) 18px 14px;
   background: var(--glass-header);
-  backdrop-filter: var(--blur-lg);
-  -webkit-backdrop-filter: var(--blur-lg);
   border: 1px solid var(--glass-border);
   border-radius: var(--lg-radius-card);
   box-shadow: var(--shadow-card);
@@ -164,8 +162,6 @@ button {
   -webkit-appearance: none;
   border: 1px solid var(--glass-border);
   background: var(--glass-chip) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236e7788' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 13px center;
-  backdrop-filter: var(--blur-sm);
-  -webkit-backdrop-filter: var(--blur-sm);
   border-radius: var(--lg-radius-capsule);
   padding: 8px 32px 8px 15px;
   font-size: 14px;
@@ -193,8 +189,6 @@ button {
   height: 38px;
   border: 1px solid var(--glass-border);
   background: var(--glass-chip);
-  backdrop-filter: var(--blur-sm);
-  -webkit-backdrop-filter: var(--blur-sm);
   border-radius: 50%;
   font-size: 17px;
   color: var(--muted);
@@ -295,8 +289,6 @@ button {
   padding: 4px;
   gap: 4px;
   background: var(--glass-chip);
-  backdrop-filter: var(--blur-sm);
-  -webkit-backdrop-filter: var(--blur-sm);
   border: 1px solid var(--glass-border-subtle);
   border-radius: var(--lg-radius-control);
   box-shadow: inset 0 1px 2px color-mix(in srgb, var(--shadow-tint-cool) 4%, transparent);
@@ -330,8 +322,6 @@ button {
 
 .card {
   background: var(--glass-surface);
-  backdrop-filter: var(--blur-md);
-  -webkit-backdrop-filter: var(--blur-md);
   border: 1px solid var(--glass-border);
   border-radius: var(--lg-radius-card);
   padding: 20px;

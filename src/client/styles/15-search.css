@@ -24,8 +24,6 @@
   margin: 8px auto 12px;
   padding: 8px;
   background: var(--glass-header);
-  backdrop-filter: var(--blur-lg);
-  -webkit-backdrop-filter: var(--blur-lg);
   border: 1px solid var(--glass-border);
   border-radius: var(--lg-radius-card);
   box-shadow: var(--shadow-card);
@@ -456,8 +454,6 @@
   margin-bottom: 12px;
   padding: 16px;
   background: var(--glass-surface);
-  backdrop-filter: var(--blur-md);
-  -webkit-backdrop-filter: var(--blur-md);
   border: 1px solid var(--glass-border);
   border-radius: var(--lg-radius-card);
   box-shadow: var(--shadow-card);
@@ -617,8 +613,6 @@ button.sr-bar-row:hover { background: var(--glass-chip); }
   gap: 2px 12px;
   padding: 10px 14px;
   background: var(--glass-header);
-  backdrop-filter: var(--blur-md);
-  -webkit-backdrop-filter: var(--blur-md);
   border-bottom: 1px solid var(--glass-divider);
   border-radius: calc(var(--lg-radius-card) - 1px) calc(var(--lg-radius-card) - 1px) 0 0;
 }
@@ -893,15 +887,13 @@ mark.sr-mark {
 :root[data-motion="off"] .sr-bar .sr-input-wrap::before { transition: none; }
 
 /* 移除搜尋框外層的膠囊玻璃框（.sr-head 保留，仍負責置頂與寬度；只拿掉底色、邊框、陰影、模糊與邊緣高光）。
- * 用 #pageSearch 提高優先權，蓋過 17／18 檔對 .sr-head 的玻璃化規則（含 ::before 邊緣層與折射 backdrop-filter）。 */
+ * 用 #pageSearch 提高優先權，蓋過 17／18 檔對 .sr-head 的玻璃化規則（含 ::before 邊緣層）。 */
 #pageSearch .sr-head {
   padding: 0;
   background: none;
   border: 0;
   border-radius: 0;
   box-shadow: none;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
 }
 #pageSearch .sr-head::before,
 #pageSearch .sr-head::after { content: none; }

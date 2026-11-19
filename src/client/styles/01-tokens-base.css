@@ -40,6 +40,26 @@ table.full_size td { padding:0!important; }
   /* 不霧化：只留不到 1px 的柔化（讓折射位移的邊緣不出鋸齒），背景細節仍清楚可見 */
   --lg-blur: blur(0.5px) saturate(150%) brightness(1.05);
   --lg-blur-thick: blur(3px) saturate(150%) brightness(1.05);
+  /* 毛玻璃只分兩組（P03，2026-11-19）：
+     --glass-live*   浮在捲動內容上方的層，背後畫面會移動，才用真正的 backdrop-filter（每幀讀回背後畫面）：
+       --glass-live        黏頂 header 的膠囊、底部導覽列、回到頂部按鈕
+       --glass-live-thick  toast、日曆／emoji／fx 選單等彈出層
+       （以上兩個在支援 SVG 折射時改成 url(#lg-refract) + 模糊，見 18-glass-chrome.css 的 :root.lg-can-refract）
+       --glass-live-sheet  彈窗卡片、說明提示框、篩選日曆（不折射，與原本相同）
+     --glass-static-*   只疊在頁面背景上、不會被內容穿過的層（內容卡片、清單容器、頁內膠囊、膠囊裡的子元素）：
+       不用 backdrop-filter，原本濾鏡的提亮／壓暗折算成「多疊一層同色底」：
+       最終 alpha = 1 − (1 − 原本的 alpha) × (1 − lift)。
+       深色的 brightness(k) 剛好等於多疊一層 (1 − k) 的暗色；淺色見下方 lift 的說明。
+     套用的元素清單在 18-glass-chrome.css「毛玻璃只留在浮動層」。 */
+  --glass-live: var(--lg-blur);
+  --glass-live-thick: var(--lg-blur-thick);
+  --glass-live-sheet: var(--lg-blur-thick);
+  /* 淺色：原本的 saturate() 會放大背後的彩度，疊白只會再沖淡，所以反而把底色調薄（lift < 0）保留背景彩度；
+     數值是 tools/perf/glass-audit.mjs 截圖比對 ΔE 最小的點（取代內容卡片的 saturate(125%) brightness(1.03)、
+     頁內膠囊的 blur(0.5px) saturate(150%) brightness(1.05)） */
+  --glass-static-content-lift: -0.068;
+  --glass-static-chip-lift: -0.05;
+  --glass-static-chip-a: calc(1 - (1 - var(--lg-alpha)) * (1 - var(--glass-static-chip-lift)));
   --lg-rim: inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 -1px 0 rgba(28, 28, 30, 0.06);
   /* 同一道內緣高光，但畫在距外緣 2px 的內側（spread 2px）：給外框由子元素畫的送出鈕用（20-uiverse-effects.css） */
   --lg-rim-in2: inset 0 1px 0 2px rgba(255, 255, 255, 0.8), inset 0 -1px 0 2px rgba(28, 28, 30, 0.06);
@@ -61,12 +81,11 @@ table.full_size td { padding:0!important; }
 
   --lg-content-rgb: 255 255 255;
   --lg-content-alpha: 0.12;
-  --lg-content-bg: rgb(var(--lg-content-rgb) / var(--lg-content-alpha));
+  --glass-static-content: rgb(var(--lg-content-rgb) / calc(1 - (1 - var(--lg-content-alpha)) * (1 - var(--glass-static-content-lift))));
   --lg-content-bg-strong: rgb(var(--lg-content-rgb) / min(1, calc(var(--lg-content-alpha) + 0.20)));
   --lg-content-sheen: linear-gradient(160deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.05) 28%, rgba(255, 255, 255, 0) 52%);
   --lg-content-lens: inset 0 1.5px 0 rgba(255, 255, 255, 0.90), inset 1px 0 0 rgba(255, 255, 255, 0.40), inset -1px -1px 0 rgba(255, 255, 255, 0.35), inset 0 0 0 0.5px rgba(255, 255, 255, 0.50), inset 0 0 24px rgba(255, 255, 255, 0.16);
   --lg-content-shadow: 0 12px 30px -16px rgba(28, 28, 30, 0.24), 0 1px 2px rgba(28, 28, 30, 0.05);
-  --lg-content-blur: saturate(125%) brightness(1.03);
   --lg-row-divider: rgba(215, 186, 150, 0.38);
   --lg-row-hover: rgb(255 255 255 / 0.38);
   --lg-row-pressed: rgb(255 255 255 / 0.56);
@@ -127,12 +146,6 @@ table.full_size td { padding:0!important; }
   --border-main: #d7ba96;
 
   --bg-base: #faf6ef;
-  --bg-gradient:
-    radial-gradient(60vmax 50vmax at 4% 6%, rgba(219, 70, 55, 0.20) 0%, transparent 62%),
-    radial-gradient(55vmax 50vmax at 98% 24%, rgba(95, 143, 126, 0.22) 0%, transparent 62%),
-    radial-gradient(70vmax 55vmax at 10% 96%, rgba(232, 196, 154, 0.42) 0%, transparent 66%),
-    radial-gradient(50vmax 45vmax at 92% 90%, rgba(219, 70, 55, 0.10) 0%, transparent 60%),
-    #faf6ef;
 
   --glass-surface: var(--surface-1);
   --glass-surface-subtle: rgba(255, 253, 249, 0.88);
@@ -196,9 +209,6 @@ table.full_size td { padding:0!important; }
   --nav-active-color: #1c1c1e;
   --nav-active-bg: rgba(28, 28, 30, 0.08);
 
-  --blur-sm: var(--lg-blur);
-  --blur-md: var(--lg-blur);
-  --blur-lg: var(--lg-blur-thick);
 }
 
 @supports (transition-timing-function: linear(0, 1)) {
@@ -665,12 +675,6 @@ body[data-mode="income"] #pageBookkeeping,
   --pay-transfer-ink: #b83264;
   --pay-transfer-ink-hover: #9d174d;
   --bg-base: #1c1c1e;
-  --bg-gradient:
-    radial-gradient(60vmax 50vmax at 4% 6%, rgba(219, 70, 55, 0.40) 0%, transparent 62%),
-    radial-gradient(55vmax 50vmax at 98% 24%, rgba(95, 143, 126, 0.44) 0%, transparent 62%),
-    radial-gradient(70vmax 55vmax at 10% 96%, rgba(232, 196, 154, 0.32) 0%, transparent 66%),
-    radial-gradient(50vmax 45vmax at 92% 90%, rgba(219, 70, 55, 0.22) 0%, transparent 60%),
-    #1c1c1e;
 
   --lg-alpha: 0.12;
   --lg-alpha-thick: min(1, calc(var(--lg-alpha) + 0.46));
@@ -685,6 +689,9 @@ body[data-mode="income"] #pageBookkeeping,
   --lg-inner-bg-hover: rgb(255 255 255 / min(1, calc(var(--lg-alpha-inner) + 0.08)));
   --lg-blur: blur(0.5px) saturate(150%) brightness(0.94);
   --lg-blur-thick: blur(3px) saturate(160%) brightness(0.88);
+  /* 深色：brightness(k) 剛好等於多疊 (1 − k) 的暗色 */
+  --glass-static-content-lift: 0.08;   /* = brightness(0.92) */
+  --glass-static-chip-lift: 0.06;      /* = brightness(0.94) */
   --lg-rim: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 -1px 0 rgba(0, 0, 0, 0.35);
   --lg-rim-in2: inset 0 1px 0 2px rgba(255, 255, 255, 0.14), inset 0 -1px 0 2px rgba(0, 0, 0, 0.35);
   --lg-ring: inset 0 0 0 0.5px rgba(255, 255, 255, 0.18);
@@ -706,7 +713,6 @@ body[data-mode="income"] #pageBookkeeping,
   --lg-content-sheen: linear-gradient(160deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 28%, rgba(255, 255, 255, 0) 52%);
   --lg-content-lens: inset 0 1px 0 rgba(255, 255, 255, 0.26), inset 1px 0 0 rgba(255, 255, 255, 0.10), inset -1px -1px 0 rgba(255, 255, 255, 0.10), inset 0 0 0 0.5px rgba(255, 255, 255, 0.12), inset 0 0 22px rgba(255, 255, 255, 0.04);
   --lg-content-shadow: 0 12px 30px -14px rgba(0, 0, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.25);
-  --lg-content-blur: saturate(125%) brightness(0.92);
   --lg-row-divider: rgba(215, 186, 150, 0.22);
   --lg-row-hover: rgb(255 255 255 / 0.07);
   --lg-row-pressed: rgb(255 255 255 / 0.12);
@@ -819,14 +825,6 @@ body {
   overflow-x: clip;
 }
 
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background: var(--bg-gradient);
-  pointer-events: none;
-  z-index: -1;
-}
 
 :root {
   --uv-bg-base: var(--bg-base);
@@ -919,9 +917,6 @@ body::before {
   --uv-rad-hi-7: color(srgb 0.191877 0.304403 0.302682);
 }
 
-body::before {
-  content: none;
-}
 
 html:is(:root, [data-theme]) {
   /* overscroll 區域與漸層底色一致（取左下角主色），避免邊緣露出純色條紋 */

@@ -83,8 +83,6 @@
   border-radius: var(--lg-radius-capsule);
   border: 1px solid var(--glass-border);
   background: var(--glass-chip);
-  backdrop-filter: var(--blur-sm);
-  -webkit-backdrop-filter: var(--blur-sm);
   color: var(--ink);
   font-size: 13.5px;
   font-weight: 800;
@@ -125,8 +123,6 @@
   border-radius: var(--lg-radius-control);
   border: 1.5px solid var(--glass-border-subtle);
   background: var(--glass-surface);
-  backdrop-filter: var(--blur-sm);
-  -webkit-backdrop-filter: var(--blur-sm);
   color: var(--ink);
   font-size: 14px;
   font-weight: 750;
@@ -212,8 +208,6 @@
   padding: 14px 16px;
   border-radius: var(--lg-radius-card);
   background: var(--glass-surface);
-  backdrop-filter: var(--blur-md);
-  -webkit-backdrop-filter: var(--blur-md);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-card);
 }

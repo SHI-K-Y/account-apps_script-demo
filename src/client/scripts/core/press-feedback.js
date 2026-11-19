@@ -109,7 +109,12 @@ function markModalAnimating(el) {
 
 function openModal(el) {
   if (!el) return;
+  // 關閉中的彈窗是 display: none（07-modals.css 的停放規則）；.is-animating 讓它先以「關閉狀態」出現，
+  // 強制算一次樣式後再加 .show：背景調暗層（::before）的淡入與卡片的轉場才有起點。
+  // 不先算這一次，display: none 的元素沒有「前一刻樣式」，調暗層會直接跳到全暗（逐幀比對確認過）。
+  const parked = !el.classList.contains('show') && !el.classList.contains('is-animating');
   markModalAnimating(el);
+  if (parked) void el.offsetWidth;
   el.classList.add('show');
   Motion.sheetIn(el, el.querySelector('.modal-card'));
 }

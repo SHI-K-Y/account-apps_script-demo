@@ -5,8 +5,6 @@
   margin: 0 12px 16px;
   padding: 6px;
   background: var(--glass-chip);
-  backdrop-filter: var(--blur-md);
-  -webkit-backdrop-filter: var(--blur-md);
   border: 1px solid var(--glass-border);
   border-radius: var(--lg-radius-card);
   box-shadow: var(--shadow-card);
@@ -59,8 +57,6 @@
   border-radius: var(--lg-radius-card);
   background: var(--glass-chip);
   border: 1px solid var(--glass-border);
-  backdrop-filter: var(--blur-md);
-  -webkit-backdrop-filter: var(--blur-md);
   box-shadow: var(--shadow-card);
   box-sizing: border-box;
 }
@@ -109,8 +105,6 @@
   background: var(--glass-surface);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-card);
-  backdrop-filter: var(--blur-md);
-  -webkit-backdrop-filter: var(--blur-md);
   box-sizing: border-box;
 }
 .settings-add-inner {
@@ -282,8 +276,6 @@
   background: var(--glass-surface);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-card);
-  backdrop-filter: var(--blur-md);
-  -webkit-backdrop-filter: var(--blur-md);
   box-sizing: border-box;
 }
 .pay-action-title {
@@ -311,8 +303,6 @@
   background: var(--glass-surface);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-card);
-  backdrop-filter: var(--blur-md);
-  -webkit-backdrop-filter: var(--blur-md);
   margin: 0 12px 24px;
   min-height: 200px;
   box-sizing: border-box;
@@ -1259,7 +1249,6 @@
   border: 1px solid var(--glass-border);
   border-radius: var(--lg-radius-card);
   box-shadow: var(--shadow-float);
-  backdrop-filter: var(--blur-lg);
   padding: 12px;
   display: flex;
   flex-direction: column;

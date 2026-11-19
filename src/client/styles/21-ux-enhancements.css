@@ -49,8 +49,6 @@
   color: var(--lg-ink-secondary);
   background-color: rgb(var(--lg-glass-rgb) / var(--lg-a, var(--lg-alpha)));
   background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: var(--lg-blur);
-  backdrop-filter: var(--lg-blur);
   box-shadow: var(--lg-lens), var(--lg-ring), var(--lg-shadow-float);
   cursor: pointer;
   opacity: 0;

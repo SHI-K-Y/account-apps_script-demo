@@ -35,6 +35,12 @@ function showToast(message, type = '') {
   const wasShown = toast.classList.contains('show');
   msgEl.textContent = message;
   iconBox.innerHTML = iconHtml(TOAST_ICONS[type] || TOAST_ICONS.info);
+  // 收起後的 toast 是 display: none（06-today-recent.css）：先以收起狀態出現、算一次樣式，再加 .show，淡入才有起點
+  clearTimeout(toast._parkTimer);
+  if (!wasShown && !toast.classList.contains('is-animating')) {
+    toast.classList.add('is-animating');
+    void toast.offsetWidth;
+  }
   toast.className = `toast show ${type}`;
   toast.style.setProperty('--toast-ms', TOAST_DURATION + 'ms');
 
@@ -53,7 +59,10 @@ function showToast(message, type = '') {
   if (type === 'success') Motion.haptic('light');
   clearTimeout(state.toastTimer);
   state.toastTimer = setTimeout(() => {
+    // 淡出期間保留 .is-animating，轉場結束後才停放（display: none，連同毛玻璃一起移除）
+    toast.classList.add('is-animating');
     toast.classList.remove('show');
+    toast._parkTimer = setTimeout(() => toast.classList.remove('is-animating'), Motion.dur('base') + 80);
   }, TOAST_DURATION);
 }
 

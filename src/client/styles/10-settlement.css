@@ -488,8 +488,6 @@
 
 .st-diff-card {
   background: var(--glass-surface);
-  backdrop-filter: var(--blur-md);
-  -webkit-backdrop-filter: var(--blur-md);
   border: 1.5px solid var(--glass-border);
   border-radius: var(--lg-radius-card);
   padding: 20px;
@@ -729,8 +727,6 @@
   border: 1.5px solid var(--glass-border);
   border-radius: var(--lg-radius-control);
   background: var(--glass-surface);
-  backdrop-filter: var(--blur-sm);
-  -webkit-backdrop-filter: var(--blur-sm);
   color: var(--muted);
   font-size: 14px;
   font-weight: 700;

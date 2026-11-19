@@ -70,7 +70,7 @@ const INPUT_ROUNDS = 3;
 const SETTLE_MS = 2000;
 const SLOW_FRAME_MS = 50.5;
 // 判定「改善／變差」：差異要超過 10%，而且絕對值超過這個雜訊門檻（超過一個 vsync 16.7ms、或 5 次／幀）
-const NOISE_FLOOR = { ms: 17, '幀': 5, '次': 5, '個': 1 };
+const NOISE_FLOOR = { ms: 17, '幀': 5, '次': 5, '個': 1, fps: 3 };
 const FAST3G = { offline: false, latency: 150, downloadThroughput: 1.6e6 / 8, uploadThroughput: 750e3 / 8 };
 // P04（移除裝置分級）完成以前，先把偏好設成「高畫質」量測現況；否則 headless 會被自動判成 low。
 const PREFS = { motion: 'full', autoScroll: true, perf: 'high' };
@@ -114,6 +114,17 @@ IDLE_VARIANTS.forEach(v => {
   metric(k + 'paintMs', v.label + ' Paint 總時間', 'ms', 'down');
   metric(k + 'rasterCount', v.label + ' RasterTask 次數', '次', 'down');
   metric(k + 'rasterMs', v.label + ' RasterTask 總時間', 'ms', 'down');
+  metric(k + 'drawMs', v.label + ' 合成器繪製總時間', 'ms', 'down');
+  metric(k + 'renderPasses', v.label + ' 合成 render pass 數', '次', 'down');
+});
+// 捲動：觸控捲動手勢往下再往上（P03 起），背後內容在動時毛玻璃、黏頂 header 的成本才看得出來
+const SCROLL_PAGES = PAGES.filter(p => p.key !== 'settings');
+SCROLL_PAGES.forEach(p => {
+  const k = 'scroll.' + p.key + '.';
+  metric(k + 'fps', p.label + ' 捲動平均幀率', 'fps', 'up');
+  metric(k + 'slowFrames', p.label + ' 捲動超過 50ms 的幀', '幀', 'down');
+  metric(k + 'p95FrameMs', p.label + ' 捲動 p95 幀時間', 'ms', 'down');
+  metric(k + 'drawMs', p.label + ' 捲動合成器繪製總時間', 'ms', 'down');
 });
 ACTIONS.forEach(a => metric('input.' + a.key, '互動延遲：' + a.label, 'ms', 'down'));
 PAGES.forEach(p => {
@@ -289,7 +300,9 @@ async function getMetrics(cdp) {
 }
 
 // RasterTask 屬於 disabled-by-default-devtools.timeline（DevTools 效能面板也會一起開），只開 devtools.timeline 會量到 0。
-const TRACE_CATEGORIES = ['devtools.timeline', 'disabled-by-default-devtools.timeline'];
+// viz：合成器（Display::DrawAndSwap、每個 render pass）。backdrop-filter 的成本落在這裡（每一層都要讀回背後畫面、
+// 多一個 render pass），主執行緒的 Paint／Raster 量不到。headless 是軟體合成，數字只拿來比較前後。
+const TRACE_CATEGORIES = ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'viz'];
 
 async function startTrace(cdp) {
   const events = [];
@@ -306,7 +319,7 @@ async function startTrace(cdp) {
 }
 
 function summarizeTrace(events) {
-  const out = { Paint: { count: 0, us: 0 }, RasterTask: { count: 0, us: 0 } };
+  const out = { Paint: { count: 0, us: 0 }, RasterTask: { count: 0, us: 0 }, 'Display::DrawAndSwap': { count: 0, us: 0 }, 'DirectRenderer::DrawRenderPass': { count: 0, us: 0 } };
   const open = new Map();
   for (const ev of events) {
     const bucket = out[ev.name];
@@ -351,6 +364,37 @@ async function measureIdle(page, cdp) {
     paintMs: trace.Paint.us / 1000,
     rasterCount: trace.RasterTask.count,
     rasterMs: trace.RasterTask.us / 1000,
+    drawMs: trace['Display::DrawAndSwap'].us / 1000,
+    renderPasses: trace['DirectRenderer::DrawRenderPass'].count,
+  };
+}
+
+/** 觸控捲動手勢：往下 SCROLL_PX、再往上回到頂端，量這段期間的幀與合成器繪製時間。 */
+const SCROLL_PX = 1600;
+const SCROLL_SPEED = 1200;   // px/s，接近手指快速滑動
+async function measureScroll(page, cdp) {
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await sleep(500);
+  const stopTrace = await startTrace(cdp);
+  const sampler = page.evaluate(() => new Promise(resolve => {
+    const list = [];
+    window.__perfScrollStop = () => resolve(list);
+    const tick = t => { list.push(t); if (window.__perfScrollStop) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  }));
+  const gesture = { x: VIEWPORT.width / 2, y: VIEWPORT.height * 0.6, speed: SCROLL_SPEED, gestureSourceType: 'touch', preventFling: true };
+  await cdp.send('Input.synthesizeScrollGesture', Object.assign({ yDistance: -SCROLL_PX }, gesture));
+  await cdp.send('Input.synthesizeScrollGesture', Object.assign({ yDistance: SCROLL_PX }, gesture));
+  await page.evaluate(() => { const f = window.__perfScrollStop; window.__perfScrollStop = null; f(); });
+  const ts = await sampler;
+  const trace = summarizeTrace(await stopTrace());
+  const deltas = ts.slice(1).map((t, i) => t - ts[i]);
+  const secs = (ts[ts.length - 1] - ts[0]) / 1000;
+  return {
+    fps: secs > 0 ? deltas.length / secs : null,
+    slowFrames: deltas.filter(x => x > SLOW_FRAME_MS).length,
+    p95FrameMs: percentile(deltas, 95),
+    drawMs: trace['Display::DrawAndSwap'].us / 1000,
   };
 }
 
@@ -526,9 +570,14 @@ async function oneRun(browser, index) {
       for (const k of Object.keys(bootStats)) flat['boot.' + k] = bootStats[k];
 
       idle = {};
+      const scroll = {};
       for (const p of PAGES) {
         await goTo(page, p.key);
         idle[p.key] = await measureIdle(page, cdp);
+        if (SCROLL_PAGES.includes(p)) {
+          scroll[p.key] = await measureScroll(page, cdp);
+          for (const k of Object.keys(scroll[p.key])) flat['scroll.' + p.key + '.' + k] = scroll[p.key][k];
+        }
       }
       await goTo(page, 'bookkeeping');
       await page.evaluate(() => {
