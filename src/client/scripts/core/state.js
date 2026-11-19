@@ -62,6 +62,7 @@ const AppState = {
   },
   creditCard: {
     selectedCard: 'ALL',
+    selectedMonth: 'ALL',   // 'ALL' 或月份工作表名稱（例如 '2026.11'）
     statusFilter: 'all',
     recordsByMonth: {},
     skippedMonths: {},

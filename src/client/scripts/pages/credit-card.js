@@ -376,6 +376,58 @@ function formatCcDate(month, day) {
   return !isNaN(monthNum) ? (monthNum + '/' + dayPart) : (dayPart + '日');
 }
 
+// 「2026.11」→「2026 年 11 月」
+function formatCcMonthLabel(month) {
+  var parts = String(month || '').split(/\D+/);
+  var y = parseInt(parts[0], 10);
+  var m = parseInt(parts[1], 10);
+  if (isNaN(y) || isNaN(m)) return String(month || '');
+  return y + ' 年 ' + m + ' 月';
+}
+
+// 可供切換的月份（新月份在前），略過舊版面、未納入對帳的月份
+function getCcSelectableMonths() {
+  var skipped = ccState.skippedMonths || {};
+  return getCcAllMonths().filter(function(m) { return !skipped[m]; });
+}
+
+function buildCcMonthBarHtml(months) {
+  var sel = ccState.selectedMonth;
+  var idx = months.indexOf(sel);
+  var currentMonth = state.data && state.data.currentMonth;
+  // 選單是新月份在前：「‹」往較舊的月份、「›」往較新的月份；從「全部月份」按「‹」會跳到最新的月份
+  var olderTarget = (sel === 'ALL') ? months[0] : months[idx + 1];
+  var newerTarget = (sel === 'ALL' || idx <= 0) ? null : months[idx - 1];
+
+  var opts = '<option value="ALL"' + (sel === 'ALL' ? ' selected' : '') + '>全部月份</option>';
+  months.forEach(function(m) {
+    opts += '<option value="' + escAttr(m) + '"' + (m === sel ? ' selected' : '') + '>' +
+              escHtml(formatCcMonthLabel(m) + (m === currentMonth ? '（本月）' : '')) +
+            '</option>';
+  });
+
+  return '<div class="cc-month-bar">' +
+           '<button type="button" class="icon-btn cc-month-step" data-month-target="' + escAttr(olderTarget || '') + '"' +
+             (olderTarget ? '' : ' disabled') + ' title="上一個月" aria-label="上一個月">' + iconHtml('caret-left') + '</button>' +
+           '<select id="ccMonthSelect" class="month-select cc-month-select" aria-label="選擇月份">' + opts + '</select>' +
+           '<button type="button" class="icon-btn cc-month-step" data-month-target="' + escAttr(newerTarget || '') + '"' +
+             (newerTarget ? '' : ' disabled') + ' title="下一個月" aria-label="下一個月">' + iconHtml('caret-right') + '</button>' +
+         '</div>';
+}
+
+function emptyCcScope(cardName) {
+  return {
+    cardName: cardName,
+    count: 0,
+    totalAmount: 0,
+    paidAmount: 0,
+    unpaidAmount: 0,
+    paidCount: 0,
+    unpaidCount: 0,
+    records: [],
+  };
+}
+
 function openCreditCardReconciliation() {
   loadCreditCardAll(false);
 }
@@ -483,17 +535,32 @@ function renderCreditCardPage() {
   }
 
   var paymentOptions = (state.data && state.data.options && state.data.options.paymentMethods) || DEFAULT_OPTIONS_FALLBACK.paymentMethods;
-  var summary = CreditCardParser.collectCardsSummary(allExpenseRecords, paymentOptions);
+  // 卡別分頁依所有月份列出（切換月份時分頁不會消失）；金額、筆數與明細只算所選月份
+  var summaryAllMonths = CreditCardParser.collectCardsSummary(allExpenseRecords, paymentOptions);
 
-  if (ccState.selectedCard !== 'ALL' && !summary.cardMap.has(ccState.selectedCard)) {
+  if (ccState.selectedCard !== 'ALL' && !summaryAllMonths.cardMap.has(ccState.selectedCard)) {
     ccState.selectedCard = 'ALL';
   }
 
+  var selectableMonths = getCcSelectableMonths();
+  if (ccState.selectedMonth !== 'ALL' && selectableMonths.indexOf(ccState.selectedMonth) === -1) {
+    ccState.selectedMonth = 'ALL';
+  }
+  var selectedMonth = ccState.selectedMonth;
+  var isAllMonths = (selectedMonth === 'ALL');
+
+  var summary = isAllMonths
+    ? summaryAllMonths
+    : CreditCardParser.collectCardsSummary(allExpenseRecords.filter(function(r) {
+        return r.month === selectedMonth;
+      }), paymentOptions);
+
   var activeScope = (ccState.selectedCard === 'ALL')
     ? summary.all
-    : (summary.cardMap.get(ccState.selectedCard) || summary.all);
+    : (summary.cardMap.get(ccState.selectedCard) || emptyCcScope(ccState.selectedCard));
 
   var activeCardTitle = (ccState.selectedCard === 'ALL') ? '全部信用卡' : activeScope.cardName;
+  var monthLoading = !isAllMonths && !Array.isArray(ccState.recordsByMonth[selectedMonth]);
 
   var filteredRecords = (activeScope.records || []).filter(function(r) {
     if (ccState.statusFilter === 'unpaid') return !r.isPaid;
@@ -510,13 +577,15 @@ function renderCreditCardPage() {
             '<span>全部信用卡</span>' +
           '</button>';
 
-  summary.cards.forEach(function(c) {
+  summaryAllMonths.cards.forEach(function(c) {
     var isActive = (ccState.selectedCard === c.cardName);
     var thumbHtml = c.imageSrc
       ? '<img class="cc-tab-card-img" src="' + escAttr(c.imageSrc) + '" alt="">'
       : '';
-    var dotHtml = (c.count > 0)
-      ? '<span class="cc-tab-dot' + (c.unpaidCount > 0 ? ' has-unpaid' : '') + '"></span>'
+    // 小圓點反映所選月份：有消費才顯示，有未繳時為紅色
+    var scoped = summary.cardMap.get(c.cardName);
+    var dotHtml = (scoped && scoped.count > 0)
+      ? '<span class="cc-tab-dot' + (scoped.unpaidCount > 0 ? ' has-unpaid' : '') + '"></span>'
       : '';
     html += '<button type="button" class="cc-card-tab' + (isActive ? ' active' : '') + '" data-card="' + escAttr(c.cardName) + '">' +
               dotHtml +
@@ -525,6 +594,8 @@ function renderCreditCardPage() {
             '</button>';
   });
   html += '</div>';
+
+  html += buildCcMonthBarHtml(selectableMonths);
 
   html += '<div class="cc-summary-bar">' +
             '<div class="cc-stat-box">' +
@@ -565,9 +636,18 @@ function renderCreditCardPage() {
   html += '<div class="ov-card cc-tx-card">';
 
   if (!filteredRecords.length) {
-    var emptyMsg = activeScope.count === 0
-      ? '尚無此信用卡的消費紀錄。'
-      : (ccState.statusFilter === 'unpaid' ? '目前沒有未繳帳單。' : '沒有符合的消費明細。');
+    var emptyMsg;
+    if (monthLoading) {
+      emptyMsg = '正在讀取這個月份的明細…';
+    } else if (activeScope.count === 0) {
+      emptyMsg = isAllMonths
+        ? '尚無此信用卡的消費紀錄。'
+        : (formatCcMonthLabel(selectedMonth) + '沒有' + (ccState.selectedCard === 'ALL' ? '信用卡' : '此信用卡的') + '消費紀錄。');
+    } else {
+      emptyMsg = ccState.statusFilter === 'unpaid'
+        ? (isAllMonths ? '目前沒有未繳帳單。' : '這個月份沒有未繳帳單。')
+        : '沒有符合的消費明細。';
+    }
     html += '<div class="empty" style="padding:28px 12px;">' + escHtml(emptyMsg) + '</div>';
   } else {
     html += '<div class="cc-tx-list">';
@@ -626,6 +706,23 @@ function renderCreditCardPage() {
     });
   });
 
+  var monthSelect = document.getElementById('ccMonthSelect');
+  if (monthSelect) {
+    monthSelect.addEventListener('change', function() {
+      ccState.selectedMonth = monthSelect.value || 'ALL';
+      renderCreditCardPage();
+    });
+  }
+
+  container.querySelectorAll('.cc-month-step').forEach(function(stepBtn) {
+    stepBtn.addEventListener('click', function() {
+      var target = stepBtn.dataset.monthTarget;
+      if (!target) return;
+      ccState.selectedMonth = target;
+      renderCreditCardPage();
+    });
+  });
+
   container.querySelectorAll('.cc-filter-btn').forEach(function(filterBtn) {
     filterBtn.addEventListener('click', function() {
       ccState.statusFilter = filterBtn.dataset.sfilter || 'all';
@@ -656,7 +753,8 @@ function renderCreditCardPage() {
       unpaid.forEach(function(r) {
         (rowsByMonth[r.month] = rowsByMonth[r.month] || []).push(r.row);
       });
-      if (!confirm('確定要將「' + activeCardTitle + '」的 ' + unpaid.length + ' 筆未繳明細，全數標記為【已繳費】嗎？')) {
+      var scopeText = '「' + activeCardTitle + '」' + (isAllMonths ? '' : formatCcMonthLabel(selectedMonth));
+      if (!confirm('確定要將' + scopeText + '的 ' + unpaid.length + ' 筆未繳明細，全數標記為【已繳費】嗎？')) {
         return;
       }
       batchMarkUnpaidRecords(rowsByMonth);

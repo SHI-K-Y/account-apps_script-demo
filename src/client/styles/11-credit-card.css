@@ -179,6 +179,31 @@
   box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-tint) 18%, transparent);
 }
 
+/* 月份切換：‹ 月份選單 › */
+.cc-month-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 14px 12px;
+}
+
+.cc-month-select {
+  flex: 0 1 220px;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+.cc-month-step {
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.cc-month-step:disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+
 .cc-summary-bar {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -670,6 +695,14 @@
     border-radius: var(--lg-radius-control);
   }
 
+  .cc-month-bar {
+    margin: 0 10px 10px;
+  }
+
+  .cc-month-select {
+    flex: 1 1 auto;
+  }
+
   .cc-summary-bar {
     margin: 0 10px 12px;
     padding: 12px 12px;
@@ -760,6 +793,10 @@
   .cc-card-tab {
     padding: 10px 18px;
     font-size: 14.5px;
+  }
+
+  .cc-month-bar {
+    margin: 0 20px 14px;
   }
 
   .cc-summary-bar {
