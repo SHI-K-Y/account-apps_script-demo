@@ -118,6 +118,20 @@ test('搜尋：關鍵字、篩選與舊格式月份', () => {
   assert.throws(() => b.call('searchRecords', { months: [] }), /請指定要搜尋的月份/);
 });
 
+test('信用卡對帳：一次讀取多個月份，略過舊版面與不存在的月份', () => {
+  const b = createBackend();
+  const res = b.call('getCreditCardRecords', ['2026.11', '2026.10', '2024.10', '2020.01'], false);
+  assert.deepEqual(Object.keys(res.recordsByMonth).sort(), ['2026.10', '2026.11']);
+  assert.deepEqual(res.recordsByMonth['2026.11'], b.call('getFullRecords', '2026.11', 'expense', false).records);
+  assert.deepEqual(res.skippedMonths, ['2024.10']);
+  assert.deepEqual(res.missingMonths, ['2020.01']);
+  assert.deepEqual(res.failedMonths, []);
+  assert.deepEqual(b.call('getCreditCardRecords', ['2026.11'], true).recordsByMonth['2026.11'], res.recordsByMonth['2026.11'], '強制重新讀取結果一致');
+  assert.throws(() => b.call('getCreditCardRecords', []), /請指定要讀取的月份/);
+  assert.throws(() => b.call('getCreditCardRecords', ['2026-11']), /月份格式錯誤/);
+  assert.throws(() => b.call('getCreditCardRecords', Array.from({ length: 13 }, (_, i) => '2025.' + String(i % 12 + 1).padStart(2, '0'))), /一次最多讀取/);
+});
+
 test('總覽、圖表與月份彙總表', () => {
   const b = createBackend();
   const ov = b.call('getAssetOverview', false);

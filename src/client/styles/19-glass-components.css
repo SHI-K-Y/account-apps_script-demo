@@ -413,11 +413,6 @@
 :root:root .cc-entry-btn:hover .cc-entry-icon-box { background: var(--accent-soft); }
 :root:root .cc-entry-btn:hover .cc-entry-pill { background: color-mix(in srgb, var(--accent) var(--lg-tint-mix), var(--lg-tint-deepen)); color: var(--on); border-color: transparent; }
 
-.cc-month-label {
-  color: var(--lg-ink-secondary);
-  text-shadow: var(--lg-text-halo);
-  font-weight: 800;
-}
 .cc-card-tabs {
   --lg-tint: color-mix(in srgb, var(--accent) var(--lg-tint-mix), var(--lg-tint-deepen));
   --lg-seg-radius: var(--lg-radius-control);

@@ -8,20 +8,6 @@ function populateMonths() {
     if (month === state.data.selectedMonth) option.selected = true;
     select.appendChild(option);
   });
-
-  const ccSelect = document.getElementById('ccMonthSelect');
-  if (ccSelect) {
-    const targetCcMonth = ccState.month || state.data.selectedMonth;
-    ccSelect.innerHTML = '';
-    state.data.months.forEach(month => {
-      const option = document.createElement('option');
-      option.value = month;
-      option.textContent = month;
-      if (month === targetCcMonth) option.selected = true;
-      ccSelect.appendChild(option);
-    });
-    if (!ccState.month) ccState.month = targetCcMonth;
-  }
 }
 
 function renderAllChoices() {

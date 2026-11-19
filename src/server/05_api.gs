@@ -47,6 +47,7 @@ function apiRoutes_() {
     updateSettlementDate:   { handler: updateSettlementDate_, write: true },
     updateSettlementActual: { handler: updateSettlementActual_, form: true, write: true },
     clearSettlementActual:  { handler: clearSettlementActual_, write: true },
+    getCreditCardRecords:   { handler: getCreditCardRecords_ },
     markCreditCardPaid:     { handler: markCreditCardPaid_, form: true, write: true },
     batchMarkCreditCardPaid: { handler: batchMarkCreditCardPaid_, form: true, write: true },
 

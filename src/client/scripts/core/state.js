@@ -61,10 +61,11 @@ const AppState = {
     deleteTarget: null
   },
   creditCard: {
-    month: '',
     selectedCard: 'ALL',
     statusFilter: 'all',
     recordsByMonth: {},
+    skippedMonths: {},
+    loadingProgress: null,
     loading: false,
     busyRows: {},
     batchBusy: false,

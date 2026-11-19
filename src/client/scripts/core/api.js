@@ -20,7 +20,7 @@
 const Api = (function() {
   // 只讀取、不修改試算表的操作：可以安全地重試與設定逾時。
   const READ_ACTIONS = new Set([
-    'getInitialData', 'getRecentRecords', 'getFullRecords', 'searchRecords',
+    'getInitialData', 'getRecentRecords', 'getFullRecords', 'searchRecords', 'getCreditCardRecords',
     'getAssetOverview', 'getOverviewCharts', 'getSettingsOptions',
     'getFxLedgers', 'getFxLedgerData', 'getFxRates', 'getBudgetSettings'
   ]);

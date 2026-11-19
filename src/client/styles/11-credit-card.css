@@ -106,26 +106,6 @@
   transform: scale(0.95);
 }
 
-.cc-month-picker {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.cc-month-label {
-  font-size: 12.5px;
-  font-weight: 750;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.cc-month-select {
-  min-height: 38px;
-  padding: 7px 32px 7px 14px;
-  font-size: 14px;
-}
-
 .cc-content {
   padding: 0 0 16px;
 }
@@ -258,6 +238,15 @@
   gap: 10px;
   margin: 0 14px 12px;
   flex-wrap: wrap;
+}
+
+/* 讀取所有月份時的進度、略過的舊版面月份說明 */
+.cc-load-note {
+  margin: 0 14px 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .cc-status-filters {
@@ -670,12 +659,6 @@
     min-height: 36px;
   }
 
-  .cc-month-select {
-    min-height: 36px;
-    padding: 6px 28px 6px 12px;
-    font-size: 13.5px;
-  }
-
   .cc-card-tabs {
     margin: 0 10px 12px;
     gap: 6px;
@@ -706,6 +689,10 @@
   }
 
   .cc-toolbar {
+    margin: 0 10px 10px;
+  }
+
+  .cc-load-note {
     margin: 0 10px 10px;
   }
 
@@ -756,12 +743,6 @@
   }
 }
 
-@media (max-width: 360px) {
-  .cc-month-label {
-    display: none;
-  }
-}
-
 @media (min-width: 1024px) {
   #pageCreditCard .app {
     width: min(980px, 92%);
@@ -791,6 +772,10 @@
   }
 
   .cc-toolbar {
+    margin: 0 20px 14px;
+  }
+
+  .cc-load-note {
     margin: 0 20px 14px;
   }
 

@@ -335,95 +335,155 @@ if (srBackBtn) {
   });
 }
 
-var ccMonthSelect = document.getElementById('ccMonthSelect');
-if (ccMonthSelect) {
-  ccMonthSelect.addEventListener('change', function(e) {
-    ccState.month = e.target.value;
-    loadCreditCardMonth(ccState.month, false);
-  });
-}
-
 var ccRefreshBtn = document.getElementById('ccRefreshBtn');
 if (ccRefreshBtn) {
   ccRefreshBtn.addEventListener('click', function() {
-    var targetMonth = ccState.month || getMonth();
-    loadCreditCardMonth(targetMonth, true);
+    loadCreditCardAll(true);
   });
 }
 
-function openCreditCardReconciliation() {
-  var ccSelect = document.getElementById('ccMonthSelect');
-  if (!ccState.month) {
-    ccState.month = getMonth() || (state.data && state.data.selectedMonth) || getClientToday().currentMonth;
-  }
-  if (ccSelect && state.data && Array.isArray(state.data.months)) {
-    if (!ccSelect.options.length) {
-      populateMonths();
-    }
-    ccSelect.value = ccState.month;
-  }
-  loadCreditCardMonth(ccState.month, false);
+// 信用卡對帳會讀取所有月份工作表；每次向後端要幾個月份（避免單次呼叫太久而逾時）
+var CC_MONTHS_PER_BATCH = 6;
+var ccLoadSeq = 0;
+
+function ccBusyKey(month, row) {
+  return month + '#' + row;
 }
 
-function loadCreditCardMonth(month, forceRefresh) {
-  if (!month) return;
-  ccState.month = month;
-  var ccSelect = document.getElementById('ccMonthSelect');
-  if (ccSelect && ccSelect.value !== month) {
-    ccSelect.value = month;
-  }
+function getCcAllMonths() {
+  return (state.data && Array.isArray(state.data.months)) ? state.data.months.slice() : [];
+}
 
+// 把各月份的支出合併成一個清單（新月份在前），每筆加上所屬月份
+function collectCcRecords() {
+  var out = [];
+  getCcAllMonths().forEach(function(m) {
+    var list = ccState.recordsByMonth[m];
+    if (!Array.isArray(list)) return;
+    list.forEach(function(r) {
+      out.push(Object.assign({}, r, { month: m }));
+    });
+  });
+  return out;
+}
+
+// 「2026.11」+ 15 → 「11/15」
+function formatCcDate(month, day) {
+  var monthNum = parseInt(String(month || '').split(/\D+/)[1], 10);
+  var parsedDay = parseInt(day, 10);
+  var dayPart = !isNaN(parsedDay) ? String(parsedDay) : (day ? String(day).trim() : '');
+  if (!dayPart) return '未填';
+  return !isNaN(monthNum) ? (monthNum + '/' + dayPart) : (dayPart + '日');
+}
+
+function openCreditCardReconciliation() {
+  loadCreditCardAll(false);
+}
+
+/**
+ * 讀取所有月份的支出明細。
+ * forceRefresh=false 時只讀還沒有資料的月份（先用記憶體與本機快取）；
+ * onlyMonths 可限定只重新讀哪些月份（例如批次標記失敗後還原）。
+ */
+function loadCreditCardAll(forceRefresh, onlyMonths) {
   var container = document.getElementById('creditCardContent');
   if (!container) return;
+  if (!ccState.skippedMonths) ccState.skippedMonths = {};
 
-  if (!forceRefresh) {
-    if (Array.isArray(ccState.recordsByMonth[month])) {
-      renderCreditCardPage(month, ccState.recordsByMonth[month]);
-      return;
-    }
-    var cachedRecent = LocalCache.getRecent(month);
+  var months = Array.isArray(onlyMonths) ? onlyMonths.slice() : getCcAllMonths();
+  if (forceRefresh && !onlyMonths) ccState.skippedMonths = {};
+
+  var pending = [];
+  months.forEach(function(m) {
+    if (forceRefresh) { pending.push(m); return; }
+    if (Array.isArray(ccState.recordsByMonth[m]) || ccState.skippedMonths[m]) return;
+    var cachedRecent = LocalCache.getRecent(m);
     if (cachedRecent && Array.isArray(cachedRecent.fullExpenses)) {
-      ccState.recordsByMonth[month] = cachedRecent.fullExpenses;
-      renderCreditCardPage(month, cachedRecent.fullExpenses);
+      ccState.recordsByMonth[m] = cachedRecent.fullExpenses;
       return;
     }
+    pending.push(m);
+  });
+
+  if (!pending.length) {
+    renderCreditCardPage();
+    return;
   }
 
-  if (!Array.isArray(ccState.recordsByMonth[month])) {
-    container.innerHTML =
-      '<div class="overview-skeleton">' +
-        '<div class="skel-block skel-hero"></div>' +
-        '<div class="skel-block skel-row"></div>' +
-        '<div class="skel-block skel-row"></div>' +
-      '</div>';
-  }
+  var seq = ++ccLoadSeq;
+  var hadSkeleton = !collectCcRecords().length;
+  ccState.loadingProgress = { done: 0, total: pending.length };
+  renderCreditCardPage();
   setLoading(true);
 
-  Api.server
-    .withSuccessHandler(function(res) {
-      setLoading(false);
-      var records = (res && res.records) || (res && res.expenses) || [];
-      ccState.recordsByMonth[month] = records;
-      var hadSkeleton = Boolean(container.querySelector('.overview-skeleton'));
-      renderCreditCardPage(month, records);
-      if (hadSkeleton) Motion.revealCards(container);
-      if (forceRefresh) {
-        showToast('已重新讀取 ' + month + ' 信用卡消費明細', 'success');
-      }
-    })
-    .withFailureHandler(function(err) {
-      setLoading(false);
-      showServerError(err);
-    })
-    .getFullRecords(month, 'expense', Boolean(forceRefresh));
+  var batches = [];
+  for (var i = 0; i < pending.length; i += CC_MONTHS_PER_BATCH) {
+    batches.push(pending.slice(i, i + CC_MONTHS_PER_BATCH));
+  }
+  var failedMonths = [];
+
+  function finish() {
+    ccState.loadingProgress = null;
+    setLoading(false);
+    renderCreditCardPage();
+    if (hadSkeleton) Motion.revealCards(container);
+    if (failedMonths.length) {
+      showToast('有 ' + failedMonths.length + ' 個月份讀取失敗：' + failedMonths.join('、'), 'error');
+    } else if (forceRefresh && !onlyMonths) {
+      showToast('已重新讀取所有月份的信用卡消費明細', 'success');
+    }
+  }
+
+  function next(idx) {
+    if (seq !== ccLoadSeq) return;
+    if (idx >= batches.length) { finish(); return; }
+    var batch = batches[idx];
+    Api.call('getCreditCardRecords', batch, Boolean(forceRefresh))
+      .then(function(res) {
+        if (seq !== ccLoadSeq) return;
+        var byMonth = (res && res.recordsByMonth) || {};
+        Object.keys(byMonth).forEach(function(m) {
+          ccState.recordsByMonth[m] = byMonth[m] || [];
+        });
+        ((res && res.skippedMonths) || []).concat((res && res.missingMonths) || []).forEach(function(m) {
+          ccState.skippedMonths[m] = true;
+        });
+        failedMonths = failedMonths.concat((res && res.failedMonths) || []);
+        ccState.loadingProgress.done += batch.length;
+        renderCreditCardPage();
+        next(idx + 1);
+      })
+      .catch(function(err) {
+        if (seq !== ccLoadSeq) return;
+        ccState.loadingProgress = null;
+        renderCreditCardPage();
+        showServerError(err);
+      });
+  }
+  next(0);
 }
 
-function renderCreditCardPage(month, allExpenseRecords) {
+function renderCreditCardPage() {
   var container = document.getElementById('creditCardContent');
   if (!container) return;
 
+  var allExpenseRecords = collectCcRecords();
+  var progress = ccState.loadingProgress;
+
+  if (!allExpenseRecords.length && progress) {
+    if (!container.querySelector('.overview-skeleton')) {
+      container.innerHTML =
+        '<div class="overview-skeleton">' +
+          '<div class="skel-block skel-hero"></div>' +
+          '<div class="skel-block skel-row"></div>' +
+          '<div class="skel-block skel-row"></div>' +
+        '</div>';
+    }
+    return;
+  }
+
   var paymentOptions = (state.data && state.data.options && state.data.options.paymentMethods) || DEFAULT_OPTIONS_FALLBACK.paymentMethods;
-  var summary = CreditCardParser.collectCardsSummary(allExpenseRecords || [], paymentOptions);
+  var summary = CreditCardParser.collectCardsSummary(allExpenseRecords, paymentOptions);
 
   if (ccState.selectedCard !== 'ALL' && !summary.cardMap.has(ccState.selectedCard)) {
     ccState.selectedCard = 'ALL';
@@ -495,22 +555,28 @@ function renderCreditCardPage(month, allExpenseRecords) {
   }
   html += '</div>';
 
+  var skippedList = Object.keys(ccState.skippedMonths || {}).sort().reverse();
+  if (progress) {
+    html += '<div class="cc-load-note" role="status">正在讀取所有月份的明細…（' + progress.done + '/' + progress.total + '）</div>';
+  } else if (skippedList.length) {
+    html += '<div class="cc-load-note">以下月份的工作表是舊版面，未納入對帳：' + escHtml(skippedList.join('、')) + '</div>';
+  }
+
   html += '<div class="ov-card cc-tx-card">';
 
   if (!filteredRecords.length) {
     var emptyMsg = activeScope.count === 0
-      ? '本月尚無此信用卡的消費紀錄。'
+      ? '尚無此信用卡的消費紀錄。'
       : (ccState.statusFilter === 'unpaid' ? '目前沒有未繳帳單。' : '沒有符合的消費明細。');
     html += '<div class="empty" style="padding:28px 12px;">' + escHtml(emptyMsg) + '</div>';
   } else {
     html += '<div class="cc-tx-list">';
 
     filteredRecords.forEach(function(rec) {
-      var parsedDay = parseInt(rec.day, 10);
-      var dayText = !isNaN(parsedDay) ? (parsedDay + '日') : (rec.day ? (rec.day + '日') : '未填');
+      var dayText = formatCcDate(rec.month, rec.day);
       var itemDisplayHtml = rec.item ? itemIconLabelHtml(rec.item) : '未填';
       var isPaid = rec.isPaid;
-      var isRowBusy = Boolean(ccState.busyRows[rec.row]);
+      var isRowBusy = Boolean(ccState.busyRows[ccBusyKey(rec.month, rec.row)]);
       var hasNote = Boolean(rec.note && String(rec.note).trim() !== '');
 
       var cardDisplay = rec.ccInfo.cardName;
@@ -523,7 +589,7 @@ function renderCreditCardPage(month, allExpenseRecords) {
         subText = rec.ccInfo.channelLabel;
       }
 
-      html += '<div class="cc-tx-item' + (isPaid ? ' is-paid' : '') + '" data-row="' + rec.row + '">' +
+      html += '<div class="cc-tx-item' + (isPaid ? ' is-paid' : '') + '" data-month="' + escAttr(rec.month) + '" data-row="' + rec.row + '">' +
                 '<div class="cc-tx-day">' + escHtml(dayText) + '</div>' +
                 '<div class="cc-tx-main">' +
                   '<div class="cc-tx-title-row">' +
@@ -534,7 +600,7 @@ function renderCreditCardPage(month, allExpenseRecords) {
                 '</div>' +
                 '<div class="cc-tx-right">' +
                   '<div class="cc-tx-amount">$' + ovFmt(Math.abs(rec.numericAmount)) + '</div>' +
-                  '<button type="button" class="cc-paid-btn' + (isPaid ? ' already-paid' : '') + '" data-row="' + rec.row + '" data-paid="' + (isPaid ? 'O' : 'X') + '"' + (isRowBusy ? ' disabled' : '') + ' title="' + (isPaid ? '點擊取消已繳費狀態' : '點擊標記為已繳費') + '" aria-label="' + (isPaid ? '已繳費，點擊取消' : '未繳費，點擊標記已繳') + '">' +
+                  '<button type="button" class="cc-paid-btn' + (isPaid ? ' already-paid' : '') + '" data-month="' + escAttr(rec.month) + '" data-row="' + rec.row + '" data-paid="' + (isPaid ? 'O' : 'X') + '"' + (isRowBusy ? ' disabled' : '') + ' title="' + (isPaid ? '點擊取消已繳費狀態' : '點擊標記為已繳費') + '" aria-label="' + (isPaid ? '已繳費，點擊取消' : '未繳費，點擊標記已繳') + '">' +
                     '<span class="uv-btn-sign" aria-hidden="true">' +
                       (isRowBusy
                         ? '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-dasharray="28" stroke-dashoffset="10" stroke-linecap="round"/></svg>'
@@ -556,14 +622,14 @@ function renderCreditCardPage(month, allExpenseRecords) {
   container.querySelectorAll('.cc-card-tab').forEach(function(tabBtn) {
     tabBtn.addEventListener('click', function() {
       ccState.selectedCard = tabBtn.dataset.card || 'ALL';
-      renderCreditCardPage(month, ccState.recordsByMonth[month] || []);
+      renderCreditCardPage();
     });
   });
 
   container.querySelectorAll('.cc-filter-btn').forEach(function(filterBtn) {
     filterBtn.addEventListener('click', function() {
       ccState.statusFilter = filterBtn.dataset.sfilter || 'all';
-      renderCreditCardPage(month, ccState.recordsByMonth[month] || []);
+      renderCreditCardPage();
     });
   });
 
@@ -573,45 +639,68 @@ function renderCreditCardPage(month, allExpenseRecords) {
       var rowNum = Number(paidBtn.dataset.row);
       var currentPaid = paidBtn.dataset.paid;
       var nextPaid = (currentPaid === 'O') ? 'X' : 'O';
-      toggleSingleCreditCardPaid(month, rowNum, nextPaid);
+      toggleSingleCreditCardPaid(paidBtn.dataset.month, rowNum, nextPaid);
     });
   });
 
   var batchBtn = document.getElementById('ccBatchMarkPaidBtn');
   if (batchBtn) {
     batchBtn.addEventListener('click', function() {
-      var unpaidRows = (activeScope.records || [])
-        .filter(function(r) { return !r.isPaid; })
-        .map(function(r) { return r.row; });
-      if (!unpaidRows.length) return;
-      if (!confirm('確定要將「' + activeCardTitle + '」的 ' + unpaidRows.length + ' 筆未繳明細，全數標記為【已繳費】嗎？')) {
+      if (ccState.loadingProgress) {
+        showToast('還在讀取其他月份的明細，請稍候再操作', 'error');
         return;
       }
-      batchMarkUnpaidRecords(month, unpaidRows);
+      var unpaid = (activeScope.records || []).filter(function(r) { return !r.isPaid; });
+      if (!unpaid.length) return;
+      var rowsByMonth = {};
+      unpaid.forEach(function(r) {
+        (rowsByMonth[r.month] = rowsByMonth[r.month] || []).push(r.row);
+      });
+      if (!confirm('確定要將「' + activeCardTitle + '」的 ' + unpaid.length + ' 筆未繳明細，全數標記為【已繳費】嗎？')) {
+        return;
+      }
+      batchMarkUnpaidRecords(rowsByMonth);
     });
   }
 }
 
 // 組出「11/15的午餐共120元」這種描述，讓 toast 指出是哪一筆消費
-// month 格式為「2026.11」
 function describeCreditCardRecord(month, rec) {
   if (!rec) return '這筆消費';
-  var monthNum = parseInt(String(month || '').split(/\D+/)[1], 10);
-  var parsedDay = parseInt(rec.day, 10);
-  var dayPart = !isNaN(parsedDay) ? String(parsedDay) : (rec.day ? String(rec.day).trim() : '');
-  var dayText = !dayPart
-    ? '未填日期'
-    : (!isNaN(monthNum) ? (monthNum + '/' + dayPart) : (dayPart + '日'));
+  var dayText = formatCcDate(month, rec.day);
+  if (dayText === '未填') dayText = '未填日期';
   var itemText = rec.item ? String(rec.item).trim() : '未填項目';
   var amountText = ovFmt(Math.abs(FinanceUtils.parse(rec.amount)));
   return dayText + '的' + itemText + '共' + amountText + '元';
 }
 
+// 寫入成功後，用後端回傳的該月最新資料更新畫面與快取
+function applyCreditCardMutationResult(month, res) {
+  if (res && res.recent) {
+    LocalCache.saveRecent(month, res.recent);
+    if (Array.isArray(res.recent.fullExpenses)) {
+      ccState.recordsByMonth[month] = res.recent.fullExpenses;
+    }
+    if (month === getMonth()) {
+      renderRecent(res.recent);
+    }
+  }
+  LocalCache.invalidateOverview(month);
+}
+
+function afterCreditCardMutations() {
+  LocalCache.saveSettlement(null);
+  if (typeof window.__invalidateOverviewFlag === 'function') {
+    window.__invalidateOverviewFlag();
+  }
+}
+
 function toggleSingleCreditCardPaid(month, rowNum, targetPaid) {
-  if (!month || !rowNum || ccState.busyRows[rowNum]) return;
+  var busyKey = ccBusyKey(month, rowNum);
+  if (!month || !rowNum || ccState.busyRows[busyKey]) return;
 
   state.mutationVersion++;
-  ccState.busyRows[rowNum] = true;
+  ccState.busyRows[busyKey] = true;
 
   var monthRecords = ccState.recordsByMonth[month] || [];
   var prevPaid = 'X';
@@ -624,80 +713,75 @@ function toggleSingleCreditCardPaid(month, rowNum, targetPaid) {
     }
   });
   var toastDesc = describeCreditCardRecord(month, targetRec);
-  renderCreditCardPage(month, monthRecords);
+  renderCreditCardPage();
 
   Api.server
     .withSuccessHandler(function(res) {
-      delete ccState.busyRows[rowNum];
-      if (res && res.recent) {
-        LocalCache.saveRecent(month, res.recent);
-        if (Array.isArray(res.recent.fullExpenses)) {
-          ccState.recordsByMonth[month] = res.recent.fullExpenses;
-        }
-        if (month === getMonth()) {
-          renderRecent(res.recent);
-        }
-      }
-      LocalCache.invalidateOverview(month);
-      LocalCache.saveSettlement(null);
-      if (typeof window.__invalidateOverviewFlag === 'function') {
-        window.__invalidateOverviewFlag();
-      }
-      renderCreditCardPage(month, ccState.recordsByMonth[month] || monthRecords);
+      delete ccState.busyRows[busyKey];
+      applyCreditCardMutationResult(month, res);
+      afterCreditCardMutations();
+      renderCreditCardPage();
       showToast(toastDesc + '，' + (targetPaid === 'O' ? '已繳費' : '未繳費'), 'success');
     })
     .withFailureHandler(function(err) {
-      delete ccState.busyRows[rowNum];
+      delete ccState.busyRows[busyKey];
       monthRecords.forEach(function(r) {
         if (Number(r.row) === Number(rowNum)) {
           r.paid = prevPaid;
         }
       });
-      renderCreditCardPage(month, monthRecords);
+      renderCreditCardPage();
       showServerError(err);
     })
     .markCreditCardPaid({ month: month, row: rowNum, paid: targetPaid });
 }
 
-function batchMarkUnpaidRecords(month, rows) {
-  if (!month || !rows || !rows.length || ccState.batchBusy) return;
+// rowsByMonth：{ '2026.11': [5, 8], '2026.10': [12] }，每個月份各送一次，依序執行
+function batchMarkUnpaidRecords(rowsByMonth) {
+  var months = Object.keys(rowsByMonth || {}).filter(function(m) {
+    return Array.isArray(rowsByMonth[m]) && rowsByMonth[m].length;
+  });
+  if (!months.length || ccState.batchBusy) return;
 
   state.mutationVersion++;
   ccState.batchBusy = true;
 
-  var monthRecords = ccState.recordsByMonth[month] || [];
-  var rowSet = new Set(rows.map(Number));
-  monthRecords.forEach(function(r) {
-    if (rowSet.has(Number(r.row))) {
-      r.paid = 'O';
-    }
+  var total = 0;
+  months.forEach(function(m) {
+    var rowSet = new Set(rowsByMonth[m].map(Number));
+    total += rowSet.size;
+    (ccState.recordsByMonth[m] || []).forEach(function(r) {
+      if (rowSet.has(Number(r.row))) r.paid = 'O';
+    });
   });
-  renderCreditCardPage(month, monthRecords);
+  renderCreditCardPage();
 
-  Api.server
-    .withSuccessHandler(function(res) {
+  var doneCount = 0;
+  function next(idx) {
+    if (idx >= months.length) {
       ccState.batchBusy = false;
-      if (res && res.recent) {
-        LocalCache.saveRecent(month, res.recent);
-        if (Array.isArray(res.recent.fullExpenses)) {
-          ccState.recordsByMonth[month] = res.recent.fullExpenses;
-        }
-        if (month === getMonth()) {
-          renderRecent(res.recent);
-        }
-      }
-      LocalCache.invalidateOverview(month);
-      LocalCache.saveSettlement(null);
-      if (typeof window.__invalidateOverviewFlag === 'function') {
-        window.__invalidateOverviewFlag();
-      }
-      renderCreditCardPage(month, ccState.recordsByMonth[month] || monthRecords);
-      showToast('已成功將 ' + rows.length + ' 筆信用卡消費標記為【已繳費 (O)】！', 'success');
-    })
-    .withFailureHandler(function(err) {
-      ccState.batchBusy = false;
-      loadCreditCardMonth(month, true);
-      showServerError(err);
-    })
-    .batchMarkCreditCardPaid({ month: month, rows: rows, paid: 'O' });
+      afterCreditCardMutations();
+      renderCreditCardPage();
+      showToast('已成功將 ' + total + ' 筆信用卡消費標記為【已繳費 (O)】！', 'success');
+      return;
+    }
+    var month = months[idx];
+    var rows = rowsByMonth[month];
+    Api.call('batchMarkCreditCardPaid', { month: month, rows: rows, paid: 'O' })
+      .then(function(res) {
+        applyCreditCardMutationResult(month, res);
+        doneCount += rows.length;
+        next(idx + 1);
+      })
+      .catch(function(err) {
+        ccState.batchBusy = false;
+        if (doneCount) afterCreditCardMutations();
+        // 還沒寫入成功的月份重新讀取，畫面才會和試算表一致
+        var remaining = months.slice(idx);
+        remaining.forEach(function(m) { delete ccState.recordsByMonth[m]; });
+        loadCreditCardAll(true, remaining);
+        showServerError(err);
+      });
+  }
+  next(0);
 }

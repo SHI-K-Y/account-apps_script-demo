@@ -411,3 +411,47 @@ function batchMarkCreditCardPaid_(form) {
     };
   });
 }
+
+/* --------------------------- 信用卡對帳：讀取多個月份 --------------------------- */
+
+const CC_MAX_MONTHS_PER_BATCH_ = 12;
+
+/**
+ * 一次讀取多個月份工作表的支出明細，給信用卡對帳頁合併顯示。
+ * 前端會把所有月份切成每批最多 CC_MAX_MONTHS_PER_BATCH_ 個依序呼叫，避免單次執行過久。
+ * 舊版面的工作表（欄位配置不同）會略過，回傳在 skippedMonths。
+ */
+function getCreditCardRecords_(months, forceRefresh) {
+  if (!Array.isArray(months) || !months.length) throw new Error('請指定要讀取的月份。');
+  if (months.length > CC_MAX_MONTHS_PER_BATCH_) {
+    throw new Error('一次最多讀取 ' + CC_MAX_MONTHS_PER_BATCH_ + ' 個月份。');
+  }
+  const list = [];
+  months.forEach(function (m) {
+    validateMonthFormat_(m);
+    if (list.indexOf(m) === -1) list.push(m);
+  });
+
+  const force = Boolean(forceRefresh);
+  let ss = null;
+  const getSs = function () { return ss || (ss = getSpreadsheet_()); };
+  const layouts = classifyMonthLayouts_(getSs, list, force);
+
+  const recordsByMonth = {};
+  const failedMonths = [];
+  layouts.current.forEach(function (month) {
+    try {
+      const monthData = force ? getMonthData_(getSs(), month, true) : getMonthData_(null, month, false);
+      recordsByMonth[month] = (monthData && monthData.expenses) || [];
+    } catch (e) {
+      failedMonths.push(month);
+    }
+  });
+
+  return {
+    recordsByMonth: recordsByMonth,
+    skippedMonths: layouts.legacy.concat(layouts.unknown),
+    missingMonths: layouts.missing,
+    failedMonths: failedMonths,
+  };
+}
