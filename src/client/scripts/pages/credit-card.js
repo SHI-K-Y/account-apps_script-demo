@@ -592,6 +592,21 @@ function renderCreditCardPage(month, allExpenseRecords) {
   }
 }
 
+// 組出「11/15的午餐共120元」這種描述，讓 toast 指出是哪一筆消費
+// month 格式為「2026.11」
+function describeCreditCardRecord(month, rec) {
+  if (!rec) return '這筆消費';
+  var monthNum = parseInt(String(month || '').split(/\D+/)[1], 10);
+  var parsedDay = parseInt(rec.day, 10);
+  var dayPart = !isNaN(parsedDay) ? String(parsedDay) : (rec.day ? String(rec.day).trim() : '');
+  var dayText = !dayPart
+    ? '未填日期'
+    : (!isNaN(monthNum) ? (monthNum + '/' + dayPart) : (dayPart + '日'));
+  var itemText = rec.item ? String(rec.item).trim() : '未填項目';
+  var amountText = ovFmt(Math.abs(FinanceUtils.parse(rec.amount)));
+  return dayText + '的' + itemText + '共' + amountText + '元';
+}
+
 function toggleSingleCreditCardPaid(month, rowNum, targetPaid) {
   if (!month || !rowNum || ccState.busyRows[rowNum]) return;
 
@@ -600,12 +615,15 @@ function toggleSingleCreditCardPaid(month, rowNum, targetPaid) {
 
   var monthRecords = ccState.recordsByMonth[month] || [];
   var prevPaid = 'X';
+  var targetRec = null;
   monthRecords.forEach(function(r) {
     if (Number(r.row) === Number(rowNum)) {
       prevPaid = r.paid || 'X';
       r.paid = targetPaid;
+      targetRec = r;
     }
   });
+  var toastDesc = describeCreditCardRecord(month, targetRec);
   renderCreditCardPage(month, monthRecords);
 
   Api.server
@@ -626,12 +644,7 @@ function toggleSingleCreditCardPaid(month, rowNum, targetPaid) {
         window.__invalidateOverviewFlag();
       }
       renderCreditCardPage(month, ccState.recordsByMonth[month] || monthRecords);
-      showToast(
-        targetPaid === 'O'
-          ? ('已將第 ' + rowNum + ' 列標記為【已繳費 (O)】')
-          : ('已將第 ' + rowNum + ' 列改回【未繳費 (X)】'),
-        'success'
-      );
+      showToast(toastDesc + '，' + (targetPaid === 'O' ? '已繳費' : '未繳費'), 'success');
     })
     .withFailureHandler(function(err) {
       delete ccState.busyRows[rowNum];
