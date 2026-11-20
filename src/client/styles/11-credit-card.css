@@ -83,7 +83,6 @@
   border-radius: var(--lg-radius-capsule);
   border: 1px solid var(--glass-border);
   background: var(--glass-chip);
-  color: var(--ink);
   font-size: 13.5px;
   font-weight: 800;
   min-height: 38px;
@@ -111,7 +110,6 @@
 .cc-card-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
   margin: 0 14px 14px;
 }
 
@@ -120,14 +118,9 @@
   align-items: center;
   gap: 7px;
   padding: 9px 15px;
-  border-radius: var(--lg-radius-control);
-  border: 1.5px solid var(--glass-border-subtle);
-  background: var(--glass-surface);
-  color: var(--ink);
   font-size: 14px;
   font-weight: 750;
   cursor: pointer;
-  box-shadow: var(--shadow-card);
   transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 
@@ -227,7 +220,6 @@
 .cc-stat-label {
   font-size: 12px;
   font-weight: 700;
-  color: var(--muted);
   white-space: nowrap;
 }
 
@@ -240,14 +232,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.cc-stat-val.unpaid {
-  color: var(--exp);
-}
-
-.cc-stat-val.paid {
-  color: var(--inc);
 }
 
 .cc-toolbar {
@@ -273,15 +257,11 @@
   align-items: center;
   gap: 4px;
   padding: 4px;
-  background: var(--glass-chip);
-  border: 1px solid var(--glass-border-subtle);
-  border-radius: var(--lg-radius-control);
 }
 
 .cc-filter-btn {
   border: 0;
   background: transparent;
-  color: var(--muted);
   font-size: 13px;
   font-weight: 700;
   padding: 6px 12px;
@@ -289,10 +269,6 @@
   cursor: pointer;
   transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
   white-space: nowrap;
-}
-
-.cc-filter-btn:hover:not(.active) {
-  color: var(--ink);
 }
 
 .cc-filter-btn.active {
@@ -313,20 +289,11 @@
   align-items: center;
   gap: 5px;
   padding: 7px 14px;
-  border-radius: var(--lg-radius-control);
-  border: 1px solid var(--inc-border);
-  background: var(--inc-gradient);
   color: var(--on);
   font-size: 13px;
   font-weight: 800;
-  box-shadow: 0 4px 12px -2px var(--inc-glow);
   cursor: pointer;
   transition: transform 0.15s ease, filter 0.15s ease;
-}
-
-.cc-batch-paid-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  filter: brightness(1.05);
 }
 
 .cc-batch-paid-btn:disabled {
@@ -426,12 +393,7 @@
   font-size: 16.5px;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
-  color: var(--exp);
   white-space: nowrap;
-}
-
-.cc-tx-item.is-paid .cc-tx-amount {
-  color: var(--inc);
 }
 
 /* ══════════════════════════════════════════════════

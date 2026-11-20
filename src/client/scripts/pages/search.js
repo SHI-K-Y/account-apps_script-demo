@@ -785,8 +785,8 @@ const SearchPage = (function () {
     };
   }
 
-  function buildSearchItem(rec, i, ident) {
-    const el = buildRecentItem(rec, rec.type, searchItemOpts(rec), ident);
+  function buildSearchItem(rec) {
+    const el = buildRecentItem(rec, rec.type, searchItemOpts(rec));
     el.classList.add('sr-item');
     if (rec.type === 'income') el.classList.add('income-rec');
     return el;
@@ -803,12 +803,13 @@ const SearchPage = (function () {
     ListRender.setHtml(section.querySelector('.sr-group-head'), groupHeadHtml(month));
     const list = section.querySelector('.sr-list');
     bindRecentList(list, SEARCH_LIST_HANDLERS);
+    const look = makeItemLook();
     ListRender.reconcile(list, recordsOfMonth(month), {
       key: function (rec) { return recentItemKey(rec, rec.type); },
       ident: function (rec) { return recentItemIdent(rec, rec.type); },
-      sig: function (rec, i, ident) { return recentItemSig(rec, rec.type, searchItemOpts(rec), ident); },
+      sig: function (rec, i, ident) { return recentItemSig(rec, rec.type, searchItemOpts(rec), ident, look); },
       create: buildSearchItem,
-      update: function (el, rec, i, ident) { patchRecentItem(el, rec, rec.type, searchItemOpts(rec), ident); },
+      update: function (el, rec) { patchRecentItem(el, rec, rec.type, searchItemOpts(rec)); },
       place: function (el, rec) { el._record = rec; },
       chunk: { listId: (S.token || 0) + '|' + month },
     });

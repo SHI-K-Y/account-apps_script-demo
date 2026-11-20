@@ -1,8 +1,10 @@
 const ICON_NAME_RE = /^[a-z0-9-]+$/;
 const ICON_VALUE_PREFIX = 'ph:';
 
-/* 圖示字型：頁面只內嵌專案用到的圖示（建置時產生的 <style id="phosphorSubset">）。
- * 若要顯示的圖示不在其中（例如舊資料存了已移出清單的圖示），就補載完整的 Phosphor 樣式表。 */
+/* 圖示字型：頁面只內嵌專案用到的圖示（建置時產生的 <style id="phosphorSubset">，字型裁成子集後以 data URI 內嵌）。
+ * 若要顯示的圖示不在其中（例如舊資料存了已移出清單的圖示、或用到沒有內嵌的 fill 粗細），就補載完整的 Phosphor 樣式表。
+ * 補載的樣式表（@import 到 icons 層）插在子集「前面」：子集的 @font-face 帶 unicode-range、又比較晚定義，子集內的字元仍然用內嵌字型，
+ * 不會因為補載的完整字型還在下載（font-display: block）而讓已經顯示的圖示暫時空白。 */
 const IconFont = (function() {
   let known = null;
   let fullRequested = false;
@@ -11,13 +13,14 @@ const IconFont = (function() {
     const set = new Set();
     const el = document.getElementById('phosphorSubset');
     if (!el || !el.sheet) return null;
-    try {
-      const rules = el.sheet.cssRules;
+    const visit = function(rules) {
       for (let i = 0; i < rules.length; i++) {
-        const m = /\.ph-([a-z0-9-]+)::?before/.exec(rules[i].selectorText || '');
-        if (m) set.add(m[1]);
+        if (rules[i].cssRules && !rules[i].selectorText) { visit(rules[i].cssRules); continue; }
+        const m = /\.(ph(?:-fill)?)\.ph-([a-z0-9-]+)::?before/.exec(rules[i].selectorText || '');
+        if (m) set.add(m[1] + ':' + m[2]);
       }
-    } catch (e) { return null; }
+    };
+    try { visit(el.sheet.cssRules); } catch (e) { return null; }
     return set.size ? set : null;
   }
 
@@ -27,18 +30,20 @@ const IconFont = (function() {
     const el = document.getElementById('phosphorSubset');
     const cdn = el && el.dataset.cdn;
     if (!cdn) return;
-    ['regular', 'fill'].forEach(function(weight) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = cdn + weight + '/style.css';
-      document.head.appendChild(link);
-    });
+    // 放進 icons 層（@layer，見 partials/head.html）：沒分層的樣式表會蓋過整個主樣式表
+    const style = document.createElement('style');
+    style.dataset.iconFallback = '';
+    style.textContent = ['regular', 'fill'].map(function(weight) {
+      return '@import url("' + cdn + weight + '/style.css") layer(icons);';
+    }).join('\n');
+    el.parentNode.insertBefore(style, el);
   }
 
-  function ensure(name) {
+  function ensure(name, weight) {
     if (fullRequested) return;
     if (!known) known = readKnown();
-    if (known && !known.has(name)) loadFull();
+    const base = weight === 'fill' ? 'ph-fill' : 'ph';
+    if (known && !known.has(base + ':' + name)) loadFull();
   }
 
   return { ensure: ensure, loadFull: loadFull };
@@ -46,7 +51,7 @@ const IconFont = (function() {
 
 function iconHtml(name, weight = 'regular', extraClass = '') {
   const n = ICON_NAME_RE.test(name || '') ? name : 'tag';
-  IconFont.ensure(n);
+  IconFont.ensure(n, weight);
   const base = weight === 'fill' ? 'ph-fill' : 'ph';
   return '<i class="' + base + ' ph-' + n + (extraClass ? ' ' + extraClass : '') + '" aria-hidden="true" data-icon="' + n + '"></i>';
 }

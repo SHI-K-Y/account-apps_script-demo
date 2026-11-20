@@ -604,24 +604,73 @@ function bindRecentList(container, opts) {
 }
 
 /** 列的 key：同步中的列用 tempId，其餘用「月份｜類型｜列號」。 */
-function recentItemKey(record, type) {
+function recentItemKey(record, type, month) {
   if (record && record.tempId && record.isPending) return 't:' + record.tempId;
-  return (record.month || getMonth()) + '|' + type + '|' + record.row;
+  return (record.month || month || getMonth()) + '|' + type + '|' + record.row;
 }
 
-/** 列的內容識別：刪除後列號往上遞補、或同步中變成已同步時，用它認回同一個節點。 */
-function recentItemIdent(record, type) {
-  const d = parseInt(record.day, 10);
-  return [record.month || getMonth(), type, isNaN(d) ? String(record.day || '') : d, record.item || '', record.category || '',
-    record.payment || '', record.paid || '', parseAmount(record.amount), record.note || ''].join('\u0001');
+/**
+ * 列的內容識別：刪除後列號往上遞補、或同步中變成已同步時，用它認回同一個節點。
+ * 每記一筆都要對每一列算一次，所以用字串串接、數字直接轉字串（伺服器回傳的日期與金額本來就是數字），
+ * 只有同步中的紀錄（表單字串）才走 parseInt／parseAmount。
+ */
+function recentItemIdent(record, type, month) {
+  const day = typeof record.day === 'number' ? record.day : parseInt(record.day, 10);
+  const amount = typeof record.amount === 'number' ? record.amount : parseAmount(record.amount);
+  return (record.month || month || getMonth()) + '\u0001' + type + '\u0001' + (isNaN(day) ? String(record.day || '') : day) + '\u0001' +
+    (record.item || '') + '\u0001' + (record.category || '') + '\u0001' + (record.payment || '') + '\u0001' +
+    (record.paid || '') + '\u0001' + amount + '\u0001' + (record.note || '');
+}
+
+/**
+ * 項目的圖示與顯示名稱：getItemIcon 要拆 emoji、查自訂圖示、再跑好幾個正規表示式，
+ * 一份清單裡的項目名稱只有幾種，所以每次渲染建一個查表，同一個名稱只算一次（不跨渲染保留，設定改了馬上生效）。
+ */
+function makeItemLook() {
+  const memo = new Map();
+  return name => {
+    const key = name == null ? '' : String(name);
+    let v = memo.get(key);
+    if (!v) {
+      v = (getItemIcon(name) || '') + '\u0003' + itemDisplayName(name);
+      memo.set(key, v);
+    }
+    return v;
+  };
+}
+
+// 記一筆時清單會重繪兩次（同步中、伺服器回來），每次都要確認幾十列「有沒有變」：
+// 直接比對欄位，不必每列組字串。recentItemIdent／recentItemSig 的字串版本只在 key 對不上、或搜尋頁才用。
+function recentDayOf(record) {
+  const d = typeof record.day === 'number' ? record.day : parseInt(record.day, 10);
+  return isNaN(d) ? String(record.day || '') : d;
+}
+function recentAmountOf(record) {
+  return typeof record.amount === 'number' ? record.amount : parseAmount(record.amount);
+}
+/** 兩筆紀錄的內容是否相同（等同 recentItemIdent 相同；呼叫端已確保月份與類型相同） */
+function recentSameContent(a, b) {
+  return a === b || (a.item === b.item && recentDayOf(a) === recentDayOf(b) && recentAmountOf(a) === recentAmountOf(b) &&
+    (a.category || '') === (b.category || '') && (a.payment || '') === (b.payment || '') &&
+    (a.paid || '') === (b.paid || '') && (a.note || '') === (b.note || ''));
+}
+/** 節點目前畫的（el._lrItem）和這一筆完全相同：內容、列號、同步狀態、項目圖示與名稱都一樣 */
+function recentRowUnchanged(el, record, look) {
+  const prev = el._lrItem;
+  if (!prev) return false;
+  if (prev !== record && !(recentSameContent(prev, record) && String(prev.row) === String(record.row) &&
+    (prev.tempId || '') === (record.tempId || '') && Boolean(prev.isPending) === Boolean(record.isPending))) return false;
+  return el._rv && el._rv.vals && el._rv.vals.lk === look(record.item);
 }
 
 /** 畫面上會用到的所有內容；和節點上次的簽章相同就完全不動。 */
-function recentItemSig(record, type, opts, ident) {
-  const o = opts || {};
-  return [ident === undefined ? recentItemIdent(record, type) : ident, record.row, record.tempId || '', record.isPending ? 1 : 0,
-    getItemIcon(record.item) || '', itemDisplayName(record.item), o.locked ? 1 : 0, o.lockedHint || '',
-    o.terms && o.terms.length ? o.terms.join(' ') : '', o.dateLabel || ''].join('\u0002');
+function recentItemSig(record, type, opts, ident, look) {
+  const base = (ident === undefined ? recentItemIdent(record, type) : ident) + '\u0002' + record.row + '\u0002' +
+    (record.tempId || '') + '\u0002' + (record.isPending ? 1 : 0) + '\u0002' +
+    (look ? look(record.item) : (getItemIcon(record.item) || '') + '\u0003' + itemDisplayName(record.item));
+  if (!opts) return base;
+  return base + '\u0002' + (opts.locked ? 1 : 0) + '\u0002' + (opts.lockedHint || '') + '\u0002' +
+    (opts.terms && opts.terms.length ? opts.terms.join(' ') : '') + '\u0002' + (opts.dateLabel || '');
 }
 
 function renderRecentList(containerId, records, type, isFiltered) {
@@ -631,17 +680,20 @@ function renderRecentList(containerId, records, type, isFiltered) {
   const filterInput = document.getElementById(containerId === 'recentIncomes' ? 'incomeFilterDate' : 'expenseFilterDate');
   const recState = state.recentState && state.recentState[type];
   const isFull = Boolean(recState && recState.isFull);
-  const listKey = [getMonth(), filterInput ? filterInput.value : '', isFull ? 'full' : 'top',
+  const month = getMonth();   // 讀一次就好（每列都讀會變成每列一次 DOM 存取）
+  const listKey = [month, filterInput ? filterInput.value : '', isFull ? 'full' : 'top',
     (records && records.length) ? 'items' : 'empty'].join('|');
   const shouldStagger = container.dataset.listKey !== listKey;
   if (shouldStagger) container.dataset.listKey = listKey;
 
+  const look = makeItemLook();
   const res = ListRender.reconcile(container, records || [], {
-    key: r => recentItemKey(r, type),
-    ident: r => recentItemIdent(r, type),
-    sig: (r, i, ident) => recentItemSig(r, type, null, ident),
-    create: (r, i, ident) => buildRecentItem(r, type, null, ident),
-    update: (el, r, i, ident) => patchRecentItem(el, r, type, null, ident),
+    key: r => recentItemKey(r, type, month),
+    ident: r => recentItemIdent(r, type, month),
+    identEq: (el, r) => recentSameContent(el._lrItem, r),
+    same: (el, r) => recentRowUnchanged(el, r, look),
+    create: r => buildRecentItem(r, type),
+    update: (el, r) => patchRecentItem(el, r, type),
     place: (el, r) => { el._record = r; },
     empty: isFiltered
       ? '<div class="empty">該日期尚無交易紀錄。</div>'
@@ -772,7 +824,7 @@ function playSubmitConfirm(btn) {
 
 // 明細列的骨架只組一次，之後每列 cloneNode（P06：不必每列 createElement 十幾次、再解析兩次按鈕圖示的 HTML）
 let recentItemTemplate = null;
-function buildRecentItem(record, type, opts, ident) {
+function buildRecentItem(record, type, opts) {
   if (!recentItemTemplate) {
     recentItemTemplate = document.createElement('div');
     recentItemTemplate.className = 'recent-item';
@@ -795,7 +847,7 @@ function buildRecentItem(record, type, opts, ident) {
     day: day, main: main, strong: main.firstChild, small: main.lastChild, amount: right.firstChild,
     edit: actions.firstChild, del: actions.lastChild, dateEl: null,
   };
-  patchRecentItem(item, record, type, opts, ident);
+  patchRecentItem(item, record, type, opts);
   return item;
 }
 
@@ -815,9 +867,8 @@ function setRecentActionState(btn, cache, key, enabled, hint, activeLabel) {
  * 只更新有變的部分（P06）：重繪時沿用同一個節點，日期、項目、明細、金額、按鈕狀態各自比對上次的值，
  * 相同就不碰 DOM。修改／刪除的點擊由 bindRecentList 委派處理。
  */
-function patchRecentItem(item, record, type, opts, ident) {
+function patchRecentItem(item, record, type, opts) {
   opts = opts || {};
-  if (ident === undefined) ident = recentItemIdent(record, type);
   const v = item._rv;
   const prev = v.vals || (v.vals = {});
   const terms = opts.terms && opts.terms.length ? opts.terms : null;
@@ -825,11 +876,10 @@ function patchRecentItem(item, record, type, opts, ident) {
   const locked = Boolean(opts.locked);
   const pending = Boolean(record.isPending);
 
-  if (prev.ident !== undefined && prev.ident !== ident) {
+  if (item._record && item._record !== record && !recentSameContent(item._record, record)) {
     // 換成另一筆內容時收起手機上展開的明細（以前整份重建也會收起）
     item.classList.remove('is-open');
   }
-  prev.ident = ident;
   item._recentType = type;
   if (item.classList.contains('is-pending') !== pending) item.classList.toggle('is-pending', pending);
   const rowStr = String(record.row);
@@ -843,13 +893,28 @@ function patchRecentItem(item, record, type, opts, ident) {
   const parsedDay = parseInt(record.day, 10);
   ListRender.setText(v.day, !isNaN(parsedDay) ? `${parsedDay}日` : (record.day ? `${record.day}日` : '未填'));
 
+  // 項目名稱（含圖示）與「同步中…」標記分開更新：同步完成時只拿掉標記，不重建名稱
   const itemIcon = getItemIcon(record.item);
+  prev.lk = (itemIcon || '') + '\u0003' + itemDisplayName(record.item);   // 和 makeItemLook 的格式相同
   const itemIconHtml = itemIcon ? '<span class="item-inline-icon" aria-hidden="true">' + iconHtml(itemIcon) + '</span>' : '';
-  const strongHtml = itemIconHtml + (terms ? hl(itemDisplayName(record.item)) : escHtml(itemDisplayName(record.item))) +
-    (pending ? '<span class="recent-pending-badge">同步中…</span>' : '');
+  const strongHtml = itemIconHtml + (terms ? hl(itemDisplayName(record.item)) : escHtml(itemDisplayName(record.item)));
   if (prev.strong !== strongHtml) {
     prev.strong = strongHtml;
-    v.strong.innerHTML = strongHtml;
+    prev.badge = null;
+    v.strong.replaceChildren(ListRender.fragment(strongHtml));
+  }
+  if (Boolean(prev.badge) !== pending) {
+    if (pending) {
+      prev.badge = document.createElement('span');
+      prev.badge.className = 'recent-pending-badge';
+      prev.badge.textContent = '同步中…';
+      // 同步完成的打勾（flashSyncedRecentRow）也掛在 strong 裡，標記要放在名稱後面、打勾前面
+      const check = v.strong.querySelector('.recent-sync-check');
+      v.strong.insertBefore(prev.badge, check);
+    } else {
+      prev.badge.remove();
+      prev.badge = null;
+    }
   }
 
   const dateLabel = opts.dateLabel || '';

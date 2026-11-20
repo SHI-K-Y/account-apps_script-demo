@@ -138,7 +138,7 @@ function submitEditRecord() {
         showToast('交易紀錄已成功修改！', 'success');
         handleMutationRecentUpdate(res, editMonth);
         if (editSource === 'search') {
-          SearchPage.onRecordUpdated({ month: editMonth, type: editType, row: editRow, record: (res && res.record) || form });
+          DeferredApp.ensure() && SearchPage.onRecordUpdated({ month: editMonth, type: editType, row: editRow, record: (res && res.record) || form });
         }
       })
       .withFailureHandler(err => {
@@ -166,7 +166,7 @@ function submitEditRecord() {
         showToast('交易紀錄已成功修改！', 'success');
         handleMutationRecentUpdate(res, editMonth);
         if (editSource === 'search') {
-          SearchPage.onRecordUpdated({ month: editMonth, type: editType, row: editRow, record: (res && res.record) || form });
+          DeferredApp.ensure() && SearchPage.onRecordUpdated({ month: editMonth, type: editType, row: editRow, record: (res && res.record) || form });
         }
       })
       .withFailureHandler(err => {
@@ -260,7 +260,7 @@ function confirmDeleteRecord() {
     handleMutationRecentUpdate(res, targetMonth);
     playRecentRowExit(leavingRow);
     if (deleteSource === 'search') {
-      SearchPage.onRecordDeleted({ month: targetMonth, type: deleteState.type, row: form.row });
+      DeferredApp.ensure() && SearchPage.onRecordDeleted({ month: targetMonth, type: deleteState.type, row: form.row });
     }
   };
 

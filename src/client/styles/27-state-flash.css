@@ -1,0 +1,61 @@
+/* 「剛套用」的閃光疊層（P07 從 12-settings、13-quick-combos、19-glass-components 分出來）：
+ * 套用常用組合後晶片閃一下（.just-applied）、自動帶入支付方式時按鈕閃一下（.auto-applied）。
+ * 它們都借用 ::after，而 ::after 平常是 20-uiverse-effects.css（effects 層）的滑鼠感應區，所以放在最後一層 overrides。 */
+/* 套用組合後閃一下：疊一層 --accent-soft 的 ::after，只動 opacity（原本是晶片本身的 background-color 動畫）。
+   非空白晶片在 19-glass-components.css 換成 brightness 效果的疊色（沿用這裡的位置與時間）。
+   ::after 平常是 20-uiverse-effects.css 的滑鼠移上去時的感應區，這個檔在最後一層 overrides，不用再疊選擇器權重。 */
+.quick-combo-chip.just-applied::after {
+  content: "";
+  position: absolute;
+  inset: -1px;   /* 連 1px 邊框一起蓋住（原本的 filter 也會作用在邊框上） */
+  height: auto;
+  border-radius: inherit;
+  background: var(--accent-soft);
+  opacity: 0;
+  pointer-events: none;
+  animation: quickComboChipFlash calc(var(--dur-base) * 2.5) var(--ease-out);
+}
+@keyframes quickComboChipFlash {
+  0%, 100% { opacity: 0; }
+  30% { opacity: 1; }
+}
+
+/* 套用組合後閃一下：原本是晶片本身 filter: brightness(1 → 1.18 → 1)。改成疊一層 color-dodge 的灰色 ::after，只動 opacity：
+   color-dodge 的結果是「底色 ÷ (1 − 疊色)」，疊色取 1 − 1/1.18 ＝ 15.2542% 灰，就是每個色版 × 1.18（與 brightness(1.18) 相同），
+   透明度 α 時則是 × (1 + 0.18α)，所以 opacity 0 → 1 → 0 等同原本的 brightness 1 → 1.18 → 1。
+   ::after 平常是 20-uiverse-effects.css 的滑鼠移上去時的感應區，這個檔在最後一層 overrides，不用再疊選擇器權重。 */
+.quick-combo-chip.just-applied:not(.is-empty)::after {
+  background: rgb(15.2542% 15.2542% 15.2542%);
+  mix-blend-mode: color-dodge;
+  animation-name: quickComboChipGradFlash;
+}
+@keyframes quickComboChipGradFlash {
+  0%, 100% { opacity: 0; }
+  30% { opacity: 1; }
+}
+
+/* 自動帶入支付方式時閃一下：原本是按鈕本身 outline-color 透明 → 主題色 → 透明。
+   改成 ::after 疊在按鈕上（圓角相同），外框畫在 ::after 的 outline（同樣 3px、外推 2px），只動 opacity。
+   ::after 平常是 20-uiverse-effects.css 的滑鼠移上去時的感應區，這個檔在最後一層 overrides，不用再疊選擇器權重。 */
+:is(#paymentChoices, #fxPaymentChoices) .choice.auto-applied::after {
+  content: "";
+  position: absolute;
+  inset: -1px;   /* 對齊按鈕的邊框外緣（1px 邊框），outline-offset 才和原本一樣從外緣算起 */
+  height: auto;
+  border-radius: inherit;
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  opacity: 0;
+  pointer-events: none;
+  animation: choiceAutoAppliedFlash calc(var(--dur-base) * 2.5) var(--ease-out);
+}
+@keyframes choiceAutoAppliedFlash {
+  0%, 100% { opacity: 0; }
+  30% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(#paymentChoices, #fxPaymentChoices) .choice.auto-applied::after {
+    animation: none;
+  }
+}

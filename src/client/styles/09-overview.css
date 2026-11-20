@@ -45,7 +45,6 @@
 .ov-layout-notice-toggle {
   flex: 0 0 auto;
   font-weight: 700;
-  color: var(--muted);
   white-space: nowrap;
 }
 
@@ -118,7 +117,6 @@
 .ov-hero-amount {
   font-size: 40px;
   font-weight: 900;
-  font-variant-numeric: tabular-nums;
   line-height: 1.15;
   letter-spacing: -0.02em;
   margin-bottom: 8px;
@@ -174,7 +172,6 @@
 .ov-mini-val {
   font-size: 18px;
   font-weight: 850;
-  font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
 
@@ -304,11 +301,6 @@
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.ov-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-float);
-}
-
 .ov-card-head {
   display: flex;
   align-items: center;
@@ -386,7 +378,6 @@
 }
 
 .ov-data-label {
-  color: var(--muted);
   font-weight: 600;
   font-size: 13px;
 }
@@ -404,11 +395,7 @@
   margin-right: 1px;
 }
 
-.ov-data-val.inc { color: var(--inc); }
-.ov-data-val.exp { color: var(--exp); }
-
 .ov-data-row.highlight {
-  background: var(--glass-chip);
   margin: 4px -8px -4px;
   padding: 10px 10px 10px;
   border-radius: var(--lg-radius-control);
@@ -449,7 +436,6 @@
 .ov-pay-label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--muted);
 }
 
 .ov-pay-val {
@@ -464,10 +450,6 @@
   font-size: 11px;
   opacity: 0.6;
   margin-right: 1px;
-}
-
-.ov-pay-val.warn {
-  color: var(--exp);
 }
 
 @media (min-width: 768px) {

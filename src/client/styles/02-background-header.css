@@ -155,7 +155,6 @@ button {
 .topbar-btn-group {
   display: flex;
   align-items: center;
-  gap: 10px;
 }
 
 .month-select {
@@ -163,26 +162,20 @@ button {
   -webkit-appearance: none;
   border: 1px solid var(--glass-border);
   background: var(--glass-chip) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236e7788' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 13px center;
-  border-radius: var(--lg-radius-capsule);
   padding: 8px 32px 8px 15px;
   font-size: 14px;
-  font-weight: 700;
-  color: var(--ink);
   min-height: 38px;
   box-shadow: 0 2px 8px color-mix(in srgb, var(--shadow-tint-cool) 4%, transparent), var(--glass-shine);
-  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
   cursor: pointer;
 }
 
 .month-select:hover {
-  background-color: var(--glass-surface-hover);
   border-color: var(--accent);
 }
 
 .month-select:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .icon-btn {
@@ -218,11 +211,9 @@ button {
   font-size: 20px;
   font-weight: 500;
   line-height: 1;
-  color: var(--accent);
 }
 
 .add-month-btn:hover {
-  transform: scale(1.08);
   border-color: var(--accent-border);
   box-shadow: 0 4px 14px var(--accent-soft);
 }
@@ -312,10 +303,7 @@ button {
 }
 
 .tab.active {
-  background: var(--accent-gradient);
   color: var(--on);
-  box-shadow: 0 4px 14px -1px var(--accent-glow);
-  transform: translateY(-1px);
 }
 
 .panel { display: none; }

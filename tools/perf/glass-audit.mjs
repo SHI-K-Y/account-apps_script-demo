@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
-import { createDevApp } from '../dev-server.mjs';
+import { STATES, VIEWPORT, FIXED_NOW, sleep, prepare, startFixtureApp } from './ui-states.mjs';
 
 const PERF_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(PERF_DIR, '..', '..');
@@ -38,47 +38,8 @@ const SHOTS = typeof args.shots === 'string' ? path.join(PERF_DIR, 'screens', 'g
 const COMPARE = typeof args.compare === 'string' ? path.join(PERF_DIR, 'screens', 'glass-' + args.compare) : '';
 const ONLY = typeof args.only === 'string' ? new Set(args.only.split(',')) : null;
 const EXTRA_CSS = typeof args.css === 'string' ? args.css : '';
-const VIEWPORT = { width: 390, height: 844 };
 const PREFS = { motion: 'full', autoScroll: true };
-const FIXED_NOW = Date.UTC(2026, 10, 13, 4, 0, 0);
-
-// 要盤點的狀態：page＝切到哪一頁；open＝在頁面內要做的事（開彈窗、打開彈出層）
-const STATES = [
-  { key: 'page-bookkeeping', page: 'bookkeeping' },
-  { key: 'page-bookkeeping-income', page: 'bookkeeping', open: () => { const t = document.querySelector('.head .tab[data-tab="income"]'); if (t) t.click(); } },
-  { key: 'page-overview', page: 'overview' },
-  { key: 'page-settlement', page: 'settlement' },
-  { key: 'page-creditcard', page: 'creditcard' },
-  { key: 'page-search', page: 'search' },
-  { key: 'page-foreign', page: 'foreign' },
-  { key: 'page-settings', page: 'settings' },
-  { key: 'page-overview-scrolled', page: 'overview', open: () => window.scrollTo(0, 900) },
-  { key: 'page-settlement-scrolled', page: 'settlement', open: () => window.scrollTo(0, 700) },
-  { key: 'page-bookkeeping-scrolled', page: 'bookkeeping', open: () => { document.querySelector('.head .tab[data-tab="expense"]').click(); window.scrollTo(0, 1400); } },
-  ...['expenseItems', 'paymentMethods', 'quickCombos', 'budget', 'mealSlots', 'reminders', 'preferences'].map(t => ({
-    key: 'settings-' + t, page: 'settings', arg: t,
-    open: tab => { const b = document.querySelector('[data-stab="' + tab + '"]'); if (b) b.click(); },
-  })),
-  // 彈出層直接畫出來再取消 hidden（用 click 開會被同一次點擊的「點外面關閉」收掉）
-  { key: 'pop-calendar', page: 'bookkeeping', open: () => { document.querySelector('.head .tab[data-tab="expense"]').click(); renderCalendar('expense'); document.getElementById('expenseCalendar').hidden = false; } },
-  { key: 'pop-recent-calendar', page: 'bookkeeping', open: () => { document.querySelector('.head .tab[data-tab="expense"]').click(); const c = document.getElementById('expenseFilterCalendar'); try { renderCalendar('expenseFilter'); } catch (e) {} c.hidden = false; c.scrollIntoView({ block: 'center' }); } },
-  { key: 'pop-fx-menu', page: 'foreign', open: () => { document.getElementById('pageForeign').dataset.view = 'ledger'; document.getElementById('fxLedgerMenu').hidden = false; } },
-  { key: 'pop-emoji', page: 'settings', modal: 'itemEditModal', open: () => { const p = document.getElementById('emojiPickerPopover'); if (p) p.hidden = false; } },
-  { key: 'toast', page: 'bookkeeping', open: () => showToast('已儲存', 'success'), keep: true },
-];
-const MODALS = ['editRecordModal', 'quickComboModal', 'settingsDeleteModal', 'deleteConfirmModal', 'addMonthModal', 'itemEditModal',
-  'cardEditModal', 'channelEditModal', 'bankEditModal', 'reminderModal', 'fxLedgerModal', 'fxRecordModal', 'fxDeleteLedgerModal', 'fxDeleteRecordModal'];
-MODALS.forEach(id => STATES.push({ key: 'modal-' + id, page: id.startsWith('fx') ? 'foreign' : 'bookkeeping', modal: id }));
-
-function shiftedDate(startMs) {
-  const offset = startMs - Date.now();
-  return class PerfDate extends Date {
-    constructor(...a) { if (a.length) super(...a); else super(Date.now() + offset); }
-    static now() { return Date.now() + offset; }
-  };
-}
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-
+// 狀態清單、開機與 prepare() 與 style-diff.mjs、css-coverage.mjs 共用（tools/perf/ui-states.mjs）
 function inventory() {
   const describe = el => {
     let s = el.tagName.toLowerCase();
@@ -133,19 +94,6 @@ function inventory() {
   return { items: out, closedModals };
 }
 
-async function prepare(page, st) {
-  await page.evaluate(() => {
-    document.querySelectorAll('.modal-backdrop.show').forEach(m => closeModal(m));
-    document.querySelectorAll('.calendar-popover, .fx-menu, .emoji-picker-popover').forEach(p => { p.hidden = true; });
-  });
-  await sleep(700);
-  await page.evaluate(p => { if (document.body.dataset.page !== p) switchPage(p); }, st.page);
-  await sleep(1200);
-  await page.evaluate(() => window.scrollTo(0, 0));
-  if (st.modal) { await page.evaluate(id => openModal(document.getElementById(id)), st.modal); await sleep(900); }
-  if (st.open) { await page.evaluate(st.open, st.arg); await sleep(900); }
-}
-
 async function shoot(page, file) {
   await page.evaluate(() => {
     document.getAnimations().forEach(a => { try { a.pause(); a.currentTime = 0; } catch (e) {} });
@@ -160,9 +108,8 @@ async function shoot(page, file) {
 }
 
 async function run() {
-  const app = createDevApp({ fixture: true, quiet: true, DateCtor: shiftedDate(FIXED_NOW), root: DIST });
-  await new Promise(r => app.server.listen(0, '127.0.0.1', r));
-  const url = 'http://127.0.0.1:' + app.server.address().port + '/';
+  const app = await startFixtureApp(DIST);
+  const url = app.url;
   const browser = await chromium.launch();
   const result = {};
   if (SHOTS) { fs.rmSync(SHOTS, { recursive: true, force: true }); fs.mkdirSync(SHOTS, { recursive: true }); }
@@ -192,7 +139,7 @@ async function run() {
     }
   } finally {
     await browser.close();
-    await new Promise(r => app.server.close(r));
+    await app.close();
   }
   return result;
 }

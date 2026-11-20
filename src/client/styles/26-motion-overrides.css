@@ -1,0 +1,22 @@
+/* 「動畫效果」偏好（data-motion，見 core/motion.js）套到所有元素的部分（P07 從 16-motion-prefs.css 分出來）。
+ * 放在最後一層 overrides：一般宣告這裡沒有；!important 在 @layer 裡是「越前面的層越優先」，
+ * 所以各元件自己針對精簡／關閉寫的 !important（例如 20-uiverse-effects.css 主題切換鈕的 transition: none）照樣蓋得過這裡的通用值，
+ * 跟以前靠疊 :root 選擇器權重的結果相同。 */
+:root[data-motion="off"] *,
+:root[data-motion="off"] *::before,
+:root[data-motion="off"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0s !important;
+  scroll-behavior: auto !important;
+}
+:root[data-motion="lite"] *,
+:root[data-motion="lite"] *::before,
+:root[data-motion="lite"] *::after {
+  transition-property: opacity, color, background-color, border-color, outline-color, box-shadow, fill, stroke, filter, --lg-tint !important;
+}
+:root[data-motion="lite"] :focus-visible {
+  transition-property: opacity, color, background-color, border-color !important;
+}

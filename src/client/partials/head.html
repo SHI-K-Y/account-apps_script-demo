@@ -21,6 +21,9 @@
     })();
   </script>
   <style id="bootLoaderStyle">
+    /* 樣式表的層順序（P07）：後面的層一律蓋過前面的層，與選擇器權重無關。必須是頁面上第一條 CSS 規則；
+     * 與 manifest.json 的 layerOrder 相同（建置時檢查）。boot＝這段開機畫面、icons＝圖示子集、其餘是主樣式表（style.html）。 */
+    @layer boot, icons, tokens, base, components, glass, effects, overrides;
     /* Hallmark · checked: 2026-11-12 · genre: editorial (inferred) · shape: app screen
      * floor: 15 FAIL left, each checked by hand as a linter misread (4, 15, 38i, 62, 76) · fixed: 48, 67, 7b, 74, 40 (hover ink), F1, F3 · kept by owner: 29 Liquid Glass, F7 capsules, 11 hover lift
      * built: the project · redesign: polish · v2.0.0 */
@@ -29,6 +32,7 @@
     /* Hallmark · dismissed 38i · the i element inside each h2 is a Phosphor caret icon inside a toggle button, not italic text */
     /* Hallmark · dismissed 62 · head-hidden is a scroll state class the script adds; theme icons swap one for the other; progress and the native picker indicator are hidden on purpose */
     /* Hallmark · dismissed 40 · disabled buttons are exempt in WCAG; modal-close has a dark-theme override; fx-menu and sr-badge resolve to later scoped tokens that pass */
+    @layer boot {
     :root { --boot-bg:#faf6ef; --boot-ink:#1c1c1e; --boot-accent:#c93a2c; --boot-accent-2:#db4637; --boot-alert:#db4637; --boot-on:#fffcf7; --boot-track:rgba(28, 28, 30,.08); --boot-ghost:rgba(28, 28, 30,.07); --font-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif; }
     html[data-theme="dark"] { --boot-bg:#000000; --boot-ink:#faf6ef; --boot-track:rgba(250,246,239,.1); --boot-ghost:rgba(250,246,239,.1); }
     html { background: var(--boot-bg); }
@@ -80,7 +84,8 @@
     @media (prefers-reduced-motion: reduce) {
       .boot-loader, .boot-ring .boot-val { transition: none; }
     }
+    }
   </style>
-  <!-- 圖示字型：建置時只內嵌專案用到的圖示（見 tools/build.mjs 的 buildIconSubset），不再等外部樣式表載入才開始畫面繪製 -->
-  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <!-- 圖示字型：建置時只內嵌專案用到的圖示，字型也裁成子集後內嵌（見 tools/build.mjs 的 buildIconSubset），
+       不連外部網站；只有遇到子集以外的圖示時，core/icons.js 的 IconFont 才會向 unpkg 補載完整樣式表 -->
   <!-- @icons -->

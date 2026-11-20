@@ -42,7 +42,6 @@
   appearance: none;
   border: 1px solid var(--glass-border-subtle);
   background: var(--glass-chip);
-  color: var(--ink-secondary);
   border-radius: var(--lg-radius-capsule);
   padding: 6px 13px;
   font: inherit;
@@ -159,7 +158,6 @@
   appearance: none;
   border: 1px solid var(--glass-border);
   background: var(--glass-chip);
-  color: var(--ink);
   border-radius: var(--lg-radius-capsule);
   padding: 6px 16px;
   font: inherit;
@@ -205,7 +203,6 @@
 .oc-stat-label {
   font-size: 12px;
   font-weight: 700;
-  color: var(--muted);
 }
 
 .oc-stat-val {
@@ -240,10 +237,6 @@
 
 .oc-delta.is-up { color: var(--chart-expense); }
 .oc-delta.is-down { color: var(--chart-income); }
-
-.oc-emoji {
-  margin-right: 4px;
-}
 
 .oc-donut-wrap {
   display: flex;
@@ -286,15 +279,6 @@
   text-align: left;
   cursor: pointer;
   transition: opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
-}
-
-.oc-legend-item:hover {
-  background: var(--glass-chip);
-}
-
-.oc-legend-item.is-focus {
-  background: var(--glass-chip);
-  border-color: var(--glass-border-subtle);
 }
 
 .oc-legend.has-focus .oc-legend-item:not(.is-focus) {
@@ -341,15 +325,12 @@
   flex-shrink: 0;
   padding: 2px;
   border-radius: var(--lg-radius-capsule);
-  border: 1px solid var(--glass-border-subtle);
-  background: var(--glass-chip);
 }
 
 .oc-seg button {
   appearance: none;
   border: 0;
   background: none;
-  color: var(--muted);
   border-radius: var(--lg-radius-capsule);
   padding: 4px 11px;
   font: inherit;

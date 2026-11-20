@@ -2,11 +2,15 @@
 //
 //   ListRender.reconcile(container, items, {
 //     key(item, i)      每筆的識別（例如「月份｜類型｜列號」或 tempId）；重複的 key 會自動加上序號
-//     sig(item, i, ident)  內容簽章：和節點上次的簽章相同就完全不動（有 ident 時第三個參數是算好的 ident）
-//     ident(item)       （選用）內容識別：key 對不上時，用它把「只是列號位移」的舊節點認回來
-//                       （紀錄沒有固定 ID，刪除一筆後下方的列號會往上遞補；有 ident 才不會整段重建）
+//     內容比對（二選一）：
+//       sig(item, i, ident)  內容簽章字串：和節點上次的簽章相同就完全不動
+//       same(el, item)       直接比對欄位（不組字串，最省）：回傳 true 表示節點內容已經是這一筆，不必更新
+//     ident(item)       （選用）內容識別字串：key 對不上時，用它把「只是列號位移」的舊節點認回來
+//                       （紀錄沒有固定 ID，刪除一筆後下方的列號會往上遞補；有 ident 才不會整段重建）。
+//                       只對 key 對不上的那幾筆才計算。
+//     identEq(el, item) （選用）key 對上時確認節點顯示的是不是同一筆內容（直接比對欄位）；沒給時比 ident 字串
 //     create(item, i, ident)  建立節點；或改給 html(item, i) 回傳單一根元素的 HTML 字串
-//     update(el, item, i, ident)  （選用）簽章改變時就地更新；沒給時直接換成新節點
+//     update(el, item, i, ident)  （選用）內容改變時就地更新；沒給時直接換成新節點
 //     place(el, item, i)   （選用）每次都會呼叫的輕量處理（例如把最新的 record 掛回節點）
 //     empty             清單為空時顯示的 HTML（字串）
 //     chunk             （選用）{ threshold: 300, first: 50, step: 50, listId }：超過 threshold 筆時先畫 first 筆，
@@ -14,6 +18,7 @@
 //   })
 //   → { created: [新節點…], removed: 數量, kept: 數量, total: 實際畫出的筆數 }
 //
+// 節點上記著它目前顯示的那一筆（el._lrItem），identEq／same 用它和新資料比對。
 // 呼叫端用 created 決定進場動畫只播給「新出現」的節點；沿用的節點不重播。
 // 被刪除動畫抓走的節點（markLeaving）不會被重複利用，讓 collapseOut 播的一定是被刪掉的那一筆。
 const ListRender = (() => {
@@ -34,17 +39,36 @@ const ListRender = (() => {
     return fromHtml(opts.html(item, i));
   }
 
+  /**
+   * 同一段 HTML（例如項目圖示＋名稱）重複出現時，只解析一次，之後複製 DocumentFragment。
+   * 快取有上限，超過就整個清掉重來（搜尋高亮之類每列都不同的字串不會讓它無限長大）。
+   */
+  const fragCache = new Map();
+  const FRAG_CACHE_MAX = 300;
+  function fragment(html) {
+    let tplEl = fragCache.get(html);
+    if (!tplEl) {
+      if (fragCache.size >= FRAG_CACHE_MAX) fragCache.clear();
+      tplEl = document.createElement('template');
+      tplEl.innerHTML = html;
+      fragCache.set(html, tplEl);
+    }
+    return tplEl.content.cloneNode(true);
+  }
+
   /** 刪除動畫抓住的節點：接下來的 reconcile 不會再拿它來顯示別筆紀錄。 */
   function markLeaving(el) {
     if (el) el._lrLeaving = true;
   }
 
   function uniqueKeys(items, keyFn) {
-    const seen = new Map();
-    return items.map((item, i) => {
-      const base = String(keyFn(item, i));
-      const n = seen.get(base) || 0;
-      seen.set(base, n + 1);
+    const keys = items.map((item, i) => String(keyFn(item, i)));
+    const seen = new Set(keys);
+    if (seen.size === keys.length) return keys;   // 一般情況：沒有重複，不必再加序號
+    const count = new Map();
+    return keys.map(base => {
+      const n = count.get(base) || 0;
+      count.set(base, n + 1);
       return n ? base + '#' + n : base;
     });
   }
@@ -127,71 +151,88 @@ const ListRender = (() => {
       : chunkLimit(container, list.length, o.chunk);
     const shown = limit < list.length ? list.slice(0, limit) : list;
     const keys = uniqueKeys(shown, o.key);
-    const idents = o.ident ? shown.map(item => String(o.ident(item))) : null;
-    const sigs = shown.map((item, i) => (o.sig ? String(o.sig(item, i, idents ? idents[i] : undefined)) : ''));
+    const n = shown.length;
+    const hasIdent = typeof o.ident === 'function';
+    // ident 字串只在需要時才算（多數重繪 key 都對得上，用不到）
+    const itemIdents = hasIdent ? new Array(n) : null;
+    const identOfItem = i => (itemIdents[i] === undefined ? (itemIdents[i] = String(o.ident(shown[i]))) : itemIdents[i]);
+    const identOfEl = el => (el._lrIdent === undefined ? (el._lrIdent = String(o.ident(el._lrItem))) : el._lrIdent);
+    const sameIdent = (el, i) => (o.identEq ? o.identEq(el, shown[i]) : identOfEl(el) === identOfItem(i));
 
     const byKey = new Map();
     const stale = [];
-    for (let n = container.firstChild; n; n = n.nextSibling) {
-      if (n.nodeType === 1 && n._lrKey != null && !n._lrLeaving && !byKey.has(n._lrKey)) byKey.set(n._lrKey, n);
-      else stale.push(n);
+    for (let node = container.firstChild; node; node = node.nextSibling) {
+      if (node.nodeType === 1 && node._lrKey != null && !node._lrLeaving && !byKey.has(node._lrKey)) byKey.set(node._lrKey, node);
+      else stale.push(node);
     }
     const claimed = new Set();
-    const nodes = new Array(shown.length);
+    const nodes = new Array(n);
+    let unmatched = 0;
 
     // 1. key 與內容都對得上
-    for (let i = 0; i < shown.length; i++) {
+    for (let i = 0; i < n; i++) {
       const el = byKey.get(keys[i]);
-      if (el && (!idents || el._lrIdent === idents[i])) { nodes[i] = el; claimed.add(el); }
+      if (el && (!hasIdent || sameIdent(el, i))) { nodes[i] = el; claimed.add(el); } else unmatched++;
     }
-    // 2. 內容對得上（列號位移、同步中 → 已同步）
-    if (idents) {
+    if (hasIdent && unmatched) {
+      // 2. 內容對得上（列號位移、同步中 → 已同步）
       const pool = new Map();
       byKey.forEach(el => {
         if (claimed.has(el)) return;
-        const arr = pool.get(el._lrIdent);
-        if (arr) arr.push(el); else pool.set(el._lrIdent, [el]);
+        const id = identOfEl(el);
+        const arr = pool.get(id);
+        if (arr) arr.push(el); else pool.set(id, [el]);
       });
-      for (let i = 0; i < shown.length; i++) {
-        if (nodes[i]) continue;
-        const arr = pool.get(idents[i]);
-        while (arr && arr.length) {
-          const el = arr.shift();
-          if (claimed.has(el)) continue;
-          nodes[i] = el; claimed.add(el);
-          break;
+      if (pool.size) {
+        for (let i = 0; i < n; i++) {
+          if (nodes[i]) continue;
+          const arr = pool.get(identOfItem(i));
+          while (arr && arr.length) {
+            const el = arr.shift();
+            if (claimed.has(el)) continue;
+            nodes[i] = el; claimed.add(el);
+            break;
+          }
         }
-      }
-      // 3. 只有 key 對得上（同一筆被修改）
-      for (let i = 0; i < shown.length; i++) {
-        if (nodes[i]) continue;
-        const el = byKey.get(keys[i]);
-        if (el && !claimed.has(el)) { nodes[i] = el; claimed.add(el); }
+        // 3. 只有 key 對得上（同一筆被修改）
+        for (let i = 0; i < n; i++) {
+          if (nodes[i]) continue;
+          const el = byKey.get(keys[i]);
+          if (el && !claimed.has(el)) { nodes[i] = el; claimed.add(el); }
+        }
       }
     }
 
     // 4. 更新內容有變的節點、建立新節點
     const dropped = [];
-    for (let i = 0; i < shown.length; i++) {
+    // create／update／sig 的第三、四個參數：已經算過的 ident 才傳（沒算過就是 undefined，呼叫端需要時自己算）
+    const identArg = i => (hasIdent ? itemIdents[i] : undefined);
+    for (let i = 0; i < n; i++) {
       let el = nodes[i];
       const item = shown[i];
-      if (el && el._lrSig !== sigs[i]) {
-        if (o.update) {
-          o.update(el, item, i, idents ? idents[i] : undefined);
+      let sig;
+      if (el) {
+        let changed;
+        if (o.same) {
+          changed = !o.same(el, item);
         } else {
-          dropped.push(el);
-          el = null;
+          sig = o.sig ? String(o.sig(item, i, identArg(i))) : '';
+          changed = el._lrSig !== sig;
         }
-      } else if (el) {
-        out.kept++;
+        if (!changed) out.kept++;
+        else if (o.update) o.update(el, item, i, identArg(i));
+        else { dropped.push(el); el = null; }
       }
       if (!el) {
-        el = makeNode(o, item, i, idents ? idents[i] : undefined);
+        el = makeNode(o, item, i, identArg(i));
+        if (!o.same && sig === undefined) sig = o.sig ? String(o.sig(item, i, identArg(i))) : '';
         out.created.push(el);
       }
+      // 節點改顯示另一個資料物件：ident 換成這一筆的（還沒算過就留待下次需要時再算）
+      if (hasIdent && el._lrItem !== item) el._lrIdent = itemIdents[i];
       el._lrKey = keys[i];
-      el._lrSig = sigs[i];
-      if (idents) el._lrIdent = idents[i];
+      if (sig !== undefined) el._lrSig = sig;
+      el._lrItem = item;
       if (o.place) o.place(el, item, i);
       nodes[i] = el;
     }
@@ -247,6 +288,7 @@ const ListRender = (() => {
     reconcile: reconcile,
     markLeaving: markLeaving,
     fromHtml: fromHtml,
+    fragment: fragment,
     more: more,
     sameSig: sameSig,
     syncSelected: syncSelected,

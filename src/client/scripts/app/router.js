@@ -100,6 +100,8 @@ function bounceActiveNavIcon() {
 }
 
 function switchPage(page) {
+  // 各頁面的程式是延後載入的（core/deferred.js）：切頁會呼叫 ForeignPage／SearchPage／loadOverview 等，先同步執行
+  DeferredApp.ensure();
   var fromPage = document.body.dataset.page || 'bookkeeping';
   var dir = getPageTransitionDir(fromPage, page);
   var level = Motion.level();

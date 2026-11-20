@@ -90,6 +90,8 @@
         shown = 1; render();
         stage.textContent = '完成';
         document.documentElement.classList.add('boot-ready');
+        // 延後載入的頁面程式（core/deferred.js）在這之後的閒置時間執行
+        try { window.dispatchEvent(new Event('bootready')); } catch (e) {}
         setTimeout(function () {
           root.classList.add('is-done');
           setTimeout(function () { if (root.parentNode) root.parentNode.removeChild(root); }, 450);

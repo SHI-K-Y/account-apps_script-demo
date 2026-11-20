@@ -71,8 +71,6 @@
 .today-expense-date-badge {
   font-size: 12px;
   font-weight: 700;
-  color: var(--exp);
-  background: var(--exp-soft);
   border: 1px solid var(--exp-border);
   border-radius: var(--lg-radius-sm);
   padding: 2px 8px;
@@ -107,18 +105,15 @@
   font-size: 11px;
   font-weight: 800;
   color: var(--on);
-  background: var(--exp-gradient);
   border: 0;
   border-radius: var(--lg-radius-sm);
   padding: 4px 9px;
   cursor: pointer;
   line-height: 1.2;
-  box-shadow: 0 2px 6px -1px var(--exp-glow);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .today-expense-back-btn:hover {
-  transform: translateY(-1px) scale(1.03);
   box-shadow: 0 4px 10px -1px var(--exp-glow);
 }
 
@@ -143,7 +138,6 @@
 .today-expense-cur {
   font-size: 17px;
   font-weight: 800;
-  color: var(--exp);
   opacity: 0.85;
   user-select: none;
 }
@@ -152,10 +146,7 @@
   font-size: 32px;
   font-weight: 900;
   line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-  color: var(--exp);
   letter-spacing: -0.02em;
-  text-shadow: 0 2px 8px color-mix(in srgb, var(--exp) 15%, transparent);
   transition: transform 0.15s ease;
 }
 
@@ -230,10 +221,6 @@
   border-top: 0;
 }
 
-.recent-item:hover {
-  background: color-mix(in srgb, var(--hl) 28%, transparent);
-}
-
 .recent-item.is-pending {
   opacity: 0.9;
 }
@@ -247,14 +234,12 @@
   border-radius: var(--lg-radius-capsule);
   margin-left: 6px;
   background: color-mix(in srgb, var(--warn) 14%, transparent);
-  color: var(--warn-strong);
   border: 1px solid color-mix(in srgb, var(--warn) 28%, transparent);
   vertical-align: middle;
 }
 
 :root[data-theme="dark"] .recent-pending-badge {
   background: color-mix(in srgb, var(--warn) 22%, transparent);
-  color: var(--warn-light);
   border-color: color-mix(in srgb, var(--warn) 40%, transparent);
 }
 
@@ -281,7 +266,6 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 4px;
-  background: var(--glass-chip);
   border: 1px solid var(--glass-border-subtle);
   border-radius: var(--lg-radius-control);
   padding: 3px;
@@ -467,12 +451,7 @@
   font-size: 16px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  color: var(--exp);
   letter-spacing: -0.01em;
-}
-
-.income-rec .recent-amount {
-  color: var(--inc);
 }
 
 .recent-actions {
@@ -484,10 +463,7 @@
 .recent-act-btn {
   width: 28px;
   height: 28px;
-  border-radius: var(--lg-radius-sm);
-  border: 1px solid var(--glass-border-subtle);
   background: var(--glass-chip);
-  color: var(--muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -564,8 +540,6 @@
 .load-full-btn:hover:not(:disabled) {
   background: var(--accent-soft);
   border-color: var(--accent-border);
-  color: var(--accent);
-  transform: translateY(-1px);
   box-shadow: 0 4px 12px -2px var(--accent-glow);
 }
 
@@ -583,14 +557,12 @@
 .load-full-btn:disabled {
   background: var(--surface-2);
   color: var(--subtle);
-  box-shadow: none;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
 }
 
 .load-full-btn.is-expanded {
-  background: var(--glass-chip-active);
   border-color: var(--glass-border);
   color: var(--ink);
 }
@@ -657,21 +629,13 @@ body.busy .progress {
   position: fixed;
   left: 50%;
   bottom: calc(88px + env(safe-area-inset-bottom));
-  transform: translate(-50%, 14px) scale(0.94);
   opacity: 0;
   pointer-events: none;
   background: color-mix(in srgb, var(--primary-2) 92%, transparent);
-  color: var(--on);
   border: 1px solid var(--glass-border);
-  padding: 12px 20px;
-  border-radius: var(--lg-radius-capsule);
   font-size: 14px;
   font-weight: 700;
-  box-shadow: 0 12px 32px color-mix(in srgb, var(--shadow-tint) 25%, transparent);
-  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
   max-width: calc(var(--vw-safe) - 32px);
-  text-align: center;
-  z-index: 100;
 }
 
 /* 效能：收起的 toast 停放成 display: none（不留毛玻璃圖層）；淡入淡出期間由 core/feedback.js 加上 .is-animating */
@@ -681,7 +645,6 @@ body.busy .progress {
 
 .toast.show {
   opacity: 1;
-  transform: translate(-50%, 0) scale(1);
 }
 
 .toast.error {
@@ -697,13 +660,10 @@ body.busy .progress {
   position: fixed;
   inset: 0;
   z-index: 120;
-  background: var(--modal-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
-  opacity: 0;
   visibility: hidden;
-  transition: opacity 0.24s ease, visibility 0.24s ease;
 }
 

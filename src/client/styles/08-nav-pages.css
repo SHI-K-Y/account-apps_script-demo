@@ -1,6 +1,5 @@
 .nav-item {
   flex: 1;
-  max-width: 160px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -8,10 +7,6 @@
   gap: 3px;
   border: 0;
   background: transparent;
-  color: var(--muted);
-  padding: 6px 10px;
-  border-radius: var(--lg-radius-control);
-  margin: 0 6px;
   transition: color 0.18s ease, background-color 0.18s ease;
   position: relative;
 }
@@ -55,7 +50,6 @@
 
 .nav-label {
   font-size: 11px;
-  font-weight: 700;
   line-height: 1.2;
 }
 
@@ -91,7 +85,6 @@
    ::after 寬 350%（3.5 個區塊寬 ＝ 一格＋一個區塊，任何位置都蓋滿區塊），同樣平鋪；
    位移只取「除以一格的餘數」，每移滿一格就瞬間跳回一格前 —— 圖樣每格重複，跳回前後畫面完全相同。 */
 .skel-block {
-  --skel-gradient: linear-gradient(110deg, var(--glass-chip) 25%, color-mix(in srgb, var(--hl) 45%, transparent) 50%, var(--glass-chip) 75%);
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -140,9 +133,6 @@
   margin: 0 14px 14px;
   background: var(--glass-chip);
   border: 1px solid var(--glass-border);
-  border-radius: var(--lg-radius-control);
   font-size: 13px;
-  font-weight: 700;
-  color: var(--muted);
   box-shadow: 0 2px 8px color-mix(in srgb, var(--shadow-tint-cool) 3%, transparent);
 }

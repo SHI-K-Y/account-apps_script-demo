@@ -158,6 +158,11 @@ test('Demo 網站：單一靜態檔，範本標記都已展開，沙盒可在瀏
     assert.match(html, /<title>記帳簿 Demo/);
     assert.match(html, /window\.__INITIAL_DATA__ = \(window\.__DEMO_INITIAL_DATA__ \|\| null\);/);
     assert.ok(html.indexOf('id="demoSandbox"') < html.indexOf('</head>'), '沙盒在主程式之前載入');
+    // 延後執行的頁面程式（P07）也一起帶進靜態頁，放在開機程式後面、仍是不解析的 text/plain
+    const tag = '\n<script type="text/plain" id="deferredApp">\n';
+    assert.equal(html.split(tag).length - 1, 1, 'Demo 帶有延後執行的頁面程式');
+    assert.ok(html.indexOf('const DeferredApp') < html.indexOf(tag), '延後的程式在開機程式之後');
+    assert.match(html, /@font-face\{font-family:"?Phosphor"?;src:url\(data:font\/woff2;base64,/, 'Demo 的圖示字型也內嵌');
     assert.ok(html.includes(REPO_URL), 'Demo 網站含有歡迎資訊卡與 GitHub 連結');
     assert.match(html, /demo-ob-card/);
 

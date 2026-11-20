@@ -22,13 +22,8 @@
 .amount-preview-label {
   font-size: 13px;
   font-weight: 700;
-  color: var(--muted);
   white-space: nowrap;
   user-select: none;
-}
-
-.amount-preview.has-value .amount-preview-label {
-  color: var(--accent);
 }
 
 .amount-preview-val {
@@ -46,7 +41,6 @@
 }
 
 .amount-preview.has-value .amount-preview-cur {
-  color: var(--accent);
   opacity: 0.85;
 }
 
@@ -60,10 +54,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   letter-spacing: -0.01em;
-}
-
-.amount-preview.has-value .amount-preview-num {
-  color: var(--accent);
 }
 
 .keypad {
@@ -80,7 +70,6 @@
   font-size: 21px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  color: var(--ink);
   box-shadow: 0 2px 6px color-mix(in srgb, var(--shadow-tint-cool) 4%, transparent), var(--glass-shine);
   transition: transform var(--dur-fast) var(--ease-out), background-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
   user-select: none;
@@ -94,15 +83,10 @@
 
 .key:active {
   transform: scale(0.94) translateY(1px);
-  background: var(--accent-soft);
-  color: var(--accent);
-  box-shadow: none;
 }
 
 .key.special {
-  color: var(--muted);
   font-size: 18px;
-  background: var(--glass-chip);
 }
 
 .key.wide {
@@ -121,9 +105,6 @@
   margin: 16px -20px -20px;
   padding: 14px 20px;
   border-radius: 0 0 var(--lg-radius-card) var(--lg-radius-card);
-  background: var(--glass-bar);
-  border-top: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-dock);
 }
 
 .bar-amount {
@@ -134,7 +115,6 @@
 .amount-label {
   font-size: 11px;
   font-weight: 700;
-  color: var(--muted);
   line-height: 1.2;
 }
 
@@ -178,14 +158,12 @@
 }
 
 .submit-btn:active:not(:disabled) {
-  transform: translateY(0) scale(0.97);
   box-shadow: 0 2px 8px var(--accent-glow);
 }
 
 .submit-btn:disabled {
   background: var(--surface-2);
   color: var(--subtle);
-  box-shadow: none;
   cursor: not-allowed;
   box-shadow: none;
 }
@@ -201,7 +179,6 @@
   gap: 12px;
   background: var(--glass-surface);
   border: 1px solid var(--glass-border);
-  border-radius: var(--lg-radius-control);
   padding: 13px 18px 13px 16px;
   text-decoration: none;
   color: var(--ink);
@@ -263,14 +240,12 @@
 .sheet-link-title {
   font-size: 15px;
   font-weight: 800;
-  color: var(--title-color);
   letter-spacing: -0.01em;
   line-height: 1.25;
 }
 
 .sheet-link-sub {
   font-size: 12px;
-  color: var(--muted);
   font-weight: 500;
   line-height: 1.25;
   white-space: nowrap;
@@ -288,7 +263,6 @@
 .sheet-link-pill {
   font-size: 12px;
   font-weight: 700;
-  color: var(--sheets-green);
   background: color-mix(in srgb, var(--sheets-green) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--sheets-green) 22%, transparent);
   border-radius: var(--lg-radius-capsule);
@@ -300,9 +274,7 @@
 }
 
 .sheet-link-btn:hover {
-  border-color: color-mix(in srgb, var(--sheets-green) 40%, transparent);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--sheets-green) 15%, transparent), var(--shadow-card);
 }
 
 .sheet-link-btn:hover::before {
@@ -322,7 +294,6 @@
 }
 
 .sheet-link-btn:active {
-  transform: translateY(0) scale(0.985);
   background: var(--glass-chip);
 }
 

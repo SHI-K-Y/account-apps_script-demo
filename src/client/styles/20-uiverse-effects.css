@@ -1,4 +1,4 @@
-:root:root:root .icon-btn.theme-toggle-btn {
+.icon-btn.theme-toggle-btn {
   --uv-size: 14px;
   --uv-w: 5.625em;
   --uv-h: 2.5em;
@@ -64,7 +64,7 @@
   --uv-hover-x: 0em;
 }
 
-:root:root:root .icon-btn.theme-toggle-btn::before {
+.icon-btn.theme-toggle-btn::before {
   content: "";
   position: absolute;
   inset: var(--uv-halo-off) auto auto var(--uv-halo-off);
@@ -87,7 +87,7 @@
   transition: transform var(--uv-t-move);
 }
 
-:root:root:root .icon-btn.theme-toggle-btn::after {
+.icon-btn.theme-toggle-btn::after {
   content: "";
   position: absolute;
   inset: auto;
@@ -114,7 +114,7 @@
   transition: transform var(--uv-t-scene);
 }
 
-:root:root:root .icon-btn.theme-toggle-btn .theme-icon-moon {
+.icon-btn.theme-toggle-btn .theme-icon-moon {
   position: absolute;
   z-index: 0;
   top: auto;
@@ -152,12 +152,12 @@
     4.125em -2.125em 0 0.437em var(--uv-cloud-back);
   transition: transform var(--uv-t-scene) !important;
 }
-:root:root:root .icon-btn.theme-toggle-btn .theme-icon-moon::before,
-:root:root:root .icon-btn.theme-toggle-btn .theme-icon-moon::after {
+.icon-btn.theme-toggle-btn .theme-icon-moon::before,
+.icon-btn.theme-toggle-btn .theme-icon-moon::after {
   content: none;
 }
 
-:root:root:root .icon-btn.theme-toggle-btn .theme-icon-sun {
+.icon-btn.theme-toggle-btn .theme-icon-sun {
   position: absolute;
   z-index: 2;
   top: var(--uv-knob-off);
@@ -185,7 +185,7 @@
     drop-shadow(0 0.062em 0.125em var(--uv-edge-shadow));
   transition: transform var(--uv-t-move) !important;
 }
-:root:root:root .icon-btn.theme-toggle-btn .theme-icon-sun::before {
+.icon-btn.theme-toggle-btn .theme-icon-sun::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -201,12 +201,12 @@
   transform: translateX(100%);
   transition: transform var(--uv-t-scene);
 }
-:root:root:root .icon-btn.theme-toggle-btn .theme-icon-sun::after {
+.icon-btn.theme-toggle-btn .theme-icon-sun::after {
   content: none;
 }
 
 @media (hover: hover) {
-  :root:root:root .icon-btn.theme-toggle-btn:hover {
+  .icon-btn.theme-toggle-btn:hover {
     transform: none;
     background: var(--uv-track);
     border-color: transparent;
@@ -214,32 +214,30 @@
     --uv-hover-x: var(--uv-nudge);
   }
 }
-:root:root:root .icon-btn.theme-toggle-btn:active {
-  transform: scale(0.95);
-}
+/* 按下時不縮放：18-glass-chrome.css 的 :active 規則（transform: none）統一處理所有圖示按鈕 */
 
-:root:root:root .icon-btn.theme-toggle-btn:focus-visible {
+.icon-btn.theme-toggle-btn:focus-visible {
   outline: 2px solid var(--lg-focus);
   outline-offset: 3px;
 }
 
-:root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn {
+:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn {
   --uv-track: color-mix(in srgb, var(--accent) 22%, var(--primary-2));
   --uv-glint: color-mix(in srgb, var(--hl) 14%, transparent);
   --uv-edge-shadow: color-mix(in srgb, var(--shadow-tint) 55%, transparent);
 }
 /* 深色：光暈與月亮移到右端、星星降到中線、雲沉到底（位移量 = 原本 left/top/bottom 的差值） */
-:root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn {
+:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn {
   --uv-halo-x: calc(var(--uv-w) - 2 * var(--uv-halo-off) - var(--uv-halo-d));
   --uv-knob-x: calc(var(--uv-w) - 2 * var(--uv-knob-off) - var(--uv-knob-d));
   --uv-stars-y: calc(var(--uv-h) * 1.5 - 0.525em);
   --uv-cloud-y: 3.437em;
 }
-:root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn .theme-icon-sun::before {
+:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn .theme-icon-sun::before {
   transform: translateX(0);
 }
 @media (hover: hover) {
-  :root:root:root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn:hover {
+  :root:is([data-theme="dark"], :not([data-theme="light"])) .icon-btn.theme-toggle-btn:hover {
     --uv-hover-x: calc(var(--uv-nudge) * -1);
   }
 }
@@ -280,45 +278,38 @@
     grid-row: 3;
     justify-self: start;
   }
-  /* 需與 :root:root:root .icon-btn.theme-toggle-btn { margin: 0 } 同權重才能生效 */
-  :root:root:root .head > .topbar > .icon-btn.theme-toggle-btn {
+  /* 同一層（effects）裡要比 .icon-btn.theme-toggle-btn { margin: 0 } 具體才蓋得過 */
+  .head > .topbar > .icon-btn.theme-toggle-btn {
     margin-top: 14px;
   }
 }
 @media (max-width: 599px) {
-  :root:root:root .icon-btn.theme-toggle-btn {
+  .icon-btn.theme-toggle-btn {
     --uv-size: 13px;
   }
 }
 
-:root:root:root[data-motion="lite"] .icon-btn.theme-toggle-btn {
+:root[data-motion="lite"] .icon-btn.theme-toggle-btn {
   --uv-t-move: var(--lg-dur-reduced) var(--lg-ease-reduced);
   --uv-t-scene: var(--lg-dur-reduced) var(--lg-ease-reduced);
   --uv-t-fill: var(--lg-dur-reduced) var(--lg-ease-reduced);
 }
-:root:root:root[data-motion="off"] .icon-btn.theme-toggle-btn,
-:root:root:root[data-motion="off"] .icon-btn.theme-toggle-btn::before,
-:root:root:root[data-motion="off"] .icon-btn.theme-toggle-btn::after,
-:root:root:root[data-motion="off"] .icon-btn.theme-toggle-btn .theme-icon-moon,
-:root:root:root[data-motion="off"] .icon-btn.theme-toggle-btn .theme-icon-sun,
-:root:root:root[data-motion="off"] .icon-btn.theme-toggle-btn .theme-icon-sun::before {
+:root[data-motion="off"] .icon-btn.theme-toggle-btn,
+:root[data-motion="off"] .icon-btn.theme-toggle-btn::before,
+:root[data-motion="off"] .icon-btn.theme-toggle-btn::after,
+:root[data-motion="off"] .icon-btn.theme-toggle-btn .theme-icon-moon,
+:root[data-motion="off"] .icon-btn.theme-toggle-btn .theme-icon-sun,
+:root[data-motion="off"] .icon-btn.theme-toggle-btn .theme-icon-sun::before {
   transition: none !important;
 }
-:root:root:root[data-motion="off"] .icon-btn.theme-toggle-btn:active,
-:root:root:root[data-motion="lite"] .icon-btn.theme-toggle-btn:active {
-  transform: none;
-}
 @media (prefers-reduced-motion: reduce) {
-  :root:root:root .icon-btn.theme-toggle-btn,
-  :root:root:root .icon-btn.theme-toggle-btn::before,
-  :root:root:root .icon-btn.theme-toggle-btn::after,
-  :root:root:root .icon-btn.theme-toggle-btn .theme-icon-moon,
-  :root:root:root .icon-btn.theme-toggle-btn .theme-icon-sun,
-  :root:root:root .icon-btn.theme-toggle-btn .theme-icon-sun::before {
+  .icon-btn.theme-toggle-btn,
+  .icon-btn.theme-toggle-btn::before,
+  .icon-btn.theme-toggle-btn::after,
+  .icon-btn.theme-toggle-btn .theme-icon-moon,
+  .icon-btn.theme-toggle-btn .theme-icon-sun,
+  .icon-btn.theme-toggle-btn .theme-icon-sun::before {
     transition: none !important;
-  }
-  :root:root:root .icon-btn.theme-toggle-btn:active {
-    transform: none;
   }
 }
 
@@ -481,7 +472,7 @@
       color-mix(in srgb, var(--accent) 70%, var(--lg-tint-deepen)) 87%
     );
 
-    position: relative;
+    /* position: relative 由 05／07 的 .submit-btn 提供（桌機的記帳頁改成 sticky，這裡不能蓋掉） */
     isolation: isolate;
     /* 外框 2px 改由 .uv-btn-ring 畫：按鈕本身不留邊框（多 2px 內距補回原本的大小），
        overflow 裁切因此落在外緣，外框圖層才畫得進那 2px；星點與光暈被不透明的外框蓋住，看起來仍只在內側。 */
@@ -835,19 +826,7 @@
   }
 }
 
-/* 效能：捲出畫面暫停已改由 core/ambient.js 統一處理（對所有常駐動畫生效）；
- * 這條 .uv-offscreen 規則保留作相容，沒有程式再加這個 class 也不影響。 */
-:is(
-  #todayExpenseCard,
-  #pageOverview .ov-hero,
-  #pageOverview .ov-card,
-  #pageForeign .fx-stat-card
-).uv-offscreen > .uv-ring > span,
-.submit-btn.uv-offscreen > .uv-btn-ring > span,
-.submit-btn.uv-offscreen::before,
-.submit-btn.uv-offscreen::after {
-  animation-play-state: paused;
-}
+/* 效能：捲出畫面暫停由 core/ambient.js 統一處理（對所有常駐動畫生效）；舊的 .uv-offscreen 規則已沒有程式使用，P07 刪除。 */
 
 :is(
   #todayExpenseCard,
@@ -927,7 +906,7 @@
   }
 
 
-  :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill) {
+  :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill) {
     position: relative;
     isolation: isolate;
     translate: 0 0;
@@ -939,7 +918,7 @@
       transform var(--dur-fast) var(--ease-out),
       translate var(--uv-dur) ease;
   }
-  :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::before {
+  :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -953,12 +932,12 @@
 
  
   @media (hover: hover) {
-    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled) {
+    :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled) {
       translate: 0 calc(var(--uv-lift) * -1);
       z-index: 2;                          
     }
-    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled)::before { opacity: 1; }
-    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::after {
+    :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled)::before { opacity: 1; }
+    :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::after {
       content: "";
       position: absolute;
       left: 0;
@@ -967,50 +946,35 @@
       height: var(--uv-lift);
       pointer-events: none;
     }
-    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled)::after { pointer-events: auto; }
+    :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled)::after { pointer-events: auto; }
   }
-  :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled) {
+  :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled) {
     translate: 0 calc(var(--uv-lift-press) * -1);
   }
-  :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled)::before { opacity: 1; }
+  :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled)::before { opacity: 1; }
 
-  :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):focus-visible { z-index: 2; }
+  :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):focus-visible { z-index: 2; }
 
   @media (prefers-reduced-motion: reduce) {
-    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill),
-    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled),
-    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled) {
+    :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill),
+    :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled),
+    :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled) {
       translate: 0 0 !important;
     }
-    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill),
-    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::before {
+    :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill),
+    :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::before {
       transition-duration: 0.01ms !important;
     }
-    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled)::before,
-    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled)::before { opacity: 0; }
+    :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled)::before,
+    :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled)::before { opacity: 0; }
   }
-  :root[data-motion="off"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill),
-  :root[data-motion="off"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled),
-  :root[data-motion="off"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled),
-  :root[data-motion="lite"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill),
-  :root[data-motion="lite"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled),
-  :root[data-motion="lite"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled) {
-    translate: 0 0 !important;
-  }
-  :root[data-motion="off"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill),
-  :root[data-motion="off"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::before,
-  :root[data-motion="lite"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill),
-  :root[data-motion="lite"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::before {
-    transition-duration: 0.01ms !important;
-  }
-  :root[data-motion="off"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled)::before,
-  :root[data-motion="off"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled)::before,
-  :root[data-motion="lite"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):hover:not(:disabled)::before,
-  :root[data-motion="lite"] :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill):active:not(:disabled)::before { opacity: 0; }
+  /* （P07）這裡原本有三條「動畫效果：精簡／關閉」時停掉選項晶片按壓位移與光暈的規則，但選擇器寫成
+     :root[data-motion] :root:root… :is(…)（把 :root 當成子孫），永遠不會命中、從來沒有生效過；照「不改任何視覺」刪除。
+     要讓精簡／關閉真的停掉這些效果，改寫成 :root[data-motion="lite"] :is(…) 即可（會改變目前的畫面，需另外決定）。 */
 
   @media (forced-colors: active) {
-    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::before,
-    :root:root:root:root:root :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::after { display: none; }
+    :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::before,
+    :is(.choice, .quick-combo-chip, .key, .sr-chip, .oc-chip, .fx-chip, .channel-quick-select-btn, .quick-combo-no-amount-btn, .st-adjust-btn, .load-full-btn, .oc-retry, #uv-pill)::after { display: none; }
   }
 }
 

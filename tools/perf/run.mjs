@@ -19,7 +19,7 @@
 // P05 新增：「轉場開始」＝按下導覽列到 View Transition 的 ready（動畫真的開始），Event Timing 量不到 update callback；
 //          「動畫期間 Layout」＝新增／刪除紀錄、展開／收合區塊時主執行緒的排版次數（FLIP 之後應該只剩開頭或結尾一次）。
 // P06 新增：「長清單」＝合成資料加長到 30 筆（記一筆支出時 renderRecent／renderRecentList 的腳本時間，
-//          CPU 4 倍降速、記 5 筆取中位數）與 300 筆（載入完整紀錄的腳本時間、在完整紀錄上觸控捲動的幀率）。
+//          CPU 4 倍降速、記 8 筆取中位數）與 300 筆（載入完整紀錄的腳本時間、在完整紀錄上觸控捲動的幀率）。
 //          --lists-only：只跑長清單這一段（快速比較用，結果不寫入 baseline）。
 // 注意：headless 是軟體繪圖，絕對數字比真機悲觀，只拿來比較「改之前／改之後」的相對變化。
 import fs from 'node:fs';
@@ -741,7 +741,7 @@ async function measureFlip(browser) {
 /* ---------------------------------------------------------------------------
  * g. 長清單（P06）
  * ------------------------------------------------------------------------- */
-const LIST_SUBMITS = 5;
+const LIST_SUBMITS = 8;
 
 /** 包住 renderRecent／renderRecentList（頂層函式宣告就是 window 的屬性），只算最外層那一次的同步執行時間。 */
 function wrapListRenderers() {

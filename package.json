@@ -16,9 +16,12 @@
     "build:demo": "node tools/demo/build-demo.mjs"
   },
   "devDependencies": {
+    "@phosphor-icons/web": "2.1.1",
     "esbuild": "^0.24.0",
     "pixelmatch": "^8.0.0",
     "playwright": "^1.65.1",
-    "pngjs": "^7.0.0"
+    "pngjs": "^7.0.0",
+    "sharp": "^0.35.5",
+    "subset-font": "^2.9.0"
   }
 }

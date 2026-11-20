@@ -71,7 +71,6 @@
   border: 0;
   box-shadow: none;
   will-change: auto;
-  transition: transform var(--lg-dur-tap) var(--lg-spring-tap);
 }
 
 :is(.head, .overview-head, .fx-head)::before {
@@ -423,11 +422,6 @@ body::after {
   box-shadow: var(--lg-lens), var(--lg-ring);
   color: var(--lg-ink-secondary);
 }
-.bar {
-  background: var(--glass-chip);
-  border-top: 1px solid var(--hairline);
-  box-shadow: none;
-}
 
 @media (prefers-reduced-transparency: reduce) {
   :root,
@@ -458,9 +452,6 @@ body::after {
   }
   :root[data-theme="dark"],
   :root:not([data-theme="light"]) {
-    --lg-group-bg: #3a3a3c;
-    --lg-group-bg-hover: #444447;
-    --lg-group-bg-pressed: #4e4e52;
     --lg-well-bg: #121214;
     --lg-well-bg-focus: #0c0c0e;
   }
@@ -775,7 +766,6 @@ body::after {
   .settings-edit-input,
   .text-input,
   .note-input,
-  .st-date-input,
   .st-actual-input,
   .sr-input,
   .sr-amount-input,
@@ -797,7 +787,6 @@ body::after {
   .settings-edit-input,
   .text-input,
   .note-input,
-  .st-date-input,
   .st-actual-input,
   .sr-input,
   .sr-amount-input,
@@ -812,7 +801,6 @@ body::after {
   .settings-edit-input,
   .text-input,
   .note-input,
-  .st-date-input,
   .st-actual-input,
   .sr-input,
   .sr-amount-input,
@@ -833,7 +821,6 @@ body::after {
   .settings-edit-input,
   .text-input,
   .note-input,
-  .st-date-input,
   .st-actual-input,
   .sr-input,
   .sr-amount-input,

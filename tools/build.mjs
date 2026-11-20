@@ -10,13 +10,16 @@
 //   code.gs          後端：src/server/*.gs 依檔名順序串接
 //   Index.html       頁面骨架：src/client/index.html + 各 partial
 //   style.html       樣式：manifest.json 的 styles 依序串接
-//   app.html         前端程式：manifest.json 的 scripts 依序串接
+//   app.html         前端程式：manifest.json 的 scripts（開機必要）依序串接成 <script>；
+//                    deferredScripts（首頁用不到的頁面、圖表）串接成 <script type="text/plain" id="deferredApp">，
+//                    瀏覽器不會解析，開機完成後由 core/deferred.js 執行（見該檔說明）
 //   assets.html      圖示對照表與內嵌圖片
 //   appsscript.json  Apps Script 專案設定
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(ROOT, 'src');
@@ -49,6 +52,23 @@ function resolveIncludes(file, seen = []) {
     if (!fs.existsSync(target)) throw new Error(path.relative(ROOT, file) + ' 引用了不存在的檔案：' + rel);
     return stripTrailingNewlines(resolveIncludes(target, seen.concat(file)));
   });
+}
+
+/**
+ * 樣式分層（P07）：manifest.json 的 styleLayers 指定每個 CSS 檔放進哪一個 @layer，建置時整個檔案包進 @layer 名稱 { … }。
+ * 層的先後（layerOrder）在 partials/head.html 第一個 <style> 開頭宣告；排在後面的層一律蓋過前面的層，跟選擇器權重無關，
+ * 所以不用再靠 :root:root:root 或 !important 疊權重。@property 是全域規則，搬到層外面。
+ */
+function layered(dir, names, layers, order) {
+  return names.map(name => {
+    const layer = layers[name];
+    if (!layer) throw new Error('manifest.json 的 styleLayers 沒有指定 ' + name + ' 的層');
+    if (!order.includes(layer)) throw new Error('manifest.json 的 styleLayers 用了沒有宣告的層：' + layer + '（' + name + '）');
+    let text = stripTrailingNewlines(read(path.join(dir, name)));
+    const hoisted = [];
+    text = text.replace(/@property\s+--[\w-]+\s*\{[^{}]*\}/g, m => { hoisted.push(m); return ''; });
+    return (hoisted.length ? hoisted.join('\n') + '\n' : '') + '@layer ' + layer + ' {\n' + text + '\n}';
+  }).join('\n\n') + '\n';
 }
 
 function concat(dir, names, label) {
@@ -91,38 +111,102 @@ function walkFiles(dir, exts, out = []) {
 }
 
 /**
- * 圖示子集：完整的 Phosphor 樣式表有 1500 多個圖示、兩種粗細共 160 KB，而且會擋住首次繪製。
- * 這裡掃描原始碼裡出現過的圖示名稱（寧可多抓也不漏抓），只輸出用得到的規則並直接內嵌到 <head>。
+ * 圖示子集：完整的 Phosphor 樣式表有 1500 多個圖示、兩種粗細共 160 KB，字型檔各 130–150 KB。
+ * 這裡掃描原始碼裡出現過的圖示名稱（寧可多抓也不漏抓），只輸出用得到的規則，
+ * 並用 subset-font 把字型裁成只含這些字元的 woff2，以 data URI 內嵌（不再依賴 unpkg，也不會因為網路慢而空白）。
+ * 粗細：只有原始碼裡真的用到 fill（ph-fill class、iconHtml(…, 'fill')、或 CSS 用 "Phosphor-Fill" 字型）時才輸出 fill。
  * 萬一執行時遇到子集以外的圖示（例如舊資料存了已不在清單內的圖示），
- * 前端的 IconFont.ensure() 會自動補載完整樣式表，不會出現空白圖示。
+ * 前端的 IconFont.ensure() 會自動補載完整樣式表（unpkg），不會出現空白圖示。
+ * @font-face 帶 unicode-range：補載的完整字型只會用在子集以外的字元，子集內的圖示不會因為補載而重新等待字型。
  */
-function buildIconSubset() {
-  const haystack = walkFiles(SRC, ['.html', '.js', '.gs']).map(read).join('\n');
+const fontSubsetCache = new Map();
+
+async function subsetFontFile(weight, codepoints) {
+  // 用 Node 的模組解析找字型檔（Demo 同步的暫存資料夾沒有自己的 node_modules，會往上層找）
+  let file;
+  try {
+    file = createRequire(import.meta.url).resolve('@phosphor-icons/web/' + weight.dir + '/' + weight.font + '.woff2');
+  } catch (e) {
+    throw new Error('找不到圖示字型 @phosphor-icons/web/' + weight.dir + '/' + weight.font + '.woff2（請先執行 npm install）');
+  }
+  const pkg = JSON.parse(read(path.resolve(path.dirname(file), '..', '..', 'package.json')));
+  if (pkg.version !== PHOSPHOR_VERSION) {
+    throw new Error('@phosphor-icons/web 版本是 ' + pkg.version + '，與 tools/vendor 的樣式表（' + PHOSPHOR_VERSION + '）不同，字元編號會對不上');
+  }
+  const key = weight.dir + ':' + codepoints.join(',');
+  if (fontSubsetCache.has(key)) return fontSubsetCache.get(key);
+  let subsetFont;
+  try {
+    subsetFont = (await import('subset-font')).default;
+  } catch (e) {
+    throw new Error('找不到 subset-font，請先在專案根目錄執行 npm install。');
+  }
+  const out = await subsetFont(fs.readFileSync(file), codepoints.map(cp => String.fromCodePoint(cp)).join(''), { targetFormat: 'woff2' });
+  fontSubsetCache.set(key, out);
+  return out;
+}
+
+/** 把一串 codepoint 壓成 unicode-range（連續的合併成區間）。 */
+function unicodeRange(codepoints) {
+  const sorted = Array.from(new Set(codepoints)).sort((a, b) => a - b);
+  const parts = [];
+  for (let i = 0; i < sorted.length; i++) {
+    let j = i;
+    while (j + 1 < sorted.length && sorted[j + 1] === sorted[j] + 1) j++;
+    const hex = n => n.toString(16).toUpperCase();
+    parts.push('U+' + hex(sorted[i]) + (j > i ? '-' + hex(sorted[j]) : ''));
+    i = j;
+  }
+  return parts.join(',');
+}
+
+async function buildIconSubset() {
+  const sources = walkFiles(SRC, ['.html', '.js', '.gs']).map(file => ({ file, text: read(file) }));
+  const haystack = sources.map(s => s.text).join('\n');
   const words = new Set(haystack.match(/[a-z][a-z0-9]*(?:-[a-z0-9]+)*/g) || []);
+  // fill 粗細：除了 core/icons.js（產生 class 的地方）之外，有沒有任何地方用到——包括 CSS 直接把 font-family
+  // 換成 "Phosphor-Fill"（選取中的選項、導覽列目前頁面的圖示等，見 19-glass-components.css 的 --font-icon-fill）
+  const iconsJs = path.join(CLIENT, 'scripts', 'core', 'icons.js');
+  const styleText = walkFiles(path.join(CLIENT, 'styles'), ['.css']).map(read).join('\n');
+  const usesFill = /Phosphor-Fill/.test(styleText) ||
+    sources.some(s => s.file !== iconsJs && /\bph-fill\b|['"]fill['"]/.test(s.text));
+  let faces = '';
   let css = '';
   let count = 0;
-  PHOSPHOR_WEIGHTS.forEach(weight => {
+  const weights = [];
+  for (const weight of PHOSPHOR_WEIGHTS) {
+    if (weight.baseClass === 'ph-fill' && !usesFill) continue;
     const file = path.join(PHOSPHOR_DIR, weight.file);
     if (!fs.existsSync(file)) throw new Error('找不到圖示樣式表：' + path.relative(ROOT, file));
     const source = read(file);
     const base = source.match(new RegExp('\\.' + weight.baseClass + '\\s*\\{[^}]*\\}'));
     if (!base) throw new Error('無法解析圖示樣式表：' + weight.file);
-    const fontUrl = PHOSPHOR_CDN + weight.dir + '/' + weight.font;
-    css += '@font-face{font-family:"' + weight.family + '";src:url("' + fontUrl + '.woff2") format("woff2"),url("' + fontUrl +
-      '.woff") format("woff"),url("' + fontUrl + '.ttf") format("truetype");font-weight:normal;font-style:normal;font-display:block}\n';
-    css += base[0].replace(/\/\*[\s\S]*?\*\//g, '') + '\n';
-    const ruleRe = new RegExp('\\.' + weight.baseClass + '\\.ph-([a-z0-9-]+):before\\s*\\{\\s*content:\\s*("[^"]*");?\\s*\\}', 'g');
+    const ruleRe = new RegExp('\\.' + weight.baseClass + '\\.ph-([a-z0-9-]+):before\\s*\\{\\s*content:\\s*"\\\\([0-9a-f]+)";?\\s*\\}', 'g');
     let m;
     let total = 0;
+    const rules = [];
+    const codepoints = [];
     while ((m = ruleRe.exec(source))) {
       total++;
       if (!words.has(m[1])) continue;
-      css += '.' + weight.baseClass + '.ph-' + m[1] + ':before{content:' + m[2] + '}\n';
-      count++;
+      rules.push('.' + weight.baseClass + '.ph-' + m[1] + ':before{content:"\\' + m[2] + '"}');
+      codepoints.push(parseInt(m[2], 16));
     }
     if (total < 1000) throw new Error('圖示樣式表內容不完整：' + weight.file + '（只解析到 ' + total + ' 個圖示）');
-  });
-  return { css, count };
+    // unicode-range 一定要包含 U+0020（空白）：CSS 用「range 含空白的第一個字型」當行高與基線的依據（first available font），
+    // 少了它，圖示所在的行會改用後備字型的行高，基線位移 1px。
+    codepoints.unshift(0x20);
+    const font = await subsetFontFile(weight, codepoints);
+    faces += '@font-face{font-family:"' + weight.family + '";src:url(data:font/woff2;base64,' + font.toString('base64') +
+      ') format("woff2");font-weight:normal;font-style:normal;font-display:block;unicode-range:' + unicodeRange(codepoints) + '}\n';
+    // 原始樣式表的 font-family 帶 !important（防止瀏覽器擴充套件換字型）。放進前面的層之後，
+    // 前面層的 !important 反而會贏過主樣式表自己的 !important（例如選取中改用 fill 字型），所以拿掉。
+    css += base[0].replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s*!important/g, '') + '\n' + rules.join('\n') + '\n';
+    count += rules.length;
+    weights.push({ name: weight.dir, icons: rules.length, fontBytes: font.length });
+  }
+  // 字型宣告是全域的，放在層外；規則放進 icons 層（排在開機畫面之後、主樣式表之前）
+  return { css: faces + '@layer icons {\n' + css + '}\n', count, weights };
 }
 
 function size(text) {
@@ -147,14 +231,24 @@ export async function build(opts) {
   const started = Date.now();
   const manifest = JSON.parse(read(path.join(CLIENT, 'manifest.json')));
   warnUnlisted(path.join(CLIENT, 'styles'), manifest.styles, '.css');
-  warnUnlisted(path.join(CLIENT, 'scripts'), manifest.scripts, '.js');
+  const deferredNames = manifest.deferredScripts || [];
+  warnUnlisted(path.join(CLIENT, 'scripts'), manifest.scripts.concat(deferredNames), '.js');
+  const dup = manifest.scripts.filter(n => deferredNames.includes(n));
+  if (dup.length) throw new Error('manifest.json 的 scripts 與 deferredScripts 重複列出：' + dup.join('、'));
 
-  let css = concat(path.join(CLIENT, 'styles'), manifest.styles, 'styles');
+  manifest.styles.forEach(name => { if (!fs.existsSync(path.join(CLIENT, 'styles', name))) throw new Error('manifest.json 的 styles 列了不存在的檔案：' + name); });
+  const layerOrder = manifest.layerOrder || [];
+  let css = layered(path.join(CLIENT, 'styles'), manifest.styles, manifest.styleLayers || {}, layerOrder);
   let js = concat(path.join(CLIENT, 'scripts'), manifest.scripts, 'scripts');
+  let deferredJs = deferredNames.length ? concat(path.join(CLIENT, 'scripts'), deferredNames, 'deferredScripts') : '';
   const assets = stripTrailingNewlines(read(path.join(CLIENT, 'assets', 'assets.js'))) + '\n';
   let html = resolveIncludes(path.join(CLIENT, 'index.html'));
+  const declared = (html.match(/<style[^>]*>(?:\s|\/\*[\s\S]*?\*\/)*@layer\s+([\w\s,-]+);/) || [])[1];
+  if (!declared || declared.split(',').map(x => x.trim()).join(',') !== layerOrder.join(',')) {
+    throw new Error('partials/head.html 第一個 <style> 開頭的 @layer 順序必須與 manifest.json 的 layerOrder 相同（' + layerOrder.join(', ') + '）');
+  }
 
-  const icons = buildIconSubset();
+  const icons = await buildIconSubset();
   let iconCss = icons.css;
 
   if (minify) {
@@ -162,10 +256,14 @@ export async function build(opts) {
     iconCss = (await esbuild.transform(iconCss, { loader: 'css', minify: true, charset: 'utf8', legalComments: 'none' })).code;
     // 不改寫語法（target: esnext）、不改頂層名稱（未指定 format 時 esbuild 會保留全域宣告），
     // 只移除空白與註解、縮短區域變數名稱。
-    const jsOut = await esbuild.transform(js, { loader: 'js', minify: true, target: 'esnext', charset: 'utf8', legalComments: 'none' });
+    // 開機必要與延後的兩段分開壓縮：兩段是不同的 <script>，頂層名稱照樣是共用的全域名稱。
+    const jsOpts = { loader: 'js', minify: true, target: 'esnext', charset: 'utf8', legalComments: 'none' };
+    const jsOut = await esbuild.transform(js, jsOpts);
+    const deferredOut = deferredJs ? await esbuild.transform(deferredJs, jsOpts) : { code: '', warnings: [] };
     const cssOut = await esbuild.transform(css, { loader: 'css', minify: true, target: 'esnext', charset: 'utf8', legalComments: 'none' });
-    jsOut.warnings.concat(cssOut.warnings).forEach(w => console.warn('⚠ esbuild：' + w.text));
+    jsOut.warnings.concat(deferredOut.warnings, cssOut.warnings).forEach(w => console.warn('⚠ esbuild：' + w.text));
     js = jsOut.code;
+    deferredJs = deferredOut.code;
     css = cssOut.code;
   }
 
@@ -175,7 +273,9 @@ export async function build(opts) {
 
   // 內嵌在 HTML 裡的 CSS / JS 不能含有會提前結束標籤的字串。
   if (/<\/style/i.test(css)) throw new Error('樣式內容含有 </style，會破壞頁面結構。');
-  if (/<\/script/i.test(js)) throw new Error('前端程式含有 </script（請改寫成 "<\\/script"）。');
+  if (/<\/script/i.test(js + deferredJs)) throw new Error('前端程式含有 </script（請改寫成 "<\\/script"）。');
+  // type="text/plain" 的內容一樣由 HTML 解析器切出來：「<!--」接「<script」會讓解析器進入 escaped 狀態而吃掉後面的內容
+  if (/<!--/.test(js + deferredJs)) throw new Error('前端程式含有 <!--（請拆開字串，例如 "<!" + "--"）。');
   if (/<\/script/i.test(assets)) throw new Error('assets.js 含有 </script。');
 
   const serverFiles = fs.readdirSync(SERVER).filter(f => f.endsWith('.gs')).sort();
@@ -185,7 +285,10 @@ export async function build(opts) {
     'code.gs': server,
     'Index.html': html,
     'style.html': '<style>\n' + css + '</style>\n',
-    'app.html': '<script>\n' + js + '</script>\n',
+    // 延後的部分緊接在開機程式後面：開機程式可以在它還在下載時就先編譯、執行；它本身不會被解析，
+    // 開機完成後由 DeferredApp（core/deferred.js）執行。
+    'app.html': '<script>\n' + js + '</script>\n' +
+      (deferredJs ? '<script type="text/plain" id="deferredApp">\n' + deferredJs + '</script>\n' : ''),
     'assets.html': '<script>\n' + assets + '</script>\n',
     'appsscript.json': read(path.join(SRC, 'appsscript.json')),
   };
@@ -209,9 +312,12 @@ export async function build(opts) {
 
   say((write ? 'dist/ 建置完成' : '建置完成（未寫入 dist/）') + '（' + (minify ? '已壓縮' : '未壓縮') + '，' + (Date.now() - started) + ' ms）');
   rows.forEach(r => say(r));
-  say('  內嵌圖示 ' + (icons.count / PHOSPHOR_WEIGHTS.length) + ' 個（每種粗細）');
+  say('  內嵌圖示 ' + icons.weights.map(w => w.name + ' ' + w.icons + ' 個（字型 ' + (w.fontBytes / 1024).toFixed(1) + ' KB）').join('、'));
+  const jsSize = size(js);
+  const deferredSize = size(deferredJs);
+  say('  前端程式：開機執行 ' + kb(jsSize.bytes).trim() + '（gzip ' + kb(jsSize.gz).trim() + '）＋延後 ' + kb(deferredSize.bytes).trim() + '（gzip ' + kb(deferredSize.gz).trim() + '）');
   say('  ' + '頁面合計'.padEnd(12) + kb(total.bytes) + '   gzip ' + kb(total.gz));
-  return { outputs, total };
+  return { outputs, total, js: { boot: jsSize, deferred: deferredSize } };
 }
 
 async function main() {

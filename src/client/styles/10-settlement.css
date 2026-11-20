@@ -259,38 +259,6 @@
   border-radius: var(--lg-radius-control);
 }
 
-.st-date-input-wrap {
-  width: 100%;
-}
-
-.st-date-input {
-  width: 100%;
-  padding: 12px 16px;
-  border: 1.5px solid var(--glass-border);
-  border-radius: var(--lg-radius-control);
-  background: var(--glass-chip);
-  color: var(--ink);
-  font-size: 16px;
-  font-weight: 700;
-  font-family: inherit;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.15s ease;
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-.st-date-input:focus {
-  outline: none;
-  border-color: var(--glass-border);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--border-main) 25%, transparent);
-  background: var(--glass-surface-hover);
-}
-
-.st-date-input:hover {
-  border-color: var(--glass-border);
-  background: var(--glass-surface-hover);
-}
-
 .st-ledger-grid {
   display: flex;
   flex-direction: column;
@@ -348,17 +316,12 @@
   font-size: 15px;
 }
 
-.st-ledger-val.warn {
-  color: var(--exp);
-}
-
 .st-total-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-top: 10px;
   padding: 12px 14px;
-  background: var(--glass-chip);
   border: 1px solid var(--glass-border-subtle);
   border-radius: var(--lg-radius-control);
 }
@@ -385,11 +348,6 @@
 
 .st-total-bar.actual {
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, transparent) 0%, color-mix(in srgb, var(--accent) 4%, transparent) 100%);
-  border-color: var(--accent-border);
-}
-
-.st-total-bar.actual .st-total-val {
-  color: var(--accent-text);
 }
 
 .st-actual-grid {
@@ -614,7 +572,6 @@
 
 .st-diff-hint {
   font-size: 12px;
-  color: var(--subtle);
   font-weight: 600;
   margin-top: 4px;
   position: relative;
@@ -684,15 +641,9 @@
   gap: 6px;
   padding: 14px 18px;
   border: 0;
-  border-radius: var(--lg-radius-control);
-  background: var(--accent-gradient);
   color: var(--on);
   font-size: 15px;
   font-weight: 800;
-  box-shadow:
-    0 6px 20px -4px color-mix(in srgb, var(--accent) 40%, transparent),
-    0 2px 8px -1px color-mix(in srgb, var(--accent) 20%, transparent),
-    inset 0 1px 1px color-mix(in srgb, var(--hl) 20%, transparent);
   transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, filter 0.15s ease;
 }
 
@@ -725,9 +676,7 @@
   gap: 5px;
   padding: 14px 14px;
   border: 1.5px solid var(--glass-border);
-  border-radius: var(--lg-radius-control);
   background: var(--glass-surface);
-  color: var(--muted);
   font-size: 14px;
   font-weight: 700;
   box-shadow: var(--shadow-card);
@@ -1191,10 +1140,6 @@
 
   .modal-title {
     font-size: 22px;
-  }
-
-  .modal-amount-val {
-    font-size: 36px;
   }
 
   .toast {
