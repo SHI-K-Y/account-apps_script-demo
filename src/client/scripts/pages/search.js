@@ -910,7 +910,20 @@ const SearchPage = (function () {
       S.records.splice(idx, 1);
     }
     if (!S.query) { renderAll(); return; }
+    requeryMonth(month);
+  }
 
+  /** 復原刪除之後（F05）：那筆插回原位、下方的列號都變了，重新搜尋這個月份。 */
+  function onRecordRestored(info) {
+    if (!info) return;
+    S.seenVersion = state.mutationVersion;
+    if (S.running) S.stale = true;
+    if (!S.query) { renderAll(); return; }
+    requeryMonth(info.month);
+  }
+
+  /** 列號會變動（刪除、復原）時：先把這個月份標成更新中，再向後端重新搜尋這個月份。 */
+  function requeryMonth(month) {
     S.refreshing.add(month);
     S.requeryFailed.delete(month);
     refreshGroup(month);
@@ -1069,5 +1082,6 @@ const SearchPage = (function () {
     onLeave: onLeave,
     onRecordUpdated: onRecordUpdated,
     onRecordDeleted: onRecordDeleted,
+    onRecordRestored: onRecordRestored,
   };
 })();

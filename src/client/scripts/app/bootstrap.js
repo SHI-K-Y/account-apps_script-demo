@@ -14,8 +14,9 @@
  *           用 LocalCache 預先渲染總覽、對帳與設定頁（畫在隱藏的頁面容器裡）、閒置預取總覽＋本月圖表＋預算（P12，
  *           app/prefetch.js，一次 batchRead）、各模組用 BootPhase.idle() 登記的工作
  *
- * LocalCache 的資料在 IndexedDB（P12）：local-cache.js 一執行就開始讀，第一段之前最多等 LOCAL_CACHE_WAIT_MS
- * （通常和等第一幀同時就讀完了）；超過時間還沒讀完就照樣用伺服器內嵌的資料開機。
+ * LocalCache 的資料在 IndexedDB（P12）：頁面一開始（partials/boot-loader.html）就開始讀，第一段之前最多等
+ * LOCAL_CACHE_WAIT_MS（通常和等第一幀同時就讀完了）；超過時間還沒讀完就照樣用伺服器內嵌的資料開機。
+ * IndexedDB 裡還沒有資料（第一次開啟、被清掉）時不等：建立資料庫要好幾十毫秒，等了也是空的。
  *
  * 有本機快取時，第一段完全不用等伺服器：用 __INITIAL_DATA__ 與 LocalCache 裡比較新的那份；背景同步回來後
  * 照舊由 applyInitialData() 一次更新全部（同步途中也可以正常操作）。都沒有資料時才保留載入畫面等同步結果。
@@ -139,7 +140,7 @@ const AppBoot = (function() {
     // 先等一幀：開機程式的編譯與頂層執行自成一個任務；已經解析好的頁面骨架在這一幀先算好樣式與排版
     // （載入畫面還蓋著，看不到），首屏加上的選項、清單在下一幀只要增量計算，不會擠成一個長任務。
     // 同時等 LocalCache 從 IndexedDB 讀完（P12）
-    await Promise.all([BootPhase.nextFrame(), LocalCache.whenReady(LOCAL_CACHE_WAIT_MS)]);
+    await Promise.all([BootPhase.nextFrame(), LocalCache.mayHaveData() ? LocalCache.whenReady(LOCAL_CACHE_WAIT_MS) : null]);
     try {
       stageFirstScreen();
     } catch (e) {

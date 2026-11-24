@@ -58,11 +58,20 @@ function showServerError(error) {
 }
 
 const TOAST_DURATION = 2800;
+// 帶「復原」按鈕的提示（F05）顯示多久；進度條跟著這個時間跑完
+const UNDO_TOAST_MS = 5000;
 const TOAST_ICONS = { success: 'check', error: 'x', info: 'info' };
 
-function showToast(message, type = '') {
+/**
+ * showToast(message, type, opts)
+ *   opts.duration  顯示多久（毫秒，預設 TOAST_DURATION）
+ *   opts.action    { label, onClick }：在提示右側加一個按鈕（例如「復原」），按一次就失效；下一則提示沒有 action 時移除
+ */
+function showToast(message, type = '', opts) {
   const toast = document.getElementById('toast');
   if (!toast) return;
+  const options = opts || {};
+  const duration = options.duration > 0 ? options.duration : TOAST_DURATION;
   let iconBox = toast.querySelector('.toast-icon');
   let msgEl = toast.querySelector('.toast-msg');
   let progressEl = toast.querySelector('.toast-progress');
@@ -82,12 +91,35 @@ function showToast(message, type = '') {
   const wasShown = toast.classList.contains('show');
   msgEl.textContent = message;
   iconBox.innerHTML = iconHtml(TOAST_ICONS[type] || TOAST_ICONS.info);
-  toast.style.setProperty('--toast-ms', TOAST_DURATION + 'ms');
+  toast.style.setProperty('--toast-ms', duration + 'ms');
+
+  let actionEl = toast.querySelector('.toast-action');
+  if (options.action && typeof options.action.onClick === 'function') {
+    if (!actionEl) {
+      actionEl = document.createElement('button');
+      actionEl.type = 'button';
+      actionEl.className = 'toast-action';
+      toast.insertBefore(actionEl, progressEl);
+    }
+    const onClick = options.action.onClick;
+    actionEl.textContent = options.action.label || '復原';
+    actionEl.disabled = false;
+    actionEl.hidden = false;
+    actionEl.onclick = () => {
+      actionEl.onclick = null;
+      actionEl.disabled = true;
+      onClick();
+    };
+  } else if (actionEl) {
+    actionEl.onclick = null;
+    actionEl.hidden = true;
+  }
+
   // 收起後的 toast 是 display: none（06-today-recent.css）：先以收起狀態出現、算一次樣式，再加 .show，淡入才有起點。
   // 這一次重算放到繪製前的 requestAnimationFrame：呼叫端（送出、刪除）通常剛改完 DOM，
   // 在這裡算會強制同步排版，rAF 裡則和這一幀本來就要做的排版合併。
   clearTimeout(toast._parkTimer);
-  toast._type = type;
+  toast._type = type + (options.action ? ' has-action' : '');
   const reveal = () => { toast.className = `toast show ${toast._type}`; };
   if (toast._revealRaf) {
     // 已排定在下一幀顯示：那一次會用最新的類型
@@ -120,7 +152,35 @@ function showToast(message, type = '') {
     toast.classList.add('is-animating');
     toast.classList.remove('show');
     toast._parkTimer = setTimeout(() => toast.classList.remove('is-animating'), Motion.dur('base') + 80);
-  }, TOAST_DURATION);
+    const btn = toast.querySelector('.toast-action');
+    if (btn) btn.onclick = null; // 時間到就不能再復原
+  }, duration);
+}
+
+/**
+ * 帶「復原」按鈕的成功提示（F05）：顯示 UNDO_TOAST_MS，按下去執行 undo()。
+ *   undo() 回傳 Promise（或值）：成功時顯示它回傳的文字（預設「已復原」），失敗時顯示錯誤（例如另一台裝置改過的衝突）。
+ * 呼叫端決定怎麼復原：已送出的寫入用 undoLedgerOps（bookkeeping/submit.js）依 opId 復原；
+ * 還在佇列、沒送出的寫入直接從佇列移除即可。
+ */
+function showUndoToast(message, undo) {
+  showToast(message, 'success', {
+    duration: UNDO_TOAST_MS,
+    action: {
+      label: '復原',
+      onClick: () => {
+        // 一次伺服器執行通常 0.3–2 秒，偶爾更久：「復原中」留到結果回來（結果的提示會取代它）
+        showToast('復原中…', 'info', { duration: 15000 });
+        Promise.resolve()
+          .then(undo)
+          .then(text => showToast(typeof text === 'string' && text ? text : '已復原', 'success'))
+          .catch(err => {
+            showToast((err && err.message) || '復原失敗，請稍後再試一次', 'error');
+            console.error(err);
+          });
+      }
+    }
+  });
 }
 
 function pad(value) {

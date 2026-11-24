@@ -77,7 +77,7 @@ test('LocalCache：開機資料不重複存最近紀錄；getBoot() 時補回 in
   assert.equal(boot.recentMonth, '2026.11');
   assert.ok(boot.cachedAt > 100, '目前月份的最近紀錄：cachedAt 改成現在');
   assert.deepEqual(h.db.get('recent:2026.11').v, recent, '最近紀錄只存在 recent:<月份>');
-  assert.deepEqual(h.lsWrites, [], '大型資料不寫 localStorage');
+  assert.deepEqual(h.lsWrites, ['FAST_BOOKKEEPING_IDB_V1'], '大型資料不寫 localStorage（只記一個「IndexedDB 有資料」的記號）');
 
   const got = h.LC.getBoot();
   assert.deepEqual(got.initialRecent, recent);
@@ -177,7 +177,7 @@ test('LocalCache：第一次啟動把舊的 localStorage 資料搬進 IndexedDB�
   await new Promise(r => setTimeout(r, 0));
   assert.equal(h.db.get('boot').v.initialRecent, undefined);
   assert.deepEqual(h.db.get('recent:2026.11').v.fullExpenses, [{ row: 5 }]);
-  assert.deepEqual(Array.from(h.store.keys()).sort(), ['FAST_BOOKKEEPING_ITEM_PREFS_V1', 'FAST_BOOKKEEPING_PREFS_V1'], '舊資料刪除、偏好保留');
+  assert.deepEqual(Array.from(h.store.keys()).sort(), ['FAST_BOOKKEEPING_IDB_V1', 'FAST_BOOKKEEPING_ITEM_PREFS_V1', 'FAST_BOOKKEEPING_PREFS_V1'], '舊資料刪除、偏好保留');
 });
 
 test('LocalCache：IndexedDB 不能用或寫入失敗時，舊資料照樣讀得到而且不刪除', async () => {
@@ -188,6 +188,18 @@ test('LocalCache：IndexedDB 不能用或寫入失敗時，舊資料照樣讀得
     assert.equal(h.LC.getOverview().assetTotal, 9, JSON.stringify(opt));
     assert.ok(h.store.has('FAST_BOOKKEEPING_BOOT_V2'), '沒有成功寫進 IndexedDB 就不刪：' + JSON.stringify(opt));
   }
+});
+
+test('LocalCache：IndexedDB 還沒有資料時開機不用等它（mayHaveData）；寫入成功之後才記下來；有舊資料要搬時要等', async () => {
+  const h = loadLocalCache();
+  assert.equal(h.LC.mayHaveData(), false, '第一次開啟：不等');
+  await h.LC.whenReady();
+  h.LC.saveOverview({ month: '2026.11' });
+  assert.equal(h.LC.mayHaveData(), false, '還沒寫進去');
+  await h.idle();
+  assert.equal(h.LC.mayHaveData(), true, '寫入成功：下次開機要等它讀完');
+  assert.equal(loadLocalCache({ writeFails: true, legacy: { FAST_BOOKKEEPING_PREFS_V1: '{}' } }).LC.mayHaveData(), false);
+  assert.equal(loadLocalCache({ legacy: LEGACY }).LC.mayHaveData(), true, '有舊版資料：要等搬家');
 });
 
 test('LocalCache：項目偏好沒變就不寫 localStorage（每記一筆都會呼叫）', async () => {

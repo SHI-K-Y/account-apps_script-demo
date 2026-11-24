@@ -1,12 +1,13 @@
 /* KvStore — IndexedDB 的極簡 key-value 包裝（P12）：LocalCache 的大型資料存這裡，localStorage 只放小型偏好。
  * 值用結構化複製存取（不經 JSON），所有操作都是非同步、失敗時回傳 null／false（隱私模式、被封鎖時照常運作，只是不保存）。
+ * 開機時 partials/boot-loader.html 已經先開好資料庫、讀好整份（window.__kvEarly），第一次 readAll() 直接用它。
  *   KvStore.readAll()      → Promise<Map<key, value> | null>
- *   KvStore.write(entries) → Promise<boolean>；entries 是 [key, value] 陣列，value 為 undefined 表示刪除，同一個交易寫完
- *   KvStore.destroy()      → Promise<void>；刪除整個資料庫（公開 Demo 每次開啟都還原） */
+ *   KvStore.write(entries) → Promise<boolean>；entries 是 [key, value] 陣列，value 為 undefined 表示刪除，同一個交易寫完 */
 const KvStore = (function() {
   const DB_NAME = 'FAST_BOOKKEEPING_V1';
   const STORE = 'kv';
-  let opening = null;
+  let early = typeof window !== 'undefined' && window.__kvEarly ? window.__kvEarly : null;
+  let opening = early ? early.then(r => (r && r.db) || null) : null;
   function open() {
     if (opening) return opening;
     opening = new Promise(resolve => {
@@ -28,17 +29,21 @@ const KvStore = (function() {
       tx.onerror = tx.onabort = () => resolve(null);
     }));
   }
-  return {
-    readAll: () => run('readonly', store => {
+  function readNow() {
+    return run('readonly', store => {
       const keys = store.getAllKeys();
       const values = store.getAll();
       return () => new Map(keys.result.map((k, i) => [k, values.result[i]]));
-    }),
+    });
+  }
+  return {
+    readAll: function() {
+      const pre = early;
+      early = null;
+      return pre ? pre.then(r => (r && r.keys ? new Map(r.keys.map((k, i) => [k, r.values[i]])) : readNow())) : readNow();
+    },
     write: entries => (entries.length ? run('readwrite', store => {
       entries.forEach(([k, v]) => { if (v === undefined) store.delete(k); else store.put(v, k); });
     }).then(Boolean) : Promise.resolve(true)),
-    destroy: () => new Promise(resolve => {
-      try { const req = indexedDB.deleteDatabase(DB_NAME); req.onsuccess = req.onerror = req.onblocked = () => resolve(); } catch (e) { resolve(); }
-    }),
   };
 })();

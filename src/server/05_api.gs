@@ -26,6 +26,8 @@ let apiRoutesMemo_ = null;
  *   - 表單可帶 opId（8–80 個英數字、-、_）：同一個 opId 在 6 小時內重送只會寫入一次，回傳上次的結果（replayed: true）。
  *   - 回應預設是差量格式 { ok, op, type, month, row, record, dailyExpenses, budget, counts }；
  *     表單帶 full: true（或經由 HTTP API 而且沒帶 full: false）時是舊的完整格式 { ok, type, month, row, record, recent }。
+ *   - 每筆寫入都記在隱藏工作表 _操作紀錄（F05，24_oplog.gs），回應帶 opId（沒送 opId 時由伺服器產生）。
+ *   - undoRecordOp({ undoOf: opId }) 依操作紀錄復原那一筆；getOpLog(limit) 讀最近的操作（唯讀）。
  */
 function apiRoutes_() {
   if (apiRoutesMemo_) return apiRoutesMemo_;
@@ -41,6 +43,8 @@ function apiRoutes_() {
     deleteExpense:          { handler: deleteExpense_, form: true, write: true },
     deleteIncome:           { handler: deleteIncome_, form: true, write: true },
     addRecords:             { handler: addRecords_, write: true },
+    undoRecordOp:           { handler: undoRecordOp_, form: true, write: true },
+    getOpLog:               { handler: getOpLog_ },
     createNewMonthSheet:    { handler: createNewMonthSheet_, write: true },
     searchRecords:          { handler: searchRecords_ },
 
@@ -127,7 +131,7 @@ function resolveApiRequest_(request) {
 const BATCH_READ_ACTIONS_ = Object.freeze([
   'getInitialData', 'getRecentRecords', 'getFullRecords', 'searchRecords', 'getCreditCardRecords',
   'getAssetOverview', 'getOverviewCharts', 'getSettingsOptions',
-  'getFxLedgers', 'getFxLedgerData', 'getFxRates', 'getBudgetSettings',
+  'getFxLedgers', 'getFxLedgerData', 'getFxRates', 'getBudgetSettings', 'getOpLog',
 ]);
 const BATCH_READ_MAX_ = 8;
 
@@ -222,6 +226,8 @@ function api(request) {
       totalMs: Date.now() - t0,
       authMs: t1 - t0,
       handlerMs: Date.now() - t1,
+      // 寫操作紀錄（_操作紀錄）花的時間（F05）：單筆記帳的目標是 ≤ 50 ms
+      opLogMs: opLogMs_,
       spreadsheet: spreadsheetOpened_(),
       ok: ok,
     }));

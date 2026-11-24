@@ -844,6 +844,30 @@ function afterCreditCardMutations() {
   Prefetch.afterMutation();
 }
 
+/**
+ * 復原標記已繳（F05）：依 opId 請後端把是否已繳寫回原值（每一列都仍是標記後的狀態才會寫，否則提示衝突）。
+ * 回應合併進信用卡頁的資料與本機快取；本機沒有該月份清單時也照 paidByRow 更新畫面上的紀錄。
+ */
+function undoCreditCardPaid(ops) {
+  return undoLedgerOps(ops, function(res, month) {
+    applyCreditCardMutationResult(month, res);
+    var byRow = (res && res.paidByRow) || {};
+    (ccState.recordsByMonth[month] || []).forEach(function(r) {
+      if (Object.prototype.hasOwnProperty.call(byRow, r.row)) r.paid = byRow[r.row];
+    });
+  }).then(function() {
+    afterCreditCardMutations();
+    renderCreditCardPage();
+    return '已復原已繳標記';
+  }, function(err) {
+    // 衝突或部分失敗：重新讀取這些月份，畫面才會和試算表一致
+    var months = ops.map(function(op) { return op.month; }).filter(function(m, i, all) { return all.indexOf(m) === i; });
+    months.forEach(function(m) { delete ccState.recordsByMonth[m]; });
+    loadCreditCardAll(true, months);
+    throw err;
+  });
+}
+
 function toggleSingleCreditCardPaid(month, rowNum, targetPaid) {
   var busyKey = ccBusyKey(month, rowNum);
   if (!month || !rowNum || ccState.busyRows[busyKey]) return;
@@ -864,13 +888,17 @@ function toggleSingleCreditCardPaid(month, rowNum, targetPaid) {
   var toastDesc = describeCreditCardRecord(month, targetRec);
   renderCreditCardPage();
 
+  var form = { month: month, row: rowNum, paid: targetPaid, opId: Api.newOpId() };
   Api.server
     .withSuccessHandler(function(res) {
       delete ccState.busyRows[busyKey];
       applyCreditCardMutationResult(month, res);
       afterCreditCardMutations();
       renderCreditCardPage();
-      showToast(toastDesc + '，' + (targetPaid === 'O' ? '已繳費' : '未繳費'), 'success');
+      var opId = (res && res.opId) || form.opId;
+      showUndoToast(toastDesc + '，' + (targetPaid === 'O' ? '已繳費' : '未繳費'), function() {
+        return undoCreditCardPaid([{ opId: opId, month: month }]);
+      });
     })
     .withFailureHandler(function(err) {
       delete ccState.busyRows[busyKey];
@@ -882,7 +910,7 @@ function toggleSingleCreditCardPaid(month, rowNum, targetPaid) {
       renderCreditCardPage();
       showServerError(err);
     })
-    .markCreditCardPaid({ month: month, row: rowNum, paid: targetPaid });
+    .markCreditCardPaid(form);
 }
 
 // rowsByMonth：{ '2026.11': [5, 8], '2026.10': [12] }，每個月份各送一次，依序執行
@@ -906,19 +934,25 @@ function batchMarkUnpaidRecords(rowsByMonth) {
   renderCreditCardPage();
 
   var doneCount = 0;
+  var undoOps = [];   // 每個月份一筆操作，「復原」時依序還原
   function next(idx) {
     if (idx >= months.length) {
       ccState.batchBusy = false;
       afterCreditCardMutations();
       renderCreditCardPage();
-      showToast('已成功將 ' + total + ' 筆信用卡消費標記為【已繳費 (O)】！', 'success');
+      var ops = undoOps.slice();
+      showUndoToast('已將 ' + total + ' 筆信用卡消費標記為已繳費', function() {
+        return undoCreditCardPaid(ops);
+      });
       return;
     }
     var month = months[idx];
     var rows = rowsByMonth[month];
-    Api.call('batchMarkCreditCardPaid', { month: month, rows: rows, paid: 'O' })
+    var form = { month: month, rows: rows, paid: 'O', opId: Api.newOpId() };
+    Api.call('batchMarkCreditCardPaid', form)
       .then(function(res) {
         applyCreditCardMutationResult(month, res);
+        undoOps.push({ opId: (res && res.opId) || form.opId, month: month });
         doneCount += rows.length;
         next(idx + 1);
       })

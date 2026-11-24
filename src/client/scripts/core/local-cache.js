@@ -17,6 +17,9 @@
 const LocalCache = (function() {
   const IDLE_TIMEOUT_MS = 2000;
   const CHARTS_MAX_MONTHS = 3;
+  // IndexedDB 裡已經有資料的記號（localStorage，一個字元）：沒有記號時開機不用等 IndexedDB（第一次開啟、
+  // 被清掉時建立資料庫要好幾十毫秒，等了也是空的）
+  const HAS_DATA_FLAG = 'FAST_BOOKKEEPING_IDB_V1';
   const LEGACY = [
     [/^FAST_BOOKKEEPING_BOOT_V2$/, () => 'boot'],
     [/^FAST_BOOKKEEPING_RECENT_V2_(.+)$/, m => 'recent:' + m[1]],
@@ -33,6 +36,7 @@ const LocalCache = (function() {
   const touched = new Set();   // 讀完 IndexedDB 之前就寫過／刪過的鍵：讀回來的舊值不蓋掉它
   const dirty = new Map();     // 下一次閒置要寫回的鍵 → entry（undefined 表示刪除）
   let flushQueued = false;
+  let flagged = false;
   let persistent = false;
   let ready = false;
   let resolveReady;
@@ -69,7 +73,13 @@ const LocalCache = (function() {
     const entries = Array.from(dirty.entries());
     dirty.clear();
     if (!hasKv() || (ready && !persistent)) return Promise.resolve(false);
-    return KvStore.write(entries);
+    return KvStore.write(entries).then(ok => {
+      if (ok && !flagged) {
+        flagged = true;
+        try { localStorage.setItem(HAS_DATA_FLAG, '1'); } catch (e) {}
+      }
+      return ok;
+    });
   }
   try {
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
@@ -144,6 +154,12 @@ const LocalCache = (function() {
       return Promise.race([readyPromise.then(() => true), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
     },
     isReady: () => ready,
+    /** IndexedDB 可能有資料（寫過、或有還沒搬的舊 localStorage 資料）：開機要不要等它讀完。 */
+    mayHaveData: function() {
+      try {
+        return localStorage.getItem(HAS_DATA_FLAG) === '1' || readLegacy().length > 0;
+      } catch (e) { return false; }
+    },
     /** 立刻寫回（測試、離開頁面前用）。 */
     flush: flush,
 

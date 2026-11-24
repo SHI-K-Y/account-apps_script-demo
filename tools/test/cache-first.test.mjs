@@ -327,8 +327,10 @@ const WARM_KEYS = [
 test('setup()：安裝每 2 小時一次的 warmCaches 觸發器，重跑不會重複', () => {
   const b = createBackend();
   const first = b.fns.setup();
-  assert.equal(b.runtime.triggers.length, 1);
-  const t = b.runtime.triggers[0];
+  // 另一個是每日維護（F05，見 oplog.test.mjs）
+  const warm = () => b.runtime.triggers.filter(x => x.getHandlerFunction() === 'warmCaches');
+  assert.equal(warm().length, 1);
+  const t = warm()[0];
   assert.equal(t.getHandlerFunction(), 'warmCaches');
   assert.equal(t.spec.type, 'CLOCK');
   assert.equal(t.spec.everyHours, 2);
@@ -336,8 +338,8 @@ test('setup()：安裝每 2 小時一次的 warmCaches 觸發器，重跑不會�
   assert.ok(Number.isFinite(first.warmMs));
 
   b.fns.setup();
-  assert.equal(b.runtime.triggers.length, 1, '先刪掉同名的舊觸發器');
-  assert.notEqual(b.runtime.triggers[0].getUniqueId(), t.getUniqueId());
+  assert.equal(warm().length, 1, '先刪掉同名的舊觸發器');
+  assert.notEqual(warm()[0].getUniqueId(), t.getUniqueId());
 });
 
 test('warmCaches：只接受本專案觸發器的事件或擁有者直接執行', () => {

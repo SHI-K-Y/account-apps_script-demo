@@ -31,9 +31,19 @@ function applyMutationDelta(base, result) {
     list = list
       .filter(r => Number(r.row) !== row)
       .map(r => (Number(r.row) > row ? Object.assign({}, r, { row: Number(r.row) - 1 }) : r));
+  } else if (result.op === 'restore') {
+    // 復原刪除（F05，src/server/24_oplog.gs 的 restoreRecord_）：插回原本的列，那一列以下往下移
+    if (!result.record) return null;
+    list = list.map(r => (Number(r.row) >= row ? Object.assign({}, r, { row: Number(r.row) + 1 }) : r));
+    list.push(result.record);
+    list.sort((a, b) => Number(b.row) - Number(a.row));
   } else if (result.op === 'paid') {
     const rows = new Set((Array.isArray(result.rows) ? result.rows : [result.row]).map(Number));
-    list = list.map(r => (rows.has(Number(r.row)) ? Object.assign({}, r, { paid: result.paid }) : r));
+    // 復原標記已繳時每一列寫回各自原本的值（paidByRow）
+    const byRow = result.paidByRow || null;
+    list = list.map(r => (rows.has(Number(r.row))
+      ? Object.assign({}, r, { paid: byRow ? byRow[r.row] : result.paid })
+      : r));
   } else {
     return null;
   }
@@ -83,6 +93,23 @@ function handleMutationRecentUpdate(result, fallbackMonth) {
   }
   // 總覽、對帳、圖表、預算標成過期（不刪除，下次照樣先顯示），寫入都回來後閒置時預取（P12）
   Prefetch.afterMutation(targetMonth);
+}
+
+/**
+ * 復原已送出的記帳寫入（F05）：ops = [{ opId, month }]，依序呼叫後端 undoRecordOp（依操作紀錄還原），
+ * 每筆成功後用 apply(res, month) 合併回應（預設 handleMutationRecentUpdate）。回傳 Promise<[回應…]>；
+ * 有一筆失敗（例如另一台裝置改過而衝突）就停下並丟出那個錯誤，已經復原的照樣生效。
+ */
+function undoLedgerOps(ops, apply) {
+  const merge = typeof apply === 'function' ? apply : handleMutationRecentUpdate;
+  state.mutationVersion++;
+  return (ops || []).filter(op => op && op.opId).reduce((chain, op) => chain.then(results =>
+    Api.call('undoRecordOp', { undoOf: op.opId, month: op.month }).then(res => {
+      merge(res, (res && res.month) || op.month);
+      results.push(res);
+      return results;
+    })
+  ), Promise.resolve([]));
 }
 
 function submitExpense() {

@@ -447,6 +447,39 @@
 .toast-msg {
   min-width: 0;
 }
+/* 「復原」按鈕（F05，core/feedback.js 的 showUndoToast）：toast 本身不接受點擊，只有按鈕可以按 */
+.toast-action {
+  flex: none;
+  margin: -4px -8px -4px 4px;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--lg-radius-capsule);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+.toast-action[hidden] {
+  display: none;
+}
+.toast.show .toast-action {
+  pointer-events: auto;
+}
+.toast-action:active {
+  transform: scale(0.95);
+}
+.toast-action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.toast-action:focus-visible {
+  outline: 2px solid var(--lg-focus);
+  outline-offset: 2px;
+}
 .toast-progress {
   position: absolute;
   left: 14px;

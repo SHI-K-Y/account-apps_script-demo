@@ -27,6 +27,30 @@
     </div>
   </div>
   <script>
+    /* P12：一開始就向 IndexedDB 讀本機快取（和下載、解析頁面同時進行）。core/kv-store.js 會接手這個結果，
+     * 不用等開機程式執行到 LocalCache 才開始讀。資料庫名稱與 store 要和 kv-store.js 相同。 */
+    (function () {
+      try {
+        window.__kvEarly = new Promise(function (resolve) {
+          var req = indexedDB.open('FAST_BOOKKEEPING_V1', 1);
+          req.onupgradeneeded = function () { try { req.result.createObjectStore('kv'); } catch (e) {} };
+          req.onerror = function () { resolve(null); };
+          req.onsuccess = function () {
+            var db = req.result;
+            try {
+              var tx = db.transaction('kv', 'readonly');
+              var store = tx.objectStore('kv');
+              var keys = store.getAllKeys();
+              var values = store.getAll();
+              tx.oncomplete = function () { resolve({ db: db, keys: keys.result, values: values.result }); };
+              tx.onerror = tx.onabort = function () { resolve({ db: db, keys: null }); };
+            } catch (e) { resolve({ db: db, keys: null }); }
+          };
+        });
+      } catch (e) { window.__kvEarly = null; }
+    })();
+  </script>
+  <script>
     /* 載入畫面（P08）：
      *  - 進度環：requestAnimationFrame 逐幀推進（依經過時間換算，速度與以前每 100ms 一格相同），只在數字或文字真的變了才寫入 DOM；
      *    <html> 加上 boot-ready 時立刻停止。

@@ -17,7 +17,8 @@ test('瀏覽器可直接呼叫的函式只有進入點與管理工具', () => {
   const b = createBackend();
   const publicNames = Object.keys(b.fns).filter(name => !name.endsWith('_') && !name.startsWith('__')).sort();
   // warmCaches（P11）：時間觸發器的處理函式不能以底線結尾；它自己會擋掉非觸發器、非擁有者的呼叫（見 cache-first.test.mjs）
-  assert.deepEqual(publicNames, ['api', 'doGet', 'doPost', 'include', 'onEdit', 'rebuildAllSummaries', 'runDebugCompareChartsSummary', 'setup', 'setupAppIcon', 'warmCaches']);
+  // dailyMaintenance（F05）：每日維護觸發器，同樣自己擋掉非觸發器、非擁有者的呼叫（見 oplog.test.mjs）
+  assert.deepEqual(publicNames, ['api', 'dailyMaintenance', 'doGet', 'doPost', 'include', 'onEdit', 'rebuildAllSummaries', 'runDebugCompareChartsSummary', 'setup', 'setupAppIcon', 'warmCaches']);
 });
 
 test('管理工具只有擁有者能執行', () => {

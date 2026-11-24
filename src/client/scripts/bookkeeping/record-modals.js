@@ -117,6 +117,25 @@ function submitEditRecord() {
   submitBtn.disabled = true;
   submitBtn.textContent = '儲存中…';
 
+  // 儲存成功：合併回應，提示帶「復原」（F05：5 秒內按下就把修改前的值寫回；該列又被改過時提示衝突）
+  const onEditSaved = (res, form) => {
+    submitBtn.disabled = false;
+    submitBtn.textContent = '儲存修改';
+    closeEditModal();
+    handleMutationRecentUpdate(res, editMonth);
+    const syncSearch = (r) => {
+      if (editSource === 'search' && r) {
+        DeferredApp.ensure() && SearchPage.onRecordUpdated({ month: editMonth, type: editType, row: r.row, record: r.record });
+      }
+    };
+    syncSearch({ row: editRow, record: (res && res.record) || form });
+    showUndoToast('交易紀錄已修改', () => undoLedgerOps([{ opId: (res && res.opId) || form.opId, month: editMonth }])
+      .then(results => {
+        syncSearch(results[0]);
+        return '已復原修改';
+      }));
+  };
+
   if (isExpense) {
     const form = {
       month: editState.month,
@@ -128,19 +147,11 @@ function submitEditRecord() {
       paid: editState.paid,
       amount: amountVal,
       note: noteVal,
+      opId: Api.newOpId(),
     };
 
     Api.server
-      .withSuccessHandler(res => {
-        submitBtn.disabled = false;
-        submitBtn.textContent = '儲存修改';
-        closeEditModal();
-        showToast('交易紀錄已成功修改！', 'success');
-        handleMutationRecentUpdate(res, editMonth);
-        if (editSource === 'search') {
-          DeferredApp.ensure() && SearchPage.onRecordUpdated({ month: editMonth, type: editType, row: editRow, record: (res && res.record) || form });
-        }
-      })
+      .withSuccessHandler(res => onEditSaved(res, form))
       .withFailureHandler(err => {
         submitBtn.disabled = false;
         submitBtn.textContent = '儲存修改';
@@ -156,19 +167,11 @@ function submitEditRecord() {
       category: editState.category,
       amount: amountVal,
       note: noteVal,
+      opId: Api.newOpId(),
     };
 
     Api.server
-      .withSuccessHandler(res => {
-        submitBtn.disabled = false;
-        submitBtn.textContent = '儲存修改';
-        closeEditModal();
-        showToast('交易紀錄已成功修改！', 'success');
-        handleMutationRecentUpdate(res, editMonth);
-        if (editSource === 'search') {
-          DeferredApp.ensure() && SearchPage.onRecordUpdated({ month: editMonth, type: editType, row: editRow, record: (res && res.record) || form });
-        }
-      })
+      .withSuccessHandler(res => onEditSaved(res, form))
       .withFailureHandler(err => {
         submitBtn.disabled = false;
         submitBtn.textContent = '儲存修改';
@@ -246,6 +249,7 @@ function confirmDeleteRecord() {
   const form = {
     month: deleteState.month,
     row: deleteState.row,
+    opId: Api.newOpId(),
   };
 
   const successHandler = (res) => {
@@ -255,13 +259,19 @@ function confirmDeleteRecord() {
     confirmBtn.disabled = false;
     confirmBtn.innerHTML = '' + iconHtml('trash', 'regular', 'ic-18') + '確認刪除';
     const targetMonth = deleteState.month;
+    const targetType = deleteState.type;
     closeDeleteModal();
-    showToast('已成功刪除該筆交易紀錄！', 'success');
     handleMutationRecentUpdate(res, targetMonth);
     playRecentRowExit(leavingRow);
     if (deleteSource === 'search') {
-      DeferredApp.ensure() && SearchPage.onRecordDeleted({ month: targetMonth, type: deleteState.type, row: form.row });
+      DeferredApp.ensure() && SearchPage.onRecordDeleted({ month: targetMonth, type: targetType, row: form.row });
     }
+    // F05：5 秒內按「復原」，後端把這筆插回原本的列（下方的紀錄往下移回原位）
+    showUndoToast('已刪除該筆交易紀錄', () => undoLedgerOps([{ opId: (res && res.opId) || form.opId, month: targetMonth }])
+      .then(() => {
+        if (deleteSource === 'search') DeferredApp.ensure() && SearchPage.onRecordRestored({ month: targetMonth, type: targetType });
+        return '已復原刪除的紀錄';
+      }));
   };
 
   const failureHandler = (err) => {

@@ -77,6 +77,11 @@
   margin: 0 14px 18px;
   min-width: 0;
   transition: opacity 0.2s ease;
+  /* P12：總覽連圖表一起預先畫好（有本機快取就不放骨架），切到總覽時圖表多半在畫面下方：
+     畫面外先不排版（auto 會記住上次的實際高度），轉場的 update callback 從約 34ms 降到約 20ms（CPU 4 倍降速）。
+     捲進畫面時照常排版、繪製，看到的內容不變。1460px＝合成資料下的實際高度。 */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1460px;
 }
 
 .oc-section.is-refreshing .oc-body {

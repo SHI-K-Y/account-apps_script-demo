@@ -211,14 +211,16 @@ function removeLedgerRow_(sheet, block, row) {
   const maxRows = Math.min(CONFIG.MAX_DATA_ROW, sheet.getMaxRows());
   const rowCount = maxRows - CONFIG.MIN_DATA_ROW + 1;
   const values = sheet.getRange(CONFIG.MIN_DATA_ROW, block.startCol, rowCount, block.width).getValues();
+  return shiftLedgerRowsUp_(sheet, block, row, values);
+}
 
-  let lastDataRow = 0;
-  for (let i = values.length - 1; i >= 0; i--) {
-    if (!values[i].every(isBlankCell_)) {
-      lastDataRow = CONFIG.MIN_DATA_ROW + i;
-      break;
-    }
-  }
+/**
+ * removeLedgerRow_ 的寫入部分：values 是剛讀到的區塊內容（從 MIN_DATA_ROW 起），只寫一次。
+ * 復原（24_oplog.gs）讀過區塊後也用這個刪除，不用再讀一次。
+ */
+function shiftLedgerRowsUp_(sheet, block, row, values) {
+  const lastIdx = lastFilledLedgerIndex_(values);
+  const lastDataRow = lastIdx === -1 ? 0 : CONFIG.MIN_DATA_ROW + lastIdx;
 
   if (lastDataRow && row <= lastDataRow) {
     if (row === lastDataRow) {
@@ -226,11 +228,7 @@ function removeLedgerRow_(sheet, block, row) {
     } else {
       const startIdx = row - CONFIG.MIN_DATA_ROW + 1;
       const endIdx = lastDataRow - CONFIG.MIN_DATA_ROW + 1;
-      const shiftValues = values.slice(startIdx, endIdx).map(function (r) {
-        return r.map(function (cell) {
-          return typeof cell === 'string' ? literalText_(cell) : cell;
-        });
-      });
+      const shiftValues = values.slice(startIdx, endIdx).map(literalLedgerRow_);
       shiftValues.push(new Array(block.width).fill(''));
       ledgerRowRange_(sheet, block, row, shiftValues.length).setValues(shiftValues);
     }
@@ -466,7 +464,9 @@ function addRecord_(kind, form) {
     const monthData = slot.monthData;
     applyAddToMonthData_(block, monthData, newRecord);
 
-    const core = { op: 'add', type: block.type, month: form.month, row: row, record: newRecord };
+    const logId = opId || serverOpId_();
+    appendOpLog_(target.ss, [{ action: 'add', month: form.month, type: block.type, row: row, before: null, after: newRecord, opId: logId }]);
+    const core = { op: 'add', type: block.type, month: form.month, row: row, record: newRecord, opId: logId };
     const months = {};
     months[form.month] = monthData;
     commitLedgerCaches_(months, opResultMap_(opId, core));
@@ -489,7 +489,10 @@ function updateRecord_(kind, form) {
     const replay = replayedLedgerOp_(state, opId, form.month);
     if (replay) return replay;
 
-    writeLedgerRow_(sheet, block, row, record);
+    // 修改前的內容（操作紀錄與復原用）：直接讀這一列，不靠快取
+    const range = ledgerRowRange_(sheet, block, row);
+    const prev = ledgerValuesToRecord_(block, range.getValues()[0], row);
+    range.setValues([recordToRowValues_(block, record)]);
     const updatedRecord = buildStoredRecord_(block, row, record);
 
     let monthData = state.monthData[form.month];
@@ -499,7 +502,10 @@ function updateRecord_(kind, form) {
       monthData = readMonthSheetDataFromSheet_(sheet, form.month, { save: false });
     }
 
-    const core = { op: 'update', type: block.type, month: form.month, row: row, record: updatedRecord };
+    const logId = opId || serverOpId_();
+    appendOpLog_(target.ss, [{ action: 'update', month: form.month, type: block.type, row: row,
+      before: prev.filled ? prev.record : null, after: updatedRecord, opId: logId }]);
+    const core = { op: 'update', type: block.type, month: form.month, row: row, record: updatedRecord, opId: logId };
     const months = {};
     months[form.month] = monthData;
     commitLedgerCaches_(months, opResultMap_(opId, core));
@@ -533,7 +539,10 @@ function deleteRecord_(kind, form) {
       }
     }
 
-    const core = { op: 'delete', type: block.type, month: form.month, row: row };
+    const logId = opId || serverOpId_();
+    appendOpLog_(target.ss, [{ action: 'delete', month: form.month, type: block.type, row: row,
+      before: filledRecordAt_(block, removal.values, row), after: null, opId: logId }]);
+    const core = { op: 'delete', type: block.type, month: form.month, row: row, opId: logId };
     const months = {};
     months[form.month] = monthData;
     commitLedgerCaches_(months, opResultMap_(opId, core));
@@ -590,6 +599,7 @@ function addRecords_(forms, options) {
     const monthData = {};
     const done = {};      // 這一批裡已經處理過的 opId → 結果（同一批重複的 opId 視為重送）
     const opResults = {};
+    const logEntries = []; // 整批的操作紀錄，最後一次 setValues
 
     const groups = [];    // [{ month, block, items }]，依第一次出現的順序
     valid.forEach(function (it) {
@@ -631,7 +641,9 @@ function addRecords_(forms, options) {
         }
         const stored = buildStoredRecord_(g.block, row, it.record);
         putRecordIntoMonthData_(g.block, md, stored);
-        it.core = { op: 'add', type: g.block.type, month: g.month, row: row, record: stored };
+        const logId = it.opId || serverOpId_();
+        logEntries.push({ index: it.index, action: 'add', month: g.month, type: g.block.type, row: row, before: null, after: stored, opId: logId });
+        it.core = { op: 'add', type: g.block.type, month: g.month, row: row, record: stored, opId: logId };
         if (it.opId) {
           done[it.opId] = it.core;
           opResults[it.opId] = it.core;
@@ -645,6 +657,9 @@ function addRecords_(forms, options) {
       if (it.replayed && it.core === true) it.core = done[it.opId];
     });
 
+    // 操作紀錄照送來的順序（寫入時是依月份＋類型分組，順序不同）
+    logEntries.sort(function (a, b) { return a.index - b.index; });
+    if (logEntries.length) appendOpLog_(targets[logEntries[0].month].ss, logEntries);
     commitLedgerCaches_(monthData, opResults);
     months.forEach(function (m) { if (!monthData[m]) monthData[m] = state.monthData[m]; });
     return { monthData: monthData, marksJson: state.marksJson };
@@ -694,6 +709,8 @@ function markCreditCardPaid_(form) {
     const replay = replayedLedgerOp_(state, opId, form.month);
     if (replay) return replay;
 
+    // 標記前的整列內容（操作紀錄與復原用）
+    const prev = ledgerValuesToRecord_(block, ledgerRowRange_(sheet, block, row).getValues()[0], row).record;
     sheet.getRange(row, block.paidCol).setValue(paid);
 
     let monthData = state.monthData[form.month];
@@ -703,7 +720,10 @@ function markCreditCardPaid_(form) {
     if (rec) rec.paid = paid;
     else monthData = readMonthSheetDataFromSheet_(sheet, form.month, { save: false });
 
-    const core = { op: 'paid', type: 'expense', month: form.month, row: row, paid: paid };
+    const logId = opId || serverOpId_();
+    appendOpLog_(target.ss, [{ action: 'paid', month: form.month, type: 'expense', row: [row],
+      before: [prev], after: [Object.assign({}, prev, { paid: paid })], opId: logId }]);
+    const core = { op: 'paid', type: 'expense', month: form.month, row: row, paid: paid, opId: logId };
     const months = {};
     months[form.month] = monthData;
     commitLedgerCaches_(months, opResultMap_(opId, core));
@@ -734,6 +754,11 @@ function batchMarkCreditCardPaid_(form) {
     const replay = replayedLedgerOp_(state, opId, form.month);
     if (replay) return replay;
 
+    // 標記前的內容（操作紀錄與復原用）：最小到最大列號一次讀完
+    const minRow = Math.min.apply(null, validRows);
+    const span = ledgerRowRange_(sheet, block, minRow, Math.max.apply(null, validRows) - minRow + 1).getValues();
+    const prevRecords = validRows.map(function (r) { return ledgerValuesToRecord_(block, span[r - minRow], r).record; });
+
     const paidColumnLetter = columnLetter_(block.paidCol);
     sheet.getRangeList(validRows.map(function (r) { return paidColumnLetter + r; })).setValue(paid);
 
@@ -747,7 +772,10 @@ function batchMarkCreditCardPaid_(form) {
       monthData = readMonthSheetDataFromSheet_(sheet, form.month, { save: false });
     }
 
-    const core = { op: 'paid', type: 'expense', month: form.month, rows: validRows, paid: paid };
+    const logId = opId || serverOpId_();
+    appendOpLog_(target.ss, [{ action: 'paid', month: form.month, type: 'expense', row: validRows, before: prevRecords,
+      after: prevRecords.map(function (r) { return Object.assign({}, r, { paid: paid }); }), opId: logId }]);
+    const core = { op: 'paid', type: 'expense', month: form.month, rows: validRows, paid: paid, opId: logId };
     const months = {};
     months[form.month] = monthData;
     commitLedgerCaches_(months, opResultMap_(opId, core));

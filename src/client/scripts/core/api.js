@@ -28,12 +28,12 @@ const Api = (function() {
   const READ_ACTIONS = new Set([
     'getInitialData', 'getRecentRecords', 'getFullRecords', 'searchRecords', 'getCreditCardRecords',
     'getAssetOverview', 'getOverviewCharts', 'getSettingsOptions',
-    'getFxLedgers', 'getFxLedgerData', 'getFxRates', 'getBudgetSettings', 'batchRead'
+    'getFxLedgers', 'getFxLedgerData', 'getFxRates', 'getBudgetSettings', 'getOpLog', 'batchRead'
   ]);
   // 後端支援 opId 去重的寫入（src/server/21_records.gs）：第一個參數是表單（addRecords 是表單陣列）
   const OP_ACTIONS = new Set([
     'addExpense', 'addIncome', 'updateExpense', 'updateIncome', 'deleteExpense', 'deleteIncome',
-    'markCreditCardPaid', 'batchMarkCreditCardPaid', 'addRecords'
+    'markCreditCardPaid', 'batchMarkCreditCardPaid', 'addRecords', 'undoRecordOp'
   ]);
   const READ_TIMEOUT_MS = 45000;
   const RETRY_DELAY_MS = 700;

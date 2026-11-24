@@ -197,6 +197,37 @@ export function createGasRuntime(opts) {
     hideSheet() { this.hidden = true; return this; }
     setFrozenRows(n) { this.frozenRows = n; return this; }
     insertRowsAfter(_after, howMany) { this.maxRows += Number(howMany) || 0; return this; }
+    /** 和 Apps Script 相同：寫在最後一列資料的下一列，列數不夠時自動加列。 */
+    appendRow(values) {
+      if (!Array.isArray(values) || !values.length) throw new Error('appendRow 需要一個非空陣列。');
+      const row = this.getLastRow() + 1;
+      if (row > this.maxRows) this.maxRows = row;
+      if (values.length > this.maxCols) this.maxCols = values.length;
+      stats.writes++;
+      values.forEach((v, i) => this._write(row, i + 1, v));
+      return this;
+    }
+    /** 和 Apps Script 相同：刪掉 rowPosition 起的 howMany 列，下方往上移，工作表列數跟著變少。 */
+    deleteRows(rowPosition, howMany) {
+      const start = Number(rowPosition);
+      const count = Number(howMany) || 0;
+      if (!(start >= 1) || !(count >= 1) || start + count - 1 > this.maxRows) {
+        throw new Error('deleteRows 的範圍無效：' + [rowPosition, howMany].join(','));
+      }
+      if (count >= this.maxRows) throw new Error('無法刪除工作表中的所有列。');
+      touch();
+      stats.writes++;
+      const next = new Map();
+      for (const [key, cell] of this.cells) {
+        const comma = key.indexOf(',');
+        const row = Number(key.slice(0, comma));
+        if (row >= start && row < start + count) continue;
+        next.set((row >= start + count ? row - count : row) + key.slice(comma), cell);
+      }
+      this.cells = next;
+      this.maxRows -= count;
+      return this;
+    }
     copyTo(ss) {
       const cells = new Map();
       for (const [key, cell] of this.cells) cells.set(key, Object.assign({}, cell));

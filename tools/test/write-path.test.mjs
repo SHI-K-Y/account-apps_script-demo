@@ -227,7 +227,8 @@ test('差量回應：300 筆的月份單筆回應 ≤ 2 KB，含新紀錄、每�
 
   const http = b.post({ token: WRITE, action: 'addExpense', args: [expenseForm({ amount: 66 })] });
   assert.equal(http.ok, true);
-  assert.deepEqual(Object.keys(http.data).sort(), ['month', 'ok', 'recent', 'record', 'row', 'type']);
+  // opId（F05）：沒送 opId 的 HTTP 呼叫端也拿得到伺服器產生的 opId，可以用 undoRecordOp 復原
+  assert.deepEqual(Object.keys(http.data).sort(), ['month', 'ok', 'opId', 'recent', 'record', 'row', 'type']);
   assert.equal(http.data.recent.fullExpenses[0].row, http.data.row);
   const httpDelta = b.post({ token: WRITE, action: 'deleteExpense', args: [{ month: '2026.11', row: http.data.row, full: false }] });
   assert.equal(httpDelta.data.recent, undefined, 'HTTP API 帶 full: false 時是差量格式');
@@ -305,7 +306,8 @@ test('快取都熱的時候：記帳不寫指令碼屬性、只讀存取名單�
   Object.entries(ops).forEach(([name, run]) => {
     const spy = countServices(b);
     const s = b.runtime.stats;
-    const before = { reads: s.reads, writes: s.writes };
+    const logRows = () => { const sh = b.sheet('_操作紀錄'); return sh ? sh.getLastRow() : 0; };
+    const before = { reads: s.reads, writes: s.writes, logRows: logRows() };
     try { run(); } finally { spy.restore(); }
     const c = spy.counts;
     // 唯一的屬性讀取是 API 閘道的存取檢查（ALLOWED_EMAILS 刻意每次現讀，名單改了立即生效）
@@ -315,9 +317,11 @@ test('快取都熱的時候：記帳不寫指令碼屬性、只讀存取名單�
     assert.equal(c.cacheGetAll, 2, name + ' 鎖外 1 次＋鎖內 1 次 getAll');
     assert.equal(c.cachePutAll || 0, name === 'replay' ? 0 : 1, name + ' 只有 1 次 putAll');
     assert.ok(s.reads - before.reads <= 2, name + ' 試算表讀取 ' + (s.reads - before.reads) + ' 次');
-    // 批次標記是一次 getRangeList(['F5','F6']).setValue()（模擬環境每個範圍各算一次）
-    const maxWrites = name === 'replay' ? 0 : name === 'batchMarkCreditCardPaid' ? 2 : 1;
+    // 批次標記是一次 getRangeList(['F5','F6']).setValue()（模擬環境每個範圍各算一次）；
+    // 另外每次寫入都有 1 次操作紀錄的 appendRow（F05：同一個鎖內、一次寫完），重送不再記
+    const maxWrites = name === 'replay' ? 0 : (name === 'batchMarkCreditCardPaid' ? 2 : 1) + 1;
     assert.ok(s.writes - before.writes <= maxWrites, name + ' 試算表寫入 ' + (s.writes - before.writes) + ' 次');
+    assert.equal(logRows() - before.logRows, name === 'replay' ? 0 : 1, name + ' 操作紀錄多 1 列');
   });
 });
 

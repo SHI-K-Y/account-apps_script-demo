@@ -238,7 +238,10 @@ function handleHttpApiRequest_(e) {
   // 記帳寫入的回應：HTTP API 預設維持舊的完整格式（iOS 捷徑等既有呼叫端不用改，見 wantsFullResponse_）
   httpApiFullResponse_ = true;
   try {
-    return { ok: true, data: dispatchApi_({ action: request.action, args: request.args }) };
+    // 操作紀錄的來源記成 api（F05）
+    return withOpLogSource_('api', function () {
+      return { ok: true, data: dispatchApi_({ action: request.action, args: request.args }) };
+    });
   } finally {
     httpApiFullResponse_ = false;
   }
@@ -366,6 +369,13 @@ function setup() {
   } catch (e) {
     notes.push('無法安裝快取預熱觸發器：' + (e && e.message ? e.message : e));
   }
+  // 每日維護觸發器（F05）：清掉超過保留筆數的操作紀錄；之後的每日工作也合併在這裡
+  let dailyTriggerId = '';
+  try {
+    dailyTriggerId = installDailyMaintenanceTrigger_();
+  } catch (e) {
+    notes.push('無法安裝每日維護觸發器：' + (e && e.message ? e.message : e));
+  }
   let warm = null;
   try {
     warm = runWarmCaches_();
@@ -378,6 +388,7 @@ function setup() {
     spreadsheetName: ss.getName(),
     months,
     warmTriggerId: warmTriggerId,
+    dailyTriggerId: dailyTriggerId,
     warmMs: warm ? warm.totalMs : null,
     message: `設定完成，目前連結的試算表：${ss.getName()}` + (notes.length ? '\n' + notes.join('\n') : ''),
   };
