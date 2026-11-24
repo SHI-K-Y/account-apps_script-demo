@@ -11,6 +11,7 @@
     "preview": "node tools/build.mjs && node tools/dev-server.mjs",
     "test": "node tools/build.mjs --no-minify --quiet && node --test tools/test/",
     "deploy": "node tools/build.mjs && npx @google/clasp push",
+    "deploy:inline": "node tools/build.mjs --template inline && npx @google/clasp push",
     "preview:demo": "node tools/demo/build-demo.mjs && node tools/demo/serve.mjs",
     "perf": "node tools/build.mjs --quiet && node tools/perf/run.mjs",
     "build:demo": "node tools/demo/build-demo.mjs"

@@ -4,12 +4,9 @@ function getSettingsOptions_(forceRefresh) {
 }
 
 function readAllOptionsData_(ss, forceRefresh) {
-  const cache = scriptCache_();
   if (!forceRefresh) {
-    const cached = cache.get(CONFIG.CACHE_KEYS.OPTIONS_ALL);
-    if (cached) {
-      try { return JSON.parse(cached); } catch (e) {}
-    }
+    const cached = cacheGetLarge_(CONFIG.CACHE_KEYS.OPTIONS_ALL);
+    if (cached) return cached;
   }
 
   const settings = getSettingsSheet_(ss);
@@ -72,21 +69,15 @@ function readAllOptionsData_(ss, forceRefresh) {
   const metadata = getSettingsMetadata_(settings);
 
   const combined = { raw, simple, metadata };
-  try {
-    const jsonStr = JSON.stringify(combined);
-    cache.put(CONFIG.CACHE_KEYS.OPTIONS_ALL, jsonStr, CONFIG.CACHE_TTL);
-    scriptProps_().setProperty(CONFIG.PROP_KEYS.OPTIONS_SNAPSHOT, jsonStr);
-  } catch (e) {}
+  // 以前還會另存一份到指令碼屬性（OPTIONS_SNAPSHOT），但沒有任何地方讀它，只是多一次慢的寫入（P09 拿掉）。
+  cachePutLarge_(CONFIG.CACHE_KEYS.OPTIONS_ALL, combined, CONFIG.CACHE_TTL);
 
   return combined;
 }
 
 function readOptions_(ssOrSettings) {
-  const cache = scriptCache_();
-  const cached = cache.get(CONFIG.CACHE_KEYS.OPTIONS_ALL);
-  if (cached) {
-    try { return JSON.parse(cached).simple; } catch (e) {}
-  }
+  const cached = cacheGetLarge_(CONFIG.CACHE_KEYS.OPTIONS_ALL);
+  if (cached && cached.simple) return cached.simple;
   const ss = (ssOrSettings && typeof ssOrSettings.getSheetByName === 'function')
     ? ssOrSettings
     : (ssOrSettings && typeof ssOrSettings.getParent === 'function' ? ssOrSettings.getParent() : null);

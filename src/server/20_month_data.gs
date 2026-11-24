@@ -13,22 +13,12 @@ function getMonthData_(ss, month, forceRefresh) {
 
 function getCachedMonthData_(month) {
   if (!month) return null;
-  try {
-    const cached = scriptCache_().get(CONFIG.CACHE_KEYS.MONTH_DATA_PREFIX + month);
-    if (cached) return JSON.parse(cached);
-  } catch (e) {}
-  return null;
+  return cacheGetLarge_(CONFIG.CACHE_KEYS.MONTH_DATA_PREFIX + month);
 }
 
 function saveMonthDataCache_(month, monthData) {
   if (!month || !monthData) return;
-  try {
-    scriptCache_().put(
-      CONFIG.CACHE_KEYS.MONTH_DATA_PREFIX + month,
-      JSON.stringify(monthData),
-      CONFIG.CACHE_TTL
-    );
-  } catch (e) {}
+  cachePutLarge_(CONFIG.CACHE_KEYS.MONTH_DATA_PREFIX + month, monthData, CONFIG.CACHE_TTL);
 }
 
 function readMonthSheetDataFromSheet_(sheet, month) {

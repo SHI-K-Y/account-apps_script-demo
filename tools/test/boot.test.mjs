@@ -303,7 +303,9 @@ test('網路慢：boot-ready 在頁面下載完之前；卡面圖片、延後程
     assert.equal(early.page, 'bookkeeping', '延後程式還沒到：先不切頁');
 
     await s.page.waitForFunction(() => document.readyState !== 'loading', null, { timeout: 30000 });
-    await s.page.waitForTimeout(300);
+    // 圖片補上、延後程式執行、排隊的切頁完成（整套測試平行跑時比較慢，用條件等而不是固定時間）
+    await s.page.waitForFunction(() => !paymentImagesMissed() && DeferredApp.loaded() &&
+      document.querySelector('.page-container.active').id === 'pageOverview', null, { timeout: 10000 }).catch(() => {});
     const late = await s.page.evaluate(() => ({
       cubeImg: Boolean(document.querySelector('#paymentChoices .choice[data-value="信用卡-海悅 wave 卡"] .choice-card-img')),
       missed: paymentImagesMissed(),

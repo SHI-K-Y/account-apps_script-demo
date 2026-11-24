@@ -6,7 +6,8 @@ import { createGasRuntime } from '../gas-mock/runtime.mjs';
 import { createFixtureWorkbook } from '../gas-mock/fixture.mjs';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-export const DIST = path.join(ROOT, 'dist');
+// TEST_DIST：改用別的建置目錄（例如另一個量測正在使用 dist/ 時，先建置到暫存目錄測試）
+export const DIST = process.env.TEST_DIST ? path.resolve(process.env.TEST_DIST) : path.join(ROOT, 'dist');
 
 /** 固定在 2026-11-13 12:00（台北時間）的 Date，讓「今天」「本月」在測試中不會變。 */
 function fixedDateClass(startMs) {

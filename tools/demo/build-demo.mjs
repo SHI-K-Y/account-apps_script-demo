@@ -55,7 +55,7 @@ async function bundleSandbox(serverSource, minify) {
 }
 
 /** 把 Apps Script 範本（Index.html）變成可以直接開啟的靜態頁面。 */
-function renderStaticPage(outputs, sandboxJs) {
+function renderStaticPage(outputs, sandboxJs, templateMode) {
   let html = outputs['Index.html'];
 
   // 逐一處理範本標記；遇到不認得的就讓建置失敗（寧可停下來，也不要產生壞掉的頁面）。
@@ -76,10 +76,11 @@ function renderStaticPage(outputs, sandboxJs) {
       return '(window.__DEMO_INITIAL_DATA__ || null)';
     }
     // 「重新載入」連結：原本指向網頁應用程式網址，Demo 就是目前這一頁。
-    if (kind === '!=' && /ScriptApp\.getService\(\)\.getUrl\(\)/.test(source)) return './';
+    if (/\bexecUrl\b/.test(source)) return './';
     throw new Error('Index.html 有 Demo 建置不認得的範本標記，請更新 tools/demo/build-demo.mjs 的 renderStaticPage()：' + tag.slice(0, 120));
   });
-  if (seen.include < 3 || seen.boot !== 1) {
+  // 範本模式 inline（tools/build.mjs --template inline）時 style／app／assets 已經展開，沒有 include
+  if ((seen.include < 3 && templateMode !== 'inline') || seen.boot !== 1) {
     throw new Error('Index.html 的範本標記與 Demo 建置預期的不同（include ' + seen.include + ' 個、啟動資料 ' + seen.boot + ' 個）。');
   }
 
@@ -104,9 +105,9 @@ export async function buildDemoSite(opts) {
   const minify = options.minify !== false;
 
   // 只取建置結果、不寫入 dist/：Demo 不應該動到要部署到 Apps Script 的檔案。
-  const { outputs } = await build({ minify, write: false, quiet: true });
+  const { outputs, templateMode } = await build({ minify, write: false, quiet: true });
   const sandboxJs = await bundleSandbox(outputs['code.gs'], minify);
-  const html = renderStaticPage(outputs, sandboxJs);
+  const html = renderStaticPage(outputs, sandboxJs, templateMode);
 
   fs.mkdirSync(outDir, { recursive: true });
   const file = path.join(outDir, 'index.html');

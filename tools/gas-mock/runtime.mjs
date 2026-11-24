@@ -35,6 +35,66 @@ function bytesToBase64(data) {
   return btoa(binary);
 }
 
+/* ------------------------------ gzip（Utilities.gzip／ungzip） ------------------------------
+ * Node 有內建 zlib 就用它（真的壓縮，量到的大小才接近 Apps Script）；瀏覽器（公開 Demo）沒有同步的壓縮 API，
+ * 改用「不壓縮的 deflate 區塊」產生格式正確的 gzip——只有這個模擬環境自己解得開，對 Demo 來說已經足夠。 */
+const nodeZlib = (() => {
+  try {
+    return typeof process !== 'undefined' && process && typeof process.getBuiltinModule === 'function'
+      ? process.getBuiltinModule('node:zlib') : null;
+  } catch (e) { return null; }
+})();
+
+let crcTable = null;
+function crc32(bytes) {
+  if (!crcTable) {
+    crcTable = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      crcTable[n] = c >>> 0;
+    }
+  }
+  let crc = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) crc = crcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function gzipBytes(input) {
+  const bytes = Uint8Array.from(input);
+  if (nodeZlib) return Array.from(nodeZlib.gzipSync(bytes));
+  const out = [0x1f, 0x8b, 8, 0, 0, 0, 0, 0, 0, 0xff];
+  const le32 = n => [n & 0xff, (n >>> 8) & 0xff, (n >>> 16) & 0xff, (n >>> 24) & 0xff];
+  let pos = 0;
+  do {
+    const len = Math.min(65535, bytes.length - pos);
+    const final = pos + len >= bytes.length;
+    out.push(final ? 1 : 0, len & 0xff, len >>> 8, ~len & 0xff, (~len >>> 8) & 0xff);
+    for (let i = 0; i < len; i++) out.push(bytes[pos + i]);
+    pos += len;
+  } while (pos < bytes.length);
+  return out.concat(le32(crc32(bytes)), le32(bytes.length >>> 0));
+}
+
+function gunzipBytes(input) {
+  const bytes = Uint8Array.from(input);
+  if (bytes[0] !== 0x1f || bytes[1] !== 0x8b) throw new Error('Utilities.ungzip：不是 gzip 資料');
+  if (nodeZlib) return Array.from(nodeZlib.gunzipSync(bytes));
+  if (bytes[3] !== 0) throw new Error('模擬環境的 ungzip 不支援 gzip 標頭旗標');
+  const out = [];
+  let pos = 10;
+  for (;;) {
+    const head = bytes[pos++];
+    if (((head >> 1) & 3) !== 0) throw new Error('模擬環境的 ungzip 只支援不壓縮的 deflate 區塊');
+    const len = bytes[pos] | (bytes[pos + 1] << 8);
+    pos += 4;
+    for (let i = 0; i < len; i++) out.push(bytes[pos + i]);
+    pos += len;
+    if (head & 1) break;
+  }
+  return out;
+}
+
 function isDate(v) {
   return Object.prototype.toString.call(v) === '[object Date]';
 }
@@ -74,7 +134,8 @@ export function createGasRuntime(opts) {
   const tzOffsetMs = (options.tzOffsetMinutes == null ? 480 : options.tzOffsetMinutes) * 60000;
   const files = options.files || {};
   const log = options.log || (() => {});
-  const stats = { reads: 0, writes: 0, cacheHits: 0, cacheMisses: 0 };
+  // spreadsheetApp：呼叫 SpreadsheetApp 的次數（doGet 不可以開試算表，測試用它檢查）；cacheGetAll：getAll 的次數
+  const stats = { reads: 0, writes: 0, cacheHits: 0, cacheMisses: 0, spreadsheetApp: 0, cacheGetAll: 0 };
 
   // 公式重算：寫入時只做記號，等到下一次讀取才重算一次。
   const recalc = typeof options.recalc === 'function' ? options.recalc : null;
@@ -328,10 +389,11 @@ export function createGasRuntime(opts) {
     getId() { return this.id; }
     getName() { return this.name; }
     getUrl() { return 'https://docs.google.com/spreadsheets/d/' + this.id + '/edit'; }
-    getSpreadsheetTimeZone() { return timeZone; }
-    getSheets() { return this.sheets.slice(); }
+    // 同一次載入裡試算表物件會被記住（getSpreadsheet_ 的 memo），所以連工作表層級的存取也算進 spreadsheetApp
+    getSpreadsheetTimeZone() { stats.spreadsheetApp++; return timeZone; }
+    getSheets() { stats.spreadsheetApp++; return this.sheets.slice(); }
     getNumSheets() { return this.sheets.length; }
-    getSheetByName(name) { return this.sheets.find(s => s.name === name) || null; }
+    getSheetByName(name) { stats.spreadsheetApp++; return this.sheets.find(s => s.name === name) || null; }
     insertSheet(name, index) {
       if (this.getSheetByName(name)) throw new Error('已有名為「' + name + '」的工作表。');
       const sheet = new MockSheet(this, { name: String(name), hidden: false, maxRows: 1000, maxCols: 26, cells: new Map() });
@@ -359,12 +421,13 @@ export function createGasRuntime(opts) {
   const spreadsheet = new MockSpreadsheet(options.workbook || { sheets: [] });
 
   const SpreadsheetApp = {
-    getActiveSpreadsheet: () => spreadsheet,
+    getActiveSpreadsheet: () => { stats.spreadsheetApp++; return spreadsheet; },
     openById: id => {
+      stats.spreadsheetApp++;
       if (id !== spreadsheet.id) throw new Error('找不到試算表：' + id);
       return spreadsheet;
     },
-    flush: () => {},
+    flush: () => { stats.spreadsheetApp++; },
   };
 
   /* --------------------------- Cache / Properties --------------------------- */
@@ -377,6 +440,7 @@ export function createGasRuntime(opts) {
       return hit;
     },
     getAll(keys) {
+      stats.cacheGetAll++;
       const out = {};
       keys.forEach(k => { if (cacheStore.has(String(k))) out[k] = cacheStore.get(String(k)); });
       return out;
@@ -431,6 +495,20 @@ export function createGasRuntime(opts) {
     return out;
   }
 
+  function makeBlob(bytes, contentType, name) {
+    let type = contentType || null;
+    let blobName = name || null;
+    const blob = {
+      getBytes: () => bytes.slice(),
+      getDataAsString: () => utf8Decoder.decode(Uint8Array.from(bytes)),
+      getContentType: () => type,
+      setContentType(t) { type = t; return blob; },
+      getName: () => blobName,
+      setName(n) { blobName = n; return blob; },
+    };
+    return blob;
+  }
+
   const Utilities = {
     formatDate(date, tz, format) {
       const p = wallParts(date, tz);
@@ -464,9 +542,14 @@ export function createGasRuntime(opts) {
         return width ? text.padStart(Number(width), zero ? '0' : ' ') : text;
       });
     },
-    newBlob(data) {
-      const bytes = toByteArray(data);
-      return { getBytes: () => bytes.slice(), getDataAsString: () => utf8Decoder.decode(Uint8Array.from(bytes)) };
+    newBlob(data, contentType, name) {
+      return makeBlob(toByteArray(data), contentType, name);
+    },
+    gzip(blob, name) {
+      return makeBlob(gzipBytes(blob.getBytes()), 'application/x-gzip', name || (blob.getName && blob.getName() ? blob.getName() + '.gz' : null));
+    },
+    ungzip(blob) {
+      return makeBlob(gunzipBytes(blob.getBytes()), null, null);
     },
     base64Decode: base64ToBytes,
     base64Encode: bytesToBase64,
@@ -551,7 +634,14 @@ export function createGasRuntime(opts) {
   };
 
   const Logger = { log: (...args) => log('[Logger]', ...args) };
+  const timers = new Map();
   const consoleProxy = {
+    time: label => { timers.set(String(label), Date.now()); },
+    timeEnd: label => {
+      const key = String(label);
+      if (timers.has(key)) log('[console.time]', key + ': ' + (Date.now() - timers.get(key)) + 'ms');
+      timers.delete(key);
+    },
     log: (...a) => log('[console.log]', ...a),
     warn: (...a) => log('[console.warn]', ...a),
     error: (...a) => log('[console.error]', ...a),

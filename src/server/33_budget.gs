@@ -347,3 +347,28 @@ function refreshBootBudget_(boot) {
   }
   return boot;
 }
+
+/**
+ * doGet 用（P09）：只用已經從快取一次讀回來的預算設定與月初餘額計算，絕不開試算表。
+ * 回傳 { status }；設定或月初餘額不在快取裡時回傳 null，呼叫端改成不帶 budget、標示需要背景同步。
+ * @param configJson   BUDGET_CONFIG 的快取字串
+ * @param openingJson  BUDGET_OPENING_<openingMonth> 的快取字串
+ */
+function budgetStatusFromCache_(month, monthData, configJson, openingJson, openingMonth) {
+  try {
+    if (!CONFIG.MONTH_PATTERN.test(String(month || '')) || !configJson) return null;
+    const config = JSON.parse(configJson);
+    if (!config || !Array.isArray(config.versions)) return null;
+    const version = resolveBudgetVersion_(config, month);
+    let extras = null;
+    if (version && version.source === 'balance') {
+      if (month !== openingMonth || !openingJson) return null;
+      const opening = JSON.parse(openingJson);
+      if (!opening || !(opening.value === null || typeof opening.value === 'number')) return null;
+      extras = { openingBalance: opening.value };
+    }
+    return { status: computeBudgetStatus_(version, month, monthData, budgetToday_(), extras) };
+  } catch (e) {
+    return null;
+  }
+}

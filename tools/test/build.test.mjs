@@ -123,3 +123,27 @@ test('樣式分層：每個 CSS 檔都指定了已宣告的層，頁面第一條
   const outside = top.filter(p => !/^@layer [a-z]+$/.test(p) && !/^@property --[\w-]+$/.test(p));
   assert.deepEqual(outside, [], '主樣式表裡沒有層外的規則');
 });
+
+test('範本模式 inline（P09 的 B）：style／app／assets 展開進 Index.html，只剩兩個 scriptlet，doGet 產生的頁面與 include 模式完全相同', async () => {
+  const { build } = await import('../build.mjs');
+  const page = async mode => {
+    const { outputs, templateMode } = await build({ minify: false, write: false, quiet: true, template: mode });
+    assert.equal(templateMode, mode);
+    assert.match(outputs['code.gs'], new RegExp("const BUILD_TEMPLATE_MODE_ = \"" + mode + "\";"));
+    const files = {};
+    ['Index', 'style', 'app', 'assets'].forEach(n => { files[n] = outputs[n + '.html']; });
+    const b = createBackend({ files });
+    b.call('getInitialData', true);
+    return { outputs, html: b.fns.doGet().getContent() };
+  };
+  const a = await page('include');
+  const inline = await page('inline');
+  const index = inline.outputs['Index.html'];
+  assert.doesNotMatch(index, /include\(/);
+  const scriptlets = index.match(/<\?[\s\S]*?\?>/g);
+  assert.equal(scriptlets.length, 2, '只剩啟動資料與網址');
+  assert.ok(scriptlets.some(s => /initialDataJson/.test(s)) && scriptlets.some(s => /execUrl/.test(s)));
+  assert.ok(index.includes(inline.outputs['app.html']), '開機程式已展開');
+  assert.equal(inline.html, a.html, '兩種模式的頁面一模一樣');
+  await assert.rejects(() => build({ write: false, quiet: true, template: 'nope' }), /不認得的範本模式/);
+});

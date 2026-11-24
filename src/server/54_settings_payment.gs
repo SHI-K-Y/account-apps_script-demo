@@ -352,16 +352,13 @@ function savePaymentSettingsConfig_(configPayload) {
 
 function updateBootSnapshotOptions_(updatedOptions) {
   try {
-    const cache = scriptCache_();
-    const props = scriptProps_();
-    const cachedStr = cache.get(CONFIG.CACHE_KEYS.BOOT_JSON);
-    const rawStr = cachedStr || props.getProperty(CONFIG.PROP_KEYS.BOOT_SNAPSHOT);
-    if (!rawStr) return;
-    const boot = JSON.parse(rawStr);
+    const current = readBootForUpdate_();
+    const boot = current.boot;
+    if (!boot) return;
     boot.options = updatedOptions.simple;
     boot.settingsOptions = updatedOptions.raw;
     if (updatedOptions.metadata) boot.settingsMetadata = updatedOptions.metadata;
-    if (cachedStr) {
+    if (current.inCache) {
       boot.cachedAt = Date.now();
       saveBootSnapshot_(boot);
     } else {

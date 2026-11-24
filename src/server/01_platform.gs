@@ -48,6 +48,11 @@ function flushSpreadsheet_() {
   SpreadsheetApp.flush();
 }
 
+/** 網頁應用程式的網址（載入失敗時的「重新載入」連結）；取不到時回傳空字串。 */
+function webAppUrl_() {
+  try { return ScriptApp.getService().getUrl() || ''; } catch (e) { return ''; }
+}
+
 function scriptTimeZone_() {
   return Session.getScriptTimeZone() || DEFAULT_TIME_ZONE_;
 }

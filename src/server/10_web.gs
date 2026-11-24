@@ -8,24 +8,161 @@
 const APP_TITLE_ = '我的記帳';
 const INCLUDABLE_FILES_ = Object.freeze(['style', 'app', 'assets']);
 
-function doGet() {
-  if (!isAuthorizedUser_()) return buildAccessDeniedPage_();
+/**
+ * 回傳記帳網頁（P09）：所有需要的快取（啟動資料、本月明細、預算設定、月初餘額、doGet 設定）用一次 getAll 讀齊，
+ * 絕不開試算表——預算需要的快取沒命中時，啟動資料不帶 budget、標示 budgetPending，交給前端的背景同步補上。
+ * 偵錯：網址加 ?timing=1，或指令碼屬性 DEBUG_DOGET_TIMING=1（執行 setup() 後生效），各階段耗時會印到「執行項目」的紀錄。
+ */
+function doGet(e) {
+  const marks = { start: Date.now() };
+  const snap = readDoGetSnapshot_();
+  marks.cache = Date.now();
+  const config = snap.config;
+  const timing = Boolean(config.debugTiming) || Boolean(e && e.parameter && e.parameter.timing === '1');
+  if (timing) console.time('doGet');
+
+  if (!isAuthorizedUser_(config.allowedEmails)) return buildAccessDeniedPage_();
+  marks.auth = Date.now();
 
   const template = HtmlService.createTemplateFromFile('Index');
-  template.initialDataJson = getBootstrapJsonForDoGet_();
+  template.initialDataJson = buildDoGetBootJson_(snap);
+  template.execUrl = config.execUrl || '#';
+  marks.boot = Date.now();
   const output = template
     .evaluate()
     .setTitle(APP_TITLE_)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  marks.template = Date.now();
 
-  try {
-    const iconUrl = scriptProps_().getProperty('APP_ICON_URL');
-    if (iconUrl) output.setFaviconUrl(iconUrl);
-  } catch (e) {
-    console.warn('setFaviconUrl 失敗，已略過：' + e);
+  if (config.iconUrl) {
+    try {
+      output.setFaviconUrl(config.iconUrl);
+    } catch (err) {
+      console.warn('setFaviconUrl 失敗，已略過：' + err);
+    }
+  }
+
+  if (timing) {
+    console.timeEnd('doGet');
+    console.log('[doGet] ' + JSON.stringify({
+      totalMs: Date.now() - marks.start,
+      cacheMs: marks.cache - marks.start,
+      authMs: marks.auth - marks.cache,
+      bootMs: marks.boot - marks.auth,
+      templateMs: marks.template - marks.boot,
+      bootHit: Boolean(snap.boot),
+      monthHit: Boolean(snap.monthData),
+      configHit: snap.configHit,
+      budgetPending: snap.budgetPending,
+      bootBytes: snap.bootBytes,
+      template: typeof BUILD_TEMPLATE_MODE_ === 'string' ? BUILD_TEMPLATE_MODE_ : 'include',
+    }));
   }
   return output;
+}
+
+/** doGet 需要的所有快取，一次 getAll 讀回。DOGET_CONFIG 沒命中時從指令碼屬性重建（不碰試算表）。 */
+function readDoGetSnapshot_() {
+  const today = budgetToday_();
+  const K = CONFIG.CACHE_KEYS;
+  const monthKey = K.MONTH_DATA_PREFIX + today.month;
+  const openingKey = K.BUDGET_OPENING_PREFIX + today.month;
+  const got = cacheGetAllMixed_([K.BOOT_JSON, monthKey], [K.DOGET_CONFIG, K.BUDGET_CONFIG, openingKey]);
+
+  let config = null;
+  try { config = got.plain[K.DOGET_CONFIG] ? JSON.parse(got.plain[K.DOGET_CONFIG]) : null; } catch (e) { config = null; }
+  const configHit = Boolean(config && Array.isArray(config.allowedEmails));
+  if (!configHit) config = refreshDoGetConfig_();
+
+  return {
+    today: today,
+    config: config,
+    configHit: configHit,
+    boot: got.large[K.BOOT_JSON],
+    monthData: got.large[monthKey],
+    budgetConfigJson: got.plain[K.BUDGET_CONFIG],
+    openingJson: got.plain[openingKey],
+    budgetPending: false,
+    bootBytes: 0,
+  };
+}
+
+/** doGet 用的設定：允許名單、App 圖示網址、網頁網址、偵錯旗標。setup()、setupAppIcon() 與快取沒命中時更新。 */
+function readDoGetConfigFromProps_() {
+  const config = { allowedEmails: [], iconUrl: '', execUrl: '', debugTiming: false };
+  try {
+    const props = scriptProps_();
+    config.allowedEmails = parseAllowedEmails_(props.getProperty(AUTH_PROP_KEYS_.ALLOWED_EMAILS));
+    config.iconUrl = props.getProperty('APP_ICON_URL') || '';
+    config.debugTiming = /^(1|true|on|yes)$/i.test(String(props.getProperty('DEBUG_DOGET_TIMING') || '').trim());
+  } catch (e) {}
+  config.execUrl = webAppUrl_();
+  return config;
+}
+
+function refreshDoGetConfig_() {
+  const config = readDoGetConfigFromProps_();
+  try {
+    scriptCache_().put(CONFIG.CACHE_KEYS.DOGET_CONFIG, JSON.stringify(config), CONFIG.DOGET_CONFIG_TTL);
+  } catch (e) {}
+  return config;
+}
+
+/**
+ * 組出內嵌在頁面裡的啟動資料（精簡格式，見 11_bootstrap.gs）。
+ *   fromFreshCache  快取命中、而且是這個月的資料：前端不用再背景同步
+ *   budgetPending   預算算不出來（預算快取沒命中）：沒有 budget，前端要背景同步
+ */
+function buildDoGetBootJson_(snap) {
+  let boot = snap.boot;
+  let fresh = Boolean(boot);
+  if (!boot) {
+    try {
+      const snapshotStr = scriptProps_().getProperty(CONFIG.PROP_KEYS.BOOT_SNAPSHOT);
+      boot = snapshotStr ? JSON.parse(snapshotStr) : null;
+    } catch (e) { boot = null; }
+  }
+  if (!boot) return 'null';
+
+  try {
+    const tz = boot.timeZone || DEFAULT_TIME_ZONE_;
+    const nowMonth = tz === DEFAULT_TIME_ZONE_ ? snap.today.month : Utilities.formatDate(new Date(), tz, 'yyyy.MM');
+    if (boot.currentMonth !== nowMonth) fresh = false;
+
+    const recent = boot.initialRecent;
+    if (recent && recent.month) {
+      const monthData = recent.month === snap.today.month && snap.monthData ? snap.monthData : null;
+      if (monthData) {
+        recent.fullExpenses = monthData.expenses || [];
+        recent.fullIncomes = monthData.incomes || [];
+        recent.dailyExpenses = monthData.dailyExpenses || {};
+        delete recent.expenses;
+        delete recent.incomes;
+      }
+      const lists = Array.isArray(recent.fullExpenses)
+        ? { expenses: recent.fullExpenses, incomes: recent.fullIncomes || [] }
+        : null;
+      const result = lists ? budgetStatusFromCache_(recent.month, lists, snap.budgetConfigJson, snap.openingJson, snap.today.month) : null;
+      // 算不出來時不沿用啟動資料裡存的 budget：即使是今天算的，之前月份有異動（月初餘額快取被清掉）也可能已經過時。
+      // 只有精簡快照（沒有整月明細，本來就會背景同步）才沿用今天算的那份。
+      if (result) {
+        recent.budget = result.status;
+      } else if (lists || !(recent.budget && recent.budget.todayISO === snap.today.iso)) {
+        delete recent.budget;
+        snap.budgetPending = true;
+      }
+    }
+  } catch (e) {
+    fresh = false;
+  }
+
+  boot.fromFreshCache = fresh;
+  if (snap.budgetPending) boot.budgetPending = true;
+  else delete boot.budgetPending;
+  const json = sanitizeJsonForScriptTag_(JSON.stringify(boot));
+  snap.bootBytes = json.length;
+  return json;
 }
 
 function buildAccessDeniedPage_() {
@@ -107,6 +244,7 @@ function setupAppIcon() {
 
   props.setProperty('APP_ICON_FILE_ID', file.getId());
   props.setProperty('APP_ICON_URL', url);
+  refreshDoGetConfig_();
   console.log('App Logo 已設定完成：' + url + '（大小 ' + bytes.length + ' bytes）');
   return url;
 }
@@ -153,27 +291,6 @@ function onEdit(e) {
   } catch (err) {}
 }
 
-function getBootstrapJsonForDoGet_() {
-  try {
-    const cache = scriptCache_();
-    const cachedStr = cache.get(CONFIG.CACHE_KEYS.BOOT_JSON);
-    if (cachedStr) {
-      const parsed = refreshBootBudget_(JSON.parse(cachedStr));
-      parsed.fromFreshCache = true;
-      return sanitizeJsonForScriptTag_(JSON.stringify(parsed));
-    }
-
-    const props = scriptProps_();
-    const snapshotStr = props.getProperty(CONFIG.PROP_KEYS.BOOT_SNAPSHOT);
-    if (snapshotStr) {
-      const parsed = refreshBootBudget_(JSON.parse(snapshotStr));
-      parsed.fromFreshCache = false;
-      return sanitizeJsonForScriptTag_(JSON.stringify(parsed));
-    }
-  } catch (e) {}
-  return 'null';
-}
-
 function sanitizeJsonForScriptTag_(jsonStr) {
   if (!jsonStr) return 'null';
   return String(jsonStr).replace(/</g, '\\u003c');
@@ -197,6 +314,7 @@ function setup() {
   }
 
   scriptProps_().setProperty(CONFIG.PROP_KEYS.SPREADSHEET_ID, ss.getId());
+  refreshDoGetConfig_();
 
   try {
     getInitialData_(true);

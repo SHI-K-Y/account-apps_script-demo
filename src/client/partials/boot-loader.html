@@ -20,7 +20,7 @@
       <div class="boot-hint" id="bootHint" hidden>
         <p id="bootHintText">網路似乎比較慢，仍在努力載入中…</p>
         <div class="boot-actions">
-          <a class="boot-btn" id="bootReload" href="<?!= (function(){ try { return ScriptApp.getService().getUrl() || '#'; } catch (e) { return '#'; } })() ?>" target="_top">重新載入</a>
+          <a class="boot-btn" id="bootReload" href="<?= typeof execUrl !== 'undefined' && execUrl ? execUrl : '#' ?>" target="_top">重新載入</a>
           <button class="boot-btn is-ghost" id="bootSkip" type="button" hidden>先進入</button>
         </div>
       </div>

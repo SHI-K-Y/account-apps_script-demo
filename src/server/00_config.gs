@@ -27,7 +27,10 @@ const CONFIG = Object.freeze({
     FX_RATES_PREFIX: 'FX_RATES_V1_',
     BUDGET_CONFIG: 'BUDGET_CONFIG_V1',
     BUDGET_OPENING_PREFIX: 'BUDGET_OPENING_V1_',
+    DOGET_CONFIG: 'DOGET_CONFIG_V1',
   }),
+  // doGet 用的設定快取（允許名單、App 圖示、網址）存多久：指令碼屬性改了之後，最慢這麼久生效（執行 setup() 立即生效）。
+  DOGET_CONFIG_TTL: 3600,
   PROP_KEYS: Object.freeze({
     SPREADSHEET_ID: 'SPREADSHEET_ID',
     BOOT_SNAPSHOT: 'BOOT_SNAPSHOT_V2',

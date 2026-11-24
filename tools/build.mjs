@@ -16,6 +16,12 @@
 //                    開機程式的最後一行（app/start.js）就開始畫首屏，不等後面的延後程式與 assets.html 下載完（P08）
 //   assets.html      內嵌圖片（預設卡面、銀行 logo、App 圖示），排在頁面最後；預設選項與圖示對照在 scripts/core/item-defaults.js
 //   appsscript.json  Apps Script 專案設定
+//
+// 範本模式（P09 的 A/B 量測）：
+//   --template include（預設，A）  Index.html 用 <?!= include('style') ?> 等在 doGet 時讀入其他三個檔案
+//   --template inline（B）         建置時就把 style／app／assets 展開進 Index.html，範本只剩啟動資料與網址兩個 scriptlet
+//   兩種模式都照樣產出 style／app／assets.html（setupAppIcon 讀 assets、include() 也還能用）。
+//   部署後網址加 ?timing=1 開頁，到 Apps Script「執行項目」看 [doGet] 紀錄的 templateMs／totalMs 比較。
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -30,6 +36,9 @@ const SERVER = path.join(SRC, 'server');
 
 const args = new Set(process.argv.slice(2));
 const MINIFY = !args.has('--no-minify');
+const TEMPLATE_MODES = ['include', 'inline'];
+const templateArg = process.argv.indexOf('--template');
+const TEMPLATE_MODE = templateArg > -1 ? process.argv[templateArg + 1] : (process.env.BUILD_TEMPLATE || 'include');
 const QUIET = args.has('--quiet');
 const log = (...a) => { if (!QUIET) console.log(...a); };
 
@@ -210,6 +219,25 @@ async function buildIconSubset() {
   return { css: faces + '@layer icons {\n' + css + '}\n', count, weights };
 }
 
+/**
+ * 範本模式 B：把 Index.html 裡的 <?!= include('名稱') ?> 換成檔案內容。展開的內容不能含有 <? 或 ?>，
+ * 否則 Apps Script 會把它當成 scriptlet 執行。取代值用函式回傳，避免內容裡的 $ 被當成特殊符號。
+ */
+function inlineIncludes(html, outputs) {
+  let count = 0;
+  const out = html.replace(/<\?!=\s*include\('([A-Za-z]+)'\)\s*\?>/g, (_, name) => {
+    const content = outputs[name + '.html'];
+    if (content == null) throw new Error('Index.html 引用了不存在的檔案：' + name);
+    if (/<\?|\?>/.test(content)) throw new Error(name + '.html 含有 <? 或 ?>，不能展開進範本（會被當成 scriptlet）');
+    count++;
+    return content;   // 與 include() 回傳的內容完全相同（含結尾換行），兩種模式產生的頁面一模一樣
+  });
+  if (count !== 3) throw new Error('範本模式 inline：預期展開 3 個 include，實際 ' + count + ' 個');
+  const left = (out.match(/<\?[\s\S]*?\?>/g) || []).length;
+  if (left !== 2) throw new Error('範本模式 inline：應該只剩啟動資料與網址兩個 scriptlet，實際 ' + left + ' 個');
+  return out;
+}
+
 function size(text) {
   const bytes = Buffer.byteLength(text, 'utf8');
   const gz = zlib.gzipSync(text, { level: 9 }).length;
@@ -228,6 +256,8 @@ export async function build(opts) {
   const options = opts || {};
   const minify = options.minify === undefined ? MINIFY : Boolean(options.minify);
   const write = options.write !== false;
+  const templateMode = options.template || TEMPLATE_MODE;
+  if (!TEMPLATE_MODES.includes(templateMode)) throw new Error('不認得的範本模式：' + templateMode + '（可用 ' + TEMPLATE_MODES.join('、') + '）');
   const say = options.quiet ? () => {} : log;
   const started = Date.now();
   const manifest = JSON.parse(read(path.join(CLIENT, 'manifest.json')));
@@ -280,7 +310,8 @@ export async function build(opts) {
   if (/<\/script/i.test(assets)) throw new Error('assets.js 含有 </script。');
 
   const serverFiles = fs.readdirSync(SERVER).filter(f => f.endsWith('.gs')).sort();
-  const server = serverFiles.map(f => '// ───── ' + f + ' ─────\n' + stripTrailingNewlines(read(path.join(SERVER, f)))).join('\n\n') + '\n';
+  const server = serverFiles.map(f => '// ───── ' + f + ' ─────\n' + stripTrailingNewlines(read(path.join(SERVER, f)))).join('\n\n') + '\n' +
+    '\n// ───── 建置資訊（tools/build.mjs 產生）─────\nconst BUILD_TEMPLATE_MODE_ = ' + JSON.stringify(templateMode) + ';\n';
 
   const outputs = {
     'code.gs': server,
@@ -293,6 +324,7 @@ export async function build(opts) {
     'assets.html': '<script>\n' + assets + '</script>\n',
     'appsscript.json': read(path.join(SRC, 'appsscript.json')),
   };
+  if (templateMode === 'inline') outputs['Index.html'] = inlineIncludes(html, outputs);
 
   if (write) {
     fs.mkdirSync(DIST, { recursive: true });
@@ -318,7 +350,8 @@ export async function build(opts) {
   const deferredSize = size(deferredJs);
   say('  前端程式：開機執行 ' + kb(jsSize.bytes).trim() + '（gzip ' + kb(jsSize.gz).trim() + '）＋延後 ' + kb(deferredSize.bytes).trim() + '（gzip ' + kb(deferredSize.gz).trim() + '）');
   say('  ' + '頁面合計'.padEnd(12) + kb(total.bytes) + '   gzip ' + kb(total.gz));
-  return { outputs, total, js: { boot: jsSize, deferred: deferredSize } };
+  say('  範本模式：' + templateMode + (templateMode === 'inline' ? '（style／app／assets 已展開進 Index.html）' : '（doGet 時 include）'));
+  return { outputs, total, js: { boot: jsSize, deferred: deferredSize }, templateMode };
 }
 
 async function main() {

@@ -95,7 +95,7 @@ function createNewMonthSheet_(targetMonth) {
         const boot = JSON.parse(rawStr);
         boot.months = updatedMonths;
         boot.selectedMonth = rawMonth;
-        boot.initialRecent = buildRecentPayload_(rawMonth, emptyMonthData, 8, 8);
+        boot.initialRecent = buildBootRecent_(rawMonth, emptyMonthData);
         boot.cachedAt = Date.now();
         saveBootSnapshot_(boot, { snapshotOnly: true });
       }

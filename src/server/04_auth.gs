@@ -32,19 +32,28 @@ function effectiveUserEmail_() {
   try { return normalizeEmail_(Session.getEffectiveUser().getEmail()); } catch (e) { return ''; }
 }
 
+function parseAllowedEmails_(raw) {
+  return String(raw == null ? '' : raw).split(/[\s,;]+/).map(normalizeEmail_).filter(Boolean);
+}
+
 function readAllowedEmails_() {
   let raw = '';
   try { raw = scriptProps_().getProperty(AUTH_PROP_KEYS_.ALLOWED_EMAILS) || ''; } catch (e) { raw = ''; }
-  return raw.split(/[\s,;]+/).map(normalizeEmail_).filter(Boolean);
+  return parseAllowedEmails_(raw);
 }
 
-/** 目前的使用者能不能用這個網頁。未設定 ALLOWED_EMAILS 時一律允許。 */
-function isAuthorizedUser_() {
-  const allowed = readAllowedEmails_();
+/**
+ * 目前的使用者能不能用這個網頁。未設定 ALLOWED_EMAILS 時一律允許。
+ * @param allowedList  選用：已經讀好的允許名單（doGet 從 DOGET_CONFIG 快取拿，省一次讀指令碼屬性）；沒給就現在讀。
+ *                     API 呼叫（assertAuthorized_）一律現讀，名單改了立即生效。
+ */
+function isAuthorizedUser_(allowedList) {
+  const allowed = Array.isArray(allowedList) ? allowedList : readAllowedEmails_();
   if (!allowed.length) return true;
   const email = activeUserEmail_();
   if (!email) return false;
-  return email === effectiveUserEmail_() || allowed.indexOf(email) !== -1;
+  // 先比對名單（不用再呼叫 Session）；名單外才看是不是擁有者本人
+  return allowed.indexOf(email) !== -1 || email === effectiveUserEmail_();
 }
 
 function assertAuthorized_() {

@@ -57,7 +57,8 @@ const AppBoot = (function() {
       applyInitialData(picked.best, { isBackgroundSync: false, firstScreen: true });
       pendingLocalSaves.boot = true;   // 寫回 LocalCache 留到第三段（內容沒變就不寫）
       const serverBoot = picked.serverBoot;
-      needSync = !(serverBoot && serverBoot.fromFreshCache &&
+      // budgetPending：伺服器的預算快取沒命中，內嵌資料沒有 budget（doGet 不開試算表，P09），要靠背景同步補上
+      needSync = !(serverBoot && serverBoot.fromFreshCache && !serverBoot.budgetPending &&
         state.data.initialRecent && state.data.initialRecent.month === state.data.selectedMonth);
     } else {
       applyInitialData({

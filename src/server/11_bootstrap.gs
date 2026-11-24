@@ -1,12 +1,15 @@
+/**
+ * 啟動資料（BOOT_JSON）：doGet 內嵌在頁面裡、前端開機第一段就用它畫首屏。
+ * 快取裡存的是精簡格式（P09）：initialRecent 只放整月的 fullExpenses／fullIncomes，前端自己取前 8 筆；
+ * 對外的 getInitialData（google.script.run 與 HTTP API）由 expandBootPayload_ 補回 expenses／incomes，回傳格式不變。
+ */
 function getInitialData_(forceRefresh) {
   const isForce = Boolean(forceRefresh);
-  const cache = scriptCache_();
 
   if (!isForce) {
-    const cachedBoot = cache.get(CONFIG.CACHE_KEYS.BOOT_JSON);
-    if (cachedBoot) {
+    const parsed = cacheGetLarge_(CONFIG.CACHE_KEYS.BOOT_JSON);
+    if (parsed) {
       try {
-        const parsed = JSON.parse(cachedBoot);
         const now = new Date();
         const tz = parsed.timeZone || scriptTimeZone_();
         const todayISO = Utilities.formatDate(now, tz, 'yyyy-MM-dd');
@@ -14,7 +17,7 @@ function getInitialData_(forceRefresh) {
         if (parsed.currentMonth === currentMonth && parsed.options && parsed.initialRecent) {
           parsed.todayISO = todayISO;
           parsed.fromFreshCache = true;
-          return refreshBootBudget_(parsed);
+          return expandBootPayload_(refreshBootBudget_(parsed));
         }
       } catch (e) {}
     }
@@ -39,8 +42,6 @@ function getInitialData_(forceRefresh) {
   const allOptions = readAllOptionsData_(ss, isForce);
   const monthData = getMonthData_(ss, selectedMonth, isForce);
 
-  const initialRecent = buildRecentPayload_(selectedMonth, monthData, 8, 8);
-
   const payload = {
     todayISO,
     currentMonth,
@@ -50,38 +51,56 @@ function getInitialData_(forceRefresh) {
     options: allOptions.simple,
     settingsOptions: allOptions.raw,
     settingsMetadata: allOptions.metadata,
-    initialRecent,
+    initialRecent: buildBootRecent_(selectedMonth, monthData),
     cachedAt: Date.now(),
     fromFreshCache: true,
   };
 
   saveBootSnapshot_(payload);
-  return payload;
+  return expandBootPayload_(payload);
 }
 
+/** 啟動資料裡的最近紀錄：只放整月（前端自己取前 8 筆），不再重複放一份前 8 筆。 */
+function buildBootRecent_(month, monthData) {
+  const recent = buildRecentPayload_(month, monthData, 0, 0);
+  delete recent.expenses;
+  delete recent.incomes;
+  return recent;
+}
+
+/** 對外的 getInitialData 維持舊格式：initialRecent 補上前 8 筆的 expenses／incomes（不改動傳入的物件）。 */
+function expandBootPayload_(boot) {
+  const recent = boot && boot.initialRecent;
+  if (!recent || (Array.isArray(recent.expenses) && Array.isArray(recent.incomes))) return boot;
+  return Object.assign({}, boot, {
+    initialRecent: Object.assign({}, recent, {
+      expenses: Array.isArray(recent.expenses) ? recent.expenses : (recent.fullExpenses || []).slice(0, 8),
+      incomes: Array.isArray(recent.incomes) ? recent.incomes : (recent.fullIncomes || []).slice(0, 8),
+    }),
+  });
+}
+
+/**
+ * 存啟動資料：CacheService（大型值，可超過 100 KB）＋ PropertiesService 的備援快照（單值 9 KB，放不下就只放前 8 筆）。
+ * options.snapshotOnly：只更新備援快照（快取裡沒有啟動資料時用，避免把舊快照當成最新的放回快取）。
+ */
 function saveBootSnapshot_(payload, options) {
   if (!payload) return;
   const snapshotOnly = Boolean(options && options.snapshotOnly);
   try {
+    if (!snapshotOnly) cachePutLarge_(CONFIG.CACHE_KEYS.BOOT_JSON, payload, CONFIG.CACHE_TTL);
     const jsonStr = JSON.stringify(payload);
-    if (!snapshotOnly) {
-      const cache = scriptCache_();
-      try {
-        cache.put(CONFIG.CACHE_KEYS.BOOT_JSON, jsonStr, CONFIG.CACHE_TTL);
-      } catch (cacheErr) {
-        cache.remove(CONFIG.CACHE_KEYS.BOOT_JSON);
-      }
-    }
     if (splitUtf8Chunks_(jsonStr, 8500).length === 1) {
       scriptProps_().setProperty(CONFIG.PROP_KEYS.BOOT_SNAPSHOT, jsonStr);
     } else {
+      const recent = payload.initialRecent;
       const compactPayload = Object.assign({}, payload, {
-        initialRecent: payload.initialRecent ? {
-          month: payload.initialRecent.month,
-          expenses: (payload.initialRecent.expenses || []).slice(0, 8),
-          incomes: (payload.initialRecent.incomes || []).slice(0, 8),
-          dailyExpenses: payload.initialRecent.dailyExpenses || {},
-          budget: payload.initialRecent.budget || null,
+        initialRecent: recent ? {
+          month: recent.month,
+          expenses: (recent.expenses || recent.fullExpenses || []).slice(0, 8),
+          incomes: (recent.incomes || recent.fullIncomes || []).slice(0, 8),
+          dailyExpenses: recent.dailyExpenses || {},
+          budget: recent.budget || null,
         } : null,
       });
       const compactStr = JSON.stringify(compactPayload);
@@ -92,18 +111,26 @@ function saveBootSnapshot_(payload, options) {
   } catch (e) {}
 }
 
+/** 讀出目前的啟動資料以便修改：{ boot, inCache }；快取沒有時退回備援快照。 */
+function readBootForUpdate_() {
+  const cached = cacheGetLarge_(CONFIG.CACHE_KEYS.BOOT_JSON);
+  if (cached) return { boot: cached, inCache: true };
+  try {
+    const rawStr = scriptProps_().getProperty(CONFIG.PROP_KEYS.BOOT_SNAPSHOT);
+    if (rawStr) return { boot: JSON.parse(rawStr), inCache: false };
+  } catch (e) {}
+  return { boot: null, inCache: false };
+}
+
+/** 記帳之後：把啟動資料的最近紀錄換成最新的月份明細並存回（快取裡的啟動資料因此一直是最新的）。 */
 function syncBootSnapshotWithMonthData_(month, monthData) {
   try {
-    const cache = scriptCache_();
-    const props = scriptProps_();
-    const rawStr = cache.get(CONFIG.CACHE_KEYS.BOOT_JSON) || props.getProperty(CONFIG.PROP_KEYS.BOOT_SNAPSHOT);
-    if (!rawStr) return;
-
-    const boot = JSON.parse(rawStr);
+    const current = readBootForUpdate_();
+    const boot = current.boot;
     if (boot && boot.selectedMonth === month) {
-      boot.initialRecent = buildRecentPayload_(month, monthData, 8, 8);
+      boot.initialRecent = buildBootRecent_(month, monthData);
       boot.cachedAt = Date.now();
-      saveBootSnapshot_(boot);
+      saveBootSnapshot_(boot, { snapshotOnly: !current.inCache });
     }
   } catch (e) {}
 }
