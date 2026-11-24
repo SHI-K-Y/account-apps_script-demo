@@ -39,7 +39,8 @@ function initDynamicHeader() {
     }
   }, { passive: true });
 
-  onScroll();
+  // 讀捲動位置會強制排版：開機時留到第一次繪製前（rAF）再做，不擠進首屏的任務（P08）
+  requestAnimationFrame(onScroll);
 }
 
 function updateNavPill(instant) {
@@ -72,7 +73,8 @@ function updateNavPill(instant) {
 }
 
 function initNavPill() {
-  updateNavPill(true);
+  // 量導覽列按鈕的位置會強制排版：開機時留到第一次繪製前（rAF）再量，不擠進首屏的任務（P08）
+  requestAnimationFrame(() => updateNavPill(true));
   let resizeTimer = 0;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
@@ -110,6 +112,7 @@ function bindTabs() {
   });
 }
 
+// 開機首屏就要能用的事件（P08：其餘在 bindSecondaryEvents，開機第二段才綁）
 function bindStaticEvents() {
   document.getElementById('monthSelect').addEventListener('change', e => {
     state.mutationVersion++;
@@ -199,7 +202,37 @@ function bindStaticEvents() {
 
   document.getElementById('expenseSubmit').addEventListener('click', submitExpense);
   document.getElementById('incomeSubmit').addEventListener('click', submitIncome);
+  bindQuickComboMenu();
 
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      const pop = document.getElementById('emojiPickerPopover');
+      if (pop && !pop.hidden) {
+        pop.hidden = true;
+        return;
+      }
+      closeCalendar('expense');
+      closeCalendar('income');
+      closeCalendar('st');
+      closeCalendar('expenseFilter');
+      closeCalendar('incomeFilter');
+      ModalManager.handleEscape();
+    }
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.date-picker-wrap') && !e.target.closest('.recent-calendar-popover') && !e.target.closest('.recent-date-picker-chip')) {
+      closeCalendar('expense');
+      closeCalendar('income');
+      closeCalendar('st');
+      closeCalendar('expenseFilter');
+      closeCalendar('incomeFilter');
+    }
+  });
+}
+
+// 開機第二段才綁定（P08）：首屏以外的按鈕——完整紀錄、最近紀錄的日期篩選、修改／刪除／新增月份的彈窗
+function bindSecondaryEvents() {
   const loadFullExpensesBtn = document.getElementById('loadFullExpensesBtn');
   if (loadFullExpensesBtn) {
     loadFullExpensesBtn.addEventListener('click', () => toggleFullRecords('expense'));
@@ -210,7 +243,6 @@ function bindStaticEvents() {
   }
 
   bindRecentDateFilterEvents();
-  bindQuickComboMenu();
 
   ModalManager.register('editRecordModal', {
     close: closeEditModal,
@@ -280,32 +312,6 @@ function bindStaticEvents() {
       }
     });
   }
-
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      const pop = document.getElementById('emojiPickerPopover');
-      if (pop && !pop.hidden) {
-        pop.hidden = true;
-        return;
-      }
-      closeCalendar('expense');
-      closeCalendar('income');
-      closeCalendar('st');
-      closeCalendar('expenseFilter');
-      closeCalendar('incomeFilter');
-      ModalManager.handleEscape();
-    }
-  });
-
-  document.addEventListener('click', e => {
-    if (!e.target.closest('.date-picker-wrap') && !e.target.closest('.recent-calendar-popover') && !e.target.closest('.recent-date-picker-chip')) {
-      closeCalendar('expense');
-      closeCalendar('income');
-      closeCalendar('st');
-      closeCalendar('expenseFilter');
-      closeCalendar('incomeFilter');
-    }
-  });
 }
 
 function toggleTheme(e) {

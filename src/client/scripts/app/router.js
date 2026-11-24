@@ -100,8 +100,12 @@ function bounceActiveNavIcon() {
 }
 
 function switchPage(page) {
-  // 各頁面的程式是延後載入的（core/deferred.js）：切頁會呼叫 ForeignPage／SearchPage／loadOverview 等，先同步執行
-  DeferredApp.ensure();
+  // 各頁面的程式是延後載入的（core/deferred.js）：切頁會呼叫 ForeignPage／SearchPage／loadOverview 等，先同步執行。
+  // 頁面還沒下載完（P08：開機不等延後程式）時，等它一到就執行並切過去。
+  if (!DeferredApp.ensure()) {
+    DeferredApp.whenLoaded(function() { switchPage(page); });
+    return;
+  }
   var fromPage = document.body.dataset.page || 'bookkeeping';
   var dir = getPageTransitionDir(fromPage, page);
   var level = Motion.level();

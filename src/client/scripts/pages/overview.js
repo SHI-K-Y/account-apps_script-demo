@@ -15,8 +15,13 @@ function loadOverview(forceRefresh, opts) {
   var cachedOv = !forceRefresh ? LocalCache.getOverview() : null;
   var chartsStarted = false;
   var chartsJob = null;
+  var prerendered = Boolean(cachedOv) && overviewPrerenderSig !== '' && overviewPrerenderSig === JSON.stringify(cachedOv) &&
+    Boolean(container.querySelector('.ov-hero'));
+  overviewPrerenderSig = '';
   if (cachedOv) {
-    renderOverview(cachedOv);
+    // 開機時已經用同一份快取畫好（prerenderOverview）：只播放數字動畫，不重建整頁
+    if (prerendered) animateOverviewNumbers(container, overviewNumbers(cachedOv));
+    else renderOverview(cachedOv);
     if (defer) {
       chartsJob = { cancelled: false };
       var job = chartsJob;
@@ -73,9 +78,27 @@ function loadOverview(forceRefresh, opts) {
     .getAssetOverview(Boolean(forceRefresh));
 }
 
-function renderOverview(d) {
+// 開機第三段（閒置時，app/bootstrap.js）用 LocalCache 先把總覽畫進隱藏的頁面容器（P08）：
+// 第一次切到總覽時，轉場的 update callback 裡就不用重建整頁，只播放數字動畫（見 loadOverview）。
+var overviewPrerenderSig = '';
+function prerenderOverview() {
+  var container = document.getElementById('overviewContent');
+  var cached = LocalCache.getOverview();
+  if (!container || !cached || overviewLoaded || overviewPrerenderSig) return false;
+  renderOverview(cached, { prerender: true });
+  overviewPrerenderSig = JSON.stringify(cached);
+  return true;
+}
+
+function overviewNumbers(d) {
+  return { total: ovParseNum(d.assetTotal), inc: ovParseNum(d.totalIncome), exp: ovParseNum(d.totalExpense), bal: ovParseNum(d.monthBalance) };
+}
+
+// opts.prerender：畫在隱藏的容器裡，數字直接是最終值（看到時才播放 countUp）
+function renderOverview(d, opts) {
   var container = document.getElementById('overviewContent');
   if (!container || !d) return;
+  overviewPrerenderSig = '';
 
   var html = '';
   var noticeWasOpen = Boolean(container.querySelector('.ov-layout-notice[open]'));
@@ -166,7 +189,7 @@ function renderOverview(d) {
   html += '</div>';
 
   container.innerHTML = html;
-  animateOverviewNumbers(container, { total: totalNum, inc: incNum, exp: expNum, bal: balNum });
+  if (!(opts && opts.prerender)) animateOverviewNumbers(container, { total: totalNum, inc: incNum, exp: expNum, bal: balNum });
   OverviewCharts.attach(container.querySelector('#overviewChartsSection'), d);
 }
 

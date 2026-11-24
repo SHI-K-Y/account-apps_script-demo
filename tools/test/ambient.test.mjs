@@ -1,4 +1,5 @@
-// 常駐動畫管理（P04）：移除效能分級之後，只剩「背景分頁暫停」與「離屏暫停」兩條規則（core/ambient.js）。
+// 常駐動畫管理（P04）：移除效能分級之後，只剩「背景分頁暫停」與「離屏暫停」兩條規則（core/ambient.js）；
+// P08 起 boot-ready（bootready 事件）之後才開始管理，開機期間登記的動畫先暫停。
 //   1. 全站不再有分級相關的程式（data-perf、Perf、效能模式卡片…）。
 //   2. 用假的瀏覽器環境執行 ambient.js：離屏／背景時暫停、回來時繼續；捲動不會讓動畫停住。
 //   3. prefs.js 開機時清掉舊版留下的分級紀錄與 perf 欄位。
@@ -71,6 +72,8 @@ function fakeEnv() {
   }
   const context = vm.createContext({
     document, IntersectionObserver,
+    // core/boot-phase.js 的替身：boot-ready 之後的工作在 bootready 時執行
+    BootPhase: { ready: fn => { (winListeners.bootready = winListeners.bootready || []).push(fn); } },
     window: { addEventListener: (t, f) => { (winListeners[t] = winListeners[t] || []).push(f); } },
     requestAnimationFrame: f => { f(0); return 1; },
   });
@@ -86,6 +89,15 @@ test('Ambient：離屏與背景分頁時暫停，回來繼續；捲動不暫停'
   const other = env.makeAnim(card, 'spin-loading');     // 不是常駐動畫，不管
   vm.runInContext(read('scripts/core/ambient.js') + '\nthis.Ambient = Ambient;', env.context);
   const Ambient = env.context.Ambient;
+
+  // 開機期間（P08）：還沒有 boot-ready，不掃描、不建立 IntersectionObserver；這時登記的 JS 動畫先暫停
+  assert.equal(env.observers.length, 0, 'boot-ready 之前不開始管理');
+  assert.equal(Ambient.debug().tracked, 0);
+  const early = Ambient.register(env.makeAnim(env.el('early'), ''));
+  assert.equal(early.playState, 'paused', '開機期間登記的動畫先暫停');
+  (env.winListeners.bootready || []).forEach(f => f());
+  assert.equal(early.playState, 'running', 'boot-ready 時一起播放');
+  early.cancel();
 
   assert.equal(env.observers.length, 1);
   assert.equal(env.observers[0].opts.rootMargin, '120px 0px');

@@ -21,6 +21,9 @@
 // P06 新增：「長清單」＝合成資料加長到 30 筆（記一筆支出時 renderRecent／renderRecentList 的腳本時間，
 //          CPU 4 倍降速、記 8 筆取中位數）與 300 筆（載入完整紀錄的腳本時間、在完整紀錄上觸控捲動的幀率）。
 //          --lists-only：只跑長清單這一段（快速比較用，結果不寫入 baseline）。
+// P08 新增：「開機（有本機快取）」＝先不降速開一次讓 LocalCache 有資料，再降速重新載入量開機；
+//          「開機後立刻互動」＝boot-ready 一出現就點支出項目、按數字鍵（不等資料同步），量 Event Timing。
+//          結尾印出 P08 的驗收檢查（boot-ready、最長長任務、開機後立刻互動）。
 // 注意：headless 是軟體繪圖，絕對數字比真機悲觀，只拿來比較「改之前／改之後」的相對變化。
 import fs from 'node:fs';
 import os from 'node:os';
@@ -103,6 +106,14 @@ metric('boot.domContentLoaded', '開機 DOMContentLoaded 結束', 'ms', 'down');
 metric('boot.bootReady', '開機 boot-ready', 'ms', 'down');
 metric('boot.longTaskTotal', '開機長任務總和', 'ms', 'down');
 metric('boot.longTaskMax', '開機最長長任務', 'ms', 'down');
+metric('bootWarm.bootReady', '開機（有本機快取）boot-ready', 'ms', 'down');
+metric('bootWarm.longTaskTotal', '開機（有本機快取）長任務總和', 'ms', 'down');
+metric('bootWarm.longTaskMax', '開機（有本機快取）最長長任務', 'ms', 'down');
+const BOOT_ACTIONS = [
+  { key: 'selectItem', label: '開機後立刻點支出項目', sel: '#expenseItemChoices .choice' },
+  { key: 'keypadDigit', label: '開機後立刻按數字鍵', sel: '#expenseKeypad .key:text-is("1")' },
+];
+BOOT_ACTIONS.forEach(a => metric('bootInput.' + a.key, a.label, 'ms', 'down'));
 const IDLE_VARIANTS = PAGES.map(p => ({ key: p.key, label: p.label }))
   .concat([{ key: 'bookkeepingPaused', label: '記帳頁（動畫全暫停）' }]);
 IDLE_VARIANTS.forEach(v => {
@@ -283,15 +294,17 @@ async function newPage(browser, opts) {
   const page = await context.newPage();
   page.on('pageerror', e => console.warn('  [頁面錯誤] ' + e.message));
   const cdp = await context.newCDPSession(page);
-  if (o.throttle) {
-    await cdp.send('Emulation.setCPUThrottlingRate', { rate: OPT.cpu });
-    if (OPT.net === 'fast3g') {
-      await cdp.send('Network.enable');
-      await cdp.send('Network.emulateNetworkConditions', FAST3G);
-    }
-  }
+  if (o.throttle) await applyThrottle(cdp);
   await cdp.send('Performance.enable');
   return { context, page, cdp };
+}
+
+async function applyThrottle(cdp) {
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: OPT.cpu });
+  if (OPT.net === 'fast3g') {
+    await cdp.send('Network.enable');
+    await cdp.send('Network.emulateNetworkConditions', FAST3G);
+  }
 }
 
 async function boot(page, url) {
@@ -335,6 +348,47 @@ async function measureBoot(page) {
       longTaskCount: lt.length,
     };
   }, SETTLE_MS);
+}
+
+/** P08：有本機快取時的開機，以及開機後立刻互動。
+ *  同一個 context 先不降速開一次（LocalCache 存下開機資料、最近紀錄、設定），再降速重新載入兩次：
+ *  第一次只量開機（boot-ready、長任務），第二次 boot-ready 一出現就點支出項目、按數字鍵（不等背景同步）。 */
+async function measureWarmBoot(browser) {
+  const app = await startApp();
+  const { context, page, cdp } = await newPage(browser, { throttle: false });
+  try {
+    await boot(page, app.url);
+    await settle(page, 500);
+    await applyThrottle(cdp);
+    await boot(page, app.url);
+    const warm = await measureBoot(page);
+
+    await boot(page, app.url);
+    const windows = [];
+    for (const a of BOOT_ACTIONS) {
+      const t0 = await inPageNow(page);
+      try {
+        await page.locator(a.sel).first().tap({ timeout: 15000, noWaitAfter: true });
+      } catch (e) {
+        console.warn('  [開機後互動] ' + a.label + ' 失敗：' + e.message.split('\n')[0]);
+        windows.push({ key: a.key, t0, failed: true });
+        continue;
+      }
+      windows.push({ key: a.key, t0 });
+    }
+    await sleep(1500);   // Event Timing 在下一次繪製後才送出
+    const events = await page.evaluate(() => window.__perf.events.slice());
+    const inputs = {};
+    windows.forEach((w, i) => {
+      const t1 = i + 1 < windows.length ? windows[i + 1].t0 : Infinity;
+      const hits = events.filter(e => e.start >= w.t0 && e.start < t1);
+      inputs[w.key] = w.failed ? null : hits.reduce((m, e) => Math.max(m, e.dur), 0);
+    });
+    return { warm, inputs };
+  } finally {
+    await context.close();
+    await app.close();
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -673,7 +727,12 @@ async function oneRun(browser, index) {
     }
   }
 
-  console.log('  第 ' + index + ' 次：boot-ready ' + round(bootStats.bootReady) + 'ms、記帳頁閒置 ' + idle.bookkeeping.frames +
+  const warmBoot = await measureWarmBoot(browser);
+  for (const k of Object.keys(warmBoot.warm)) flat['bootWarm.' + k] = warmBoot.warm[k];
+  for (const k of Object.keys(warmBoot.inputs)) flat['bootInput.' + k] = warmBoot.inputs[k];
+
+  console.log('  第 ' + index + ' 次：boot-ready ' + round(bootStats.bootReady) + 'ms（有快取 ' + round(warmBoot.warm.bootReady) +
+    'ms）、最長長任務 ' + round(bootStats.longTaskMax) + 'ms、記帳頁閒置 ' + idle.bookkeeping.frames +
     ' 幀、送出 ' + round(inputs.values.submit) + 'ms');
   return { metrics: flat, inputEvents: { samples: inputs.samples, topEvent: inputs.detail } };
 }
@@ -970,6 +1029,27 @@ function printListsOnly(listRuns) {
   console.log('\n結果：' + path.relative(ROOT, outFile));
 }
 
+/** P08 驗收：4 倍降速 boot-ready ≤ 0.8 秒、最長長任務 ≤ 100ms；開機後立刻互動 ≤ 200ms；
+ *  6 倍＋Fast 3G 時 boot-ready 比基準（--baseline）快 35% 以上。 */
+function printBootChecks(result, base) {
+  const m = result.metrics;
+  const rows = [];
+  const check = (label, ok, text) => rows.push((ok == null ? '  ・ ' : ok ? '  ✓ ' : '  ✗ ') + padR(label, 34) + text);
+  const ms = v => (typeof v === 'number' ? round(v) + 'ms' : '—');
+  if (OPT.cpu === 4 && OPT.net === 'none') {
+    check('boot-ready ≤ 800ms', m['boot.bootReady'] <= 800, ms(m['boot.bootReady']) + '（有快取 ' + ms(m['bootWarm.bootReady']) + '）');
+    check('開機最長長任務 ≤ 100ms', Math.max(m['boot.longTaskMax'] || 0, m['bootWarm.longTaskMax'] || 0) <= 100,
+      ms(m['boot.longTaskMax']) + '（有快取 ' + ms(m['bootWarm.longTaskMax']) + '）');
+  }
+  BOOT_ACTIONS.forEach(a => check(a.label + ' ≤ 200ms', typeof m['bootInput.' + a.key] === 'number' ? m['bootInput.' + a.key] <= 200 : null, ms(m['bootInput.' + a.key])));
+  if (OPT.net === 'fast3g' && base && base.metrics && typeof base.metrics['boot.bootReady'] === 'number') {
+    const b = base.metrics['boot.bootReady'];
+    const gain = (b - m['boot.bootReady']) / b * 100;
+    check('boot-ready 比基準快 ≥ 35%', gain >= 35, ms(b) + ' → ' + ms(m['boot.bootReady']) + '（快 ' + round(gain, 1) + '%）');
+  }
+  if (rows.length) console.log('\n開機驗收（P08）：\n' + rows.join('\n'));
+}
+
 function resolveResultFile(name) {
   const candidates = [name, path.join(RESULTS_DIR, name), path.join(RESULTS_DIR, name + '.json'), path.join(PERF_DIR, name)];
   const hit = candidates.find(f => fs.existsSync(f) && fs.statSync(f).isFile());
@@ -1101,6 +1181,7 @@ async function main() {
 
   printTable(result, base);
   if (base) console.log('基準：' + path.relative(ROOT, baseFile) + '（' + base.label + '，' + base.createdAt + '）');
+  printBootChecks(result, base);
   printInventory(stat.inventory);
   if (result.screenCompare) {
     console.log('\n截圖比對（與 screens/' + OPT.compare + '/，pixelmatch threshold 0.1）：');

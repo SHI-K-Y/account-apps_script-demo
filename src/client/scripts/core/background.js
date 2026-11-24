@@ -16,6 +16,7 @@
  *   p 由起點線性變到 0；圖塊以 2 倍容器為週期平鋪，每個圖塊各自裁切（和 CSS 一樣）。
  *   前 3 層 circle farthest-corner（半徑 = 圖塊半對角線），第 4 層 ellipse farthest-corner
  *   （半徑 = 圖塊半寬、半高各乘 √2），色標都在 60%，疊放順序第一層在最上面。
+ * 開機完成（<html> 加上 boot-ready）才開始繪製，開機期間由載入畫面蓋住（P08）。
  * 主題切換、視窗尺寸變更時重新讀取 CSS 變數並重設 canvas；頁面在背景時停止繪製；
  * 減少動態效果或動畫效果關閉時只畫一張靜態畫面（亮度 1、位置 0%，和原本動畫被移除時一樣）。
  * 偵錯：window.__bgDebug.setTime(ms) 定格在第 ms 毫秒（null 恢復播放）、.mode()、.state()、.restart('main'|'worker')。
@@ -448,8 +449,12 @@ const BgGlow = (function () {
     }
   }
 
-  start();
-  bind();
+  // 開機期間載入畫面整個蓋住背景：等 boot-ready（載入畫面開始淡出）才建立 Worker、讀樣式、量尺寸（P08），
+  // 不在解析階段強制計算樣式與版面，也不和首屏搶主執行緒
+  BootPhase.ready(() => {
+    start();
+    bind();
+  });
 
   const api = {
     core: core,

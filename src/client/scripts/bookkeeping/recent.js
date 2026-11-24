@@ -18,8 +18,11 @@ function loadRecent(month, forceRefresh) {
     .getRecentRecords(month, expLim, incLim, Boolean(forceRefresh));
 }
 
-function renderRecent(data) {
+// opts.only（'expense'｜'income'）：狀態兩邊都更新，畫面只畫其中一邊；開機首屏只畫支出，收入在第二段用
+// renderRecentType('income') 補上（P08）
+function renderRecent(data, opts) {
   if (!data) return;
+  const only = opts && opts.only;
   const expFull = state.recentState && state.recentState.expense ? state.recentState.expense.isFull : false;
   const incFull = state.recentState && state.recentState.income ? state.recentState.income.isFull : false;
 
@@ -63,26 +66,29 @@ function renderRecent(data) {
     state.budget = null;
   }
 
-  if (isRecentDateFiltered('expense')) {
-    applyRecentDateFilter('expense');
-  } else {
-    renderRecentList('recentExpenses', expRecords, 'expense');
-  }
-
-  if (isRecentDateFiltered('income')) {
-    applyRecentDateFilter('income');
-  } else {
-    renderRecentList('recentIncomes', incRecords, 'income');
-  }
-
-  updateRecentHeader('expense', expFull, expRecords.length);
-  updateLoadFullButton('expense', expFull, expRecords.length);
-
-  updateRecentHeader('income', incFull, incRecords.length);
-  updateLoadFullButton('income', incFull, incRecords.length);
+  if (only !== 'income') renderRecentLists('expense', expRecords, expFull);
+  if (only !== 'expense') renderRecentLists('income', incRecords, incFull);
 
   updateTodayExpenseUI();
   ReminderPrompt.onRecordsChanged();
+}
+
+function renderRecentLists(type, records, isFull) {
+  const isExpense = type === 'expense';
+  if (isRecentDateFiltered(type)) {
+    applyRecentDateFilter(type);
+  } else {
+    renderRecentList(isExpense ? 'recentExpenses' : 'recentIncomes', records, type);
+  }
+  updateRecentHeader(type, isFull, records.length);
+  updateLoadFullButton(type, isFull, records.length);
+}
+
+/** 用目前的狀態（state.recentState）重畫某一邊的最近紀錄；開機第二段補畫收入用。 */
+function renderRecentType(type) {
+  const rs = state.recentState && state.recentState[type];
+  if (!rs || !Array.isArray(rs.records)) return;
+  renderRecentLists(type, rs.records, Boolean(rs.isFull));
 }
 
 function updateTodayExpenseUI() {
@@ -700,8 +706,15 @@ function renderRecentList(containerId, records, type, isFiltered) {
       : '<div class="empty">這個月還沒有紀錄。</div>',
     chunk: { listId: listKey.replace(/\|(items|empty)$/, '') },
   });
-  // 進場動畫只給這次新出現的節點；沿用的節點不重播
-  if (shouldStagger && res.created.length) Motion.staggerIn(res.created, { max: 12, stagger: 30 });
+  // 進場動畫只給這次新出現的節點；沿用的節點不重播。
+  // 收在另一個分頁（display: none 的支出／收入面板）裡的清單看不到動畫，不播（P08：開機第二段畫收入清單時不強制計算樣式）。
+  // 開機首屏（還沒 boot-ready）：載入畫面還蓋著，等它要淡出時再播（P08），也不在首屏的任務裡讀動畫時間（會強制計算樣式）
+  const panel = container.closest('.panel');
+  if (panel && !panel.classList.contains('active')) return;
+  if (shouldStagger && res.created.length) {
+    if (BootPhase.isReady()) Motion.staggerIn(res.created, { max: 12, stagger: 30 });
+    else { const created = res.created; BootPhase.ready(() => Motion.staggerIn(created.filter(el => el.isConnected), { max: 12, stagger: 30 })); }
+  }
 }
 
 function animatePendingRecentRow(containerId, tempId) {

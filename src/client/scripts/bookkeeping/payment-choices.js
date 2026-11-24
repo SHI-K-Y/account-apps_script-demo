@@ -1,3 +1,33 @@
+/* 內嵌的預設卡面與銀行 logo（assets.html）排在頁面最後才下載（P08）：首屏先畫不含這些圖片的選項，
+ * 圖片到齊後由 AppBoot 呼叫 refreshPaymentImages()，只重畫當時缺圖的支付方式選項（使用者自訂的圖片不受影響）。 */
+let paymentImagesMissedFlag = false;
+const paymentImagesMissedIds = new Set();
+function paymentImagesLoaded() {
+  return typeof PAYMENT_CARD_IMAGES !== 'undefined' && typeof BANK_LOGOS !== 'undefined';
+}
+function paymentImagesMissed() {
+  return paymentImagesMissedIds.size > 0;
+}
+function defaultCardImage(key) {
+  if (!paymentImagesLoaded()) { paymentImagesMissedFlag = true; return ''; }
+  return PAYMENT_CARD_IMAGES[key] || '';
+}
+function defaultBankLogo(key) {
+  if (!paymentImagesLoaded()) { paymentImagesMissedFlag = true; return ''; }
+  return BANK_LOGOS[key] || '';
+}
+function refreshPaymentImages() {
+  const ids = Array.from(paymentImagesMissedIds);
+  paymentImagesMissedIds.clear();
+  ids.forEach(id => {
+    const container = document.getElementById(id);
+    const args = container && container._payArgs;
+    if (!args || !container._choiceSetter) return;
+    const current = container.querySelector('.choice.selected');
+    renderPaymentChoices(id, args.items, current ? current._choiceValue : args.selected, container._choiceSetter);
+  });
+}
+
 function getPaymentCardImage(rawValue, displayName) {
   const combined = `${rawValue || ''} ${displayName || ''}`.trim();
   if (!combined) return '';
@@ -19,30 +49,30 @@ function getPaymentCardImage(rawValue, displayName) {
         if (cardTarget === cName || cardTarget.includes(cName) || cName.includes(cardTarget)) {
           const customSrc = (c.id && cachedImgs[c.id]) || c.customImage || c.image || '';
           if (customSrc) return customSrc;
-          if (c.imageKey && PAYMENT_CARD_IMAGES[c.imageKey]) return PAYMENT_CARD_IMAGES[c.imageKey];
+          if (c.imageKey && defaultCardImage(c.imageKey)) return defaultCardImage(c.imageKey);
         }
       }
     }
   }
 
   if (norm.includes('山嵐簽帳') || ((norm.includes('山嵐') || norm.includes('山嵐銀行')) && norm.includes('簽帳'))) {
-    return PAYMENT_CARD_IMAGES.shanlanDebit;
+    return defaultCardImage('shanlanDebit');
   }
 
   if (norm.includes('海悅簽帳') || (norm.includes('海悅') && norm.includes('簽帳'))) {
-    return PAYMENT_CARD_IMAGES.haiyueDebit;
+    return defaultCardImage('haiyueDebit');
   }
 
   if (norm.includes('wave') || (norm.includes('海悅') && norm.includes('信用卡'))) {
-    return PAYMENT_CARD_IMAGES.haiyueWave;
+    return defaultCardImage('haiyueWave');
   }
 
   if (norm.includes('北辰聯名') || norm.includes('megamart') || norm.includes('美佳量販') || (norm.includes('北辰') && (norm.includes('聯名') || norm.includes('信用卡')))) {
-    return PAYMENT_CARD_IMAGES.beichenMegamart;
+    return defaultCardImage('beichenMegamart');
   }
 
   if (norm.includes('evercard') || (norm.includes('青禾') && norm.includes('信用卡'))) {
-    return PAYMENT_CARD_IMAGES.qingheEvercard;
+    return defaultCardImage('qingheEvercard');
   }
 
   return '';
@@ -66,26 +96,26 @@ function getBankLogo(rawValue, displayName, channel) {
         if (bankTarget === bName || bankTarget.includes(bName) || bName.includes(bankTarget)) {
           const customSrc = (b.id && cachedImgs[b.id]) || b.customLogo || b.logo || '';
           if (customSrc) return customSrc;
-          if (b.logoKey && BANK_LOGOS[b.logoKey]) return BANK_LOGOS[b.logoKey];
+          if (b.logoKey && defaultBankLogo(b.logoKey)) return defaultBankLogo(b.logoKey);
         }
       }
     }
   }
 
   if (combined.includes('山嵐銀行') || combined.includes('山嵐')) {
-    return BANK_LOGOS.shanlan;
+    return defaultBankLogo('shanlan');
   }
   if (combined.includes('雲杉')) {
-    return BANK_LOGOS.yunshan;
+    return defaultBankLogo('yunshan');
   }
   if (combined.includes('北辰')) {
-    return BANK_LOGOS.beichen;
+    return defaultBankLogo('beichen');
   }
   if (combined.includes('青禾')) {
-    return BANK_LOGOS.qinghe;
+    return defaultBankLogo('qinghe');
   }
   if (combined.includes('海悅')) {
-    return BANK_LOGOS.haiyue;
+    return defaultBankLogo('haiyue');
   }
 
   return '';
@@ -220,6 +250,7 @@ function renderPaymentChoices(containerId, items, selected, setter) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
+  paymentImagesMissedFlag = false;
   const groups = parsePaymentMethods(items).map(group => ({
     channel: group.channel,
     channelType: getPaymentType(group.channel),
@@ -232,6 +263,8 @@ function renderPaymentChoices(containerId, items, selected, setter) {
       bankLogoSrc: getBankLogo(item.rawValue, item.displayName, group.channel) || '',
     })),
   }));
+  if (paymentImagesMissedFlag) paymentImagesMissedIds.add(containerId);
+  container._payArgs = { items: items, selected: selected };
   const sig = 'pay\u0001' + JSON.stringify(groups);
   if (reuseChoices(container, sig, setter, btn => btn._choiceValue === selected)) return;
 

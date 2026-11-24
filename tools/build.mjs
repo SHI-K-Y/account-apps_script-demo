@@ -12,8 +12,9 @@
 //   style.html       樣式：manifest.json 的 styles 依序串接
 //   app.html         前端程式：manifest.json 的 scripts（開機必要）依序串接成 <script>；
 //                    deferredScripts（首頁用不到的頁面、圖表）串接成 <script type="text/plain" id="deferredApp">，
-//                    瀏覽器不會解析，開機完成後由 core/deferred.js 執行（見該檔說明）
-//   assets.html      圖示對照表與內嵌圖片
+//                    瀏覽器不會解析，開機完成後由 core/deferred.js 執行（見該檔說明）。
+//                    開機程式的最後一行（app/start.js）就開始畫首屏，不等後面的延後程式與 assets.html 下載完（P08）
+//   assets.html      內嵌圖片（預設卡面、銀行 logo、App 圖示），排在頁面最後；預設選項與圖示對照在 scripts/core/item-defaults.js
 //   appsscript.json  Apps Script 專案設定
 import fs from 'node:fs';
 import path from 'node:path';

@@ -46,10 +46,10 @@
   <script>
     window.__INITIAL_DATA__ = <?!= typeof initialDataJson !== 'undefined' ? initialDataJson : 'null' ?>;
   </script>
-  <script>window.__boot && __boot.step(0.50, '正在載入圖示與預設設定…', 0.61);</script>
-  <?!= include('assets') ?>
-  <script>window.__boot && __boot.step(0.62, '正在載入主程式…', 0.84);</script>
+  <script>window.__boot && __boot.step(0.50, '正在載入主程式…', 0.84);</script>
+  <!-- 開機程式執行完就開始畫首屏（app/start.js → app/bootstrap.js），不等下面這些下載完（P08）：
+       app.html 後半段是延後執行的頁面程式（text/plain），assets.html 是內嵌的卡面、銀行 logo 與 App 圖示 -->
   <?!= include('app') ?>
-  <!-- @include partials/boot-finish.html -->
+  <?!= include('assets') ?>
 </body>
 </html>

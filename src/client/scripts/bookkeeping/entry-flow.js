@@ -1,7 +1,11 @@
-function populateMonths() {
+// opts.onlySelected：開機首屏只放目前月份這一個選項（getMonth() 讀的就是它），完整清單在第二段補上（P08）
+function populateMonths(opts) {
   const select = document.getElementById('monthSelect');
   select.innerHTML = '';
-  state.data.months.forEach(month => {
+  const months = (opts && opts.onlySelected && state.data.months.includes(state.data.selectedMonth))
+    ? [state.data.selectedMonth]
+    : state.data.months;
+  months.forEach(month => {
     const option = document.createElement('option');
     option.value = month;
     option.textContent = month;
@@ -11,6 +15,12 @@ function populateMonths() {
 }
 
 function renderAllChoices() {
+  renderExpenseChoices();
+  renderIncomeEntryChoices();
+}
+
+// 支出面板（開機首屏，P08）：項目、總類、支付方式、時段建議、常用組合
+function renderExpenseChoices() {
   const o = state.data.options;
   renderChoices('expenseItemChoices', o.expenseItems, state.expense.item, value => {
     selectExpenseItem(value);
@@ -26,12 +36,15 @@ function renderAllChoices() {
   renderExpensePaymentChoices();
   updatePaidSectionVisibility();
 
-  state.income.category = prefer(state.income.category || '生活費', o.incomeCategories);
-  renderIncomeChoices();
-
   syncExpenseItemSelectionUI();
   applySuggestedExpenseItem();
   renderQuickComboChips();
+}
+
+// 收入面板（開機第二段，P08）
+function renderIncomeEntryChoices() {
+  state.income.category = prefer(state.income.category || '生活費', state.data.options.incomeCategories);
+  renderIncomeChoices();
 }
 
 function renderIncomeChoices() {

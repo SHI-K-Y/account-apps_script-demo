@@ -29,8 +29,11 @@ function loadSettlement(forceRefresh, customDate) {
   if (!container) return;
 
   var cachedSt = !forceRefresh ? LocalCache.getSettlement() : null;
+  var prerendered = Boolean(cachedSt) && settlementPrerenderSig !== '' && settlementPrerenderSig === JSON.stringify(cachedSt);
+  settlementPrerenderSig = '';
   if (cachedSt) {
-    renderSettlement(cachedSt);
+    // 開機時已經用同一份快取畫好（prerenderSettlement）就不重建
+    if (!prerendered) renderSettlement(cachedSt);
   } else {
     container.innerHTML =
       '<div class="overview-skeleton">' +
@@ -69,9 +72,22 @@ function loadSettlement(forceRefresh, customDate) {
     .getSettlementData(targetDate);
 }
 
+// 開機第三段（閒置時，app/bootstrap.js）用 LocalCache 先把對帳頁畫進隱藏的頁面容器（P08），
+// 第一次切到對帳頁時就不用在切頁當下重建（見 loadSettlement）。
+var settlementPrerenderSig = '';
+function prerenderSettlement() {
+  var container = document.getElementById('settlementContent');
+  var cached = LocalCache.getSettlement();
+  if (!container || !cached || settlementLoaded || settlementPrerenderSig) return false;
+  renderSettlement(cached);
+  settlementPrerenderSig = JSON.stringify(cached);
+  return true;
+}
+
 function renderSettlement(d) {
   var container = document.getElementById('settlementContent');
   if (!container || !d) return;
+  settlementPrerenderSig = '';
 
   var html = '';
 

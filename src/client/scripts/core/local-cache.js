@@ -11,14 +11,36 @@ const LocalCache = {
     } catch (e) { return null; }
   },
 
+  /* 寫回開機資料（P08：內容沒變就不寫）。結果與以前相同：開機資料＋該月的最近紀錄；
+   * initialRecent 是目前選取的月份時，開機資料的 cachedAt 改成現在（以前經由 saveRecent 再寫一次）。
+   * cachedAt 只用來在「伺服器內嵌的」與「本機快取的」兩份之間挑新的；內容相同時挑哪一份都一樣，所以不為了它重寫。 */
   saveBoot: function(data) {
     if (!data) return;
     try {
-      localStorage.setItem(this.KEY_BOOT, JSON.stringify(data));
-      if (data.initialRecent && data.initialRecent.month) {
-        this.saveRecent(data.initialRecent.month, data.initialRecent);
+      const recent = data.initialRecent && data.initialRecent.month ? data.initialRecent : null;
+      const stamped = recent && data.selectedMonth === recent.month;
+      const text = JSON.stringify(Object.assign({}, data, stamped ? { cachedAt: 0 } : null));
+      const prevRaw = localStorage.getItem(this.KEY_BOOT);
+      let prev = null;
+      if (prevRaw && stamped) {
+        try { const p = JSON.parse(prevRaw); p.cachedAt = 0; prev = JSON.stringify(p); } catch (e) { prev = null; }
+      } else {
+        prev = prevRaw;
       }
+      if (prev !== text) {
+        localStorage.setItem(this.KEY_BOOT, stamped ? JSON.stringify(Object.assign({}, data, { cachedAt: Date.now() })) : text);
+      }
+      if (recent) this._setIfChanged(this.KEY_RECENT_PREFIX + recent.month, JSON.stringify(recent));
     } catch (e) {}
+  },
+
+  /** 內容和已存的一樣就不寫（localStorage 寫入是同步的，大的 JSON 會卡主執行緒）。回傳是否有寫入。 */
+  _setIfChanged: function(key, text) {
+    try {
+      if (localStorage.getItem(key) === text) return false;
+      localStorage.setItem(key, text);
+      return true;
+    } catch (e) { return false; }
   },
 
   getRecent: function(month) {
@@ -180,7 +202,8 @@ const LocalCache = {
   saveSettingsMetadata: function(meta) {
     if (!meta) return;
     try {
-      localStorage.setItem(this.KEY_SETTINGS_METADATA, JSON.stringify(meta));
+      // 內容沒變就不寫（P08）：卡面、銀行圖示也是從同一份 metadata 來的，已經存過了
+      if (!this._setIfChanged(this.KEY_SETTINGS_METADATA, JSON.stringify(meta))) return;
       const imgs = Object.assign({}, this.getCustomImages());
       if (Array.isArray(meta.cards)) {
         meta.cards.forEach(c => {

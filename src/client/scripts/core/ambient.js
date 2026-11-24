@@ -21,6 +21,13 @@
  *      （motion-lint 只看 CSS，JS 動畫的 keyframes 同樣只能動 transform／opacity，請自行遵守。）
  *   4. 一次性的動畫（點擊回饋、進場、彈窗）照常用 Motion.animate()，不用登記。
  *   5. 「動畫效果」偏好（完整／精簡／關閉）與系統的「減少動態效果」由 core/motion.js 處理，和這裡無關。
+ *
+ * 開機期間（P08）：<html> 還沒有 boot-ready 時，載入畫面整個蓋住頁面，常駐動畫只是在搶開機的資源。
+ *   - CSS 的常駐動畫由 26-motion-overrides.css 的 html:not(.boot-ready) 規則暫停（不經過 JS，解析階段就生效）；
+ *   - 這支程式的初始掃描、IntersectionObserver 都等 boot-ready 之後（BootPhase.ready）才開始；
+ *     開機期間用 register() 登記的 JS 動畫先暫停，boot-ready 時一起播放；
+ *   - 整頁背景光暈（core/background.js）也等 boot-ready 才啟動。
+ *   新增 CSS 常駐動畫時，選擇器也要加進 26-motion-overrides.css 那一組（tools/test/boot.test.mjs 會檢查）。
  * ============================================================================= */
 const Ambient = (function() {
   // 目前專案中的無限循環裝飾動畫（載入中的轉圈圈不算）。
@@ -41,10 +48,11 @@ const Ambient = (function() {
   const targets = new Map();       // 元素 → 身上被管理的動畫
   const offscreen = new WeakSet(); // 目前在預留範圍外的元素
   let hidden = false;
+  let booting = true;
   let io = null;
 
   function shouldRun(anim) {
-    if (hidden) return false;
+    if (hidden || booting) return false;
     const el = anim._ambTarget;
     return !(el && offscreen.has(el));
   }
@@ -121,6 +129,7 @@ const Ambient = (function() {
   }
 
   function init() {
+    booting = false;
     if (typeof IntersectionObserver === 'function') {
       io = new IntersectionObserver(entries => {
         for (let i = 0; i < entries.length; i++) {
@@ -139,11 +148,12 @@ const Ambient = (function() {
       if (!scanRaf) scanRaf = requestAnimationFrame(flushScan);
     }, true);
     scan(document);
-    setHidden(document.hidden);
+    hidden = Boolean(document.hidden);
+    tracked.forEach(applyPlayState);
   }
 
-  if (document.body) init();
-  else document.addEventListener('DOMContentLoaded', init, { once: true });
+  // 開機完成（boot-ready 那一幀畫出來之後）才開始管理：之前的 CSS 常駐動畫由樣式暫停，這裡不用掃描
+  BootPhase.ready(init);
 
   return {
     register: register,

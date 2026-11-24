@@ -68,6 +68,7 @@
     "27-state-flash.css": "overrides"
   },
   "scripts": [
+    "core/boot-phase.js",
     "core/env.js",
     "core/fmt.js",
     "core/list-render.js",
@@ -83,6 +84,7 @@
     "core/image-optimizer.js",
     "core/state.js",
     "core/reminders.js",
+    "core/item-defaults.js",
     "core/icons.js",
     "core/info-tip.js",
     "core/modal-manager.js",
@@ -102,7 +104,8 @@
     "budget/budget-view.js",
     "app/router.js",
     "app/ux.js",
-    "app/reminder-prompt.js"
+    "app/reminder-prompt.js",
+    "app/start.js"
   ],
   "deferredScripts": [
     "charts/mini-charts.js",

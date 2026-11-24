@@ -1194,7 +1194,7 @@ const Motion = (function() {
     schedule(false);
   }
 
-  // 寫在靜態 HTML 裡的分段控制：開機時掃描一次。
+  // 寫在靜態 HTML 裡的分段控制：開機第二段掃描一次。
   // 由程式渲染出來的分段控制（偏好設定、預算、提醒的 .pref-segmented，信用卡頁的卡別與繳費狀態）
   // 改由建立它的渲染函式直接呼叫 Motion.segmented(container, itemSel)。
   // P06：以前在 document.body 開了 subtree 的 MutationObserver，任何清單重繪都要經過它；現在已移除。
@@ -1217,8 +1217,8 @@ const Motion = (function() {
   bindSpecular();
   bindTriggerCapture();
   initRefraction();
-  if (document.body) bindSegmentedStatic();
-  else document.addEventListener('DOMContentLoaded', bindSegmentedStatic, { once: true });
+  // 開機第二段才綁（P08）：分頁、篩選晶片的指示器都不在首屏的第一眼範圍，也不用在解析階段建立 ResizeObserver
+  BootPhase.later(bindSegmentedStatic);
 
   if (reduceMql) {
     const onChange = () => {

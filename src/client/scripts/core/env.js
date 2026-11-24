@@ -1,8 +1,13 @@
+// --sbw 是 :root 上會被繼承的自訂屬性：每寫一次整份文件都要重算樣式，所以只在數值真的變了才寫（CSS 預設 0px，手機上通常不用寫）
+let scrollbarWidthPx = 0;
 function syncScrollbarWidth() {
   const sbw = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
+  if (sbw === scrollbarWidthPx) return;
+  scrollbarWidthPx = sbw;
   document.documentElement.style.setProperty('--sbw', sbw + 'px');
 }
-syncScrollbarWidth();
+// 量捲軸寬度會強制排版：留到第一次繪製前（rAF）再量，不在解析階段排版整份頁面（P08）
+if (typeof requestAnimationFrame === 'function') requestAnimationFrame(syncScrollbarWidth); else syncScrollbarWidth();
 window.addEventListener('resize', syncScrollbarWidth, { passive: true });
 
 /* 時段建議：記帳頁依現在時間自動預選支出項目。
@@ -57,7 +62,8 @@ const MealSlots = (function() {
   return { DEFAULTS, toMinutes, contains, config, match };
 })();
 
-(function applyAppIcon() {
+// App 圖示：APP_ICON_BASE64 在 assets.html（頁面最後才下載），圖片到齊時由 app/bootstrap.js 呼叫（P08）
+function applyAppIcon() {
   try {
     if (typeof APP_ICON_BASE64 === 'undefined' || !APP_ICON_BASE64) return;
     var iconRaw = String(APP_ICON_BASE64).replace(/\s+/g, '');
@@ -73,4 +79,4 @@ const MealSlots = (function() {
       document.head.appendChild(link);
     });
   } catch (e) {  }
-})();
+}

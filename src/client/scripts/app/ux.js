@@ -230,8 +230,8 @@ const UxEnhancements = (function() {
     bindBackToTop();
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  // 開機第二段才綁（P08）：首屏畫好、載入畫面移除之後
+  BootPhase.later(init);
 
   return { syncDateAfterRollover: syncDateAfterRollover };
 })();
