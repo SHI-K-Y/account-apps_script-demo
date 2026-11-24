@@ -31,10 +31,12 @@ function loadSettlement(forceRefresh, customDate) {
   var cachedSt = !forceRefresh ? LocalCache.getSettlement() : null;
   var prerendered = Boolean(cachedSt) && settlementPrerenderSig !== '' && settlementPrerenderSig === JSON.stringify(cachedSt);
   settlementPrerenderSig = '';
+  // 重新讀取時畫面上已經有資料：照樣留著，不換成骨架（P12）
+  var showing = !cachedSt && Boolean(container.querySelector('.st-date-section'));
   if (cachedSt) {
     // 開機時已經用同一份快取畫好（prerenderSettlement）就不重建
     if (!prerendered) renderSettlement(cachedSt);
-  } else {
+  } else if (!showing) {
     container.innerHTML =
       '<div class="overview-skeleton">' +
         '<div class="skel-block skel-hero"></div>' +
@@ -46,22 +48,26 @@ function loadSettlement(forceRefresh, customDate) {
 
   var dateInput = document.getElementById('stDateInput');
   var targetDate = customDate || (dateInput && dateInput.value) || getClientToday().todayISO;
+  // 已經畫了快取（P12）：標題旁顯示「更新中」，不遮畫面
+  var syncDone = (cachedSt || showing) ? SyncStatus.begin('settlement') : function() {};
 
   Api.server
     .withSuccessHandler(function(data) {
+      syncDone();
       setLoading(false);
       settlementLoaded = true;
       LocalCache.saveSettlement(data);
       var hadSkeleton = Boolean(container.querySelector('.overview-skeleton'));
-      renderSettlement(data);
+      if (hadSkeleton || !cachedSt || JSON.stringify(cachedSt) !== JSON.stringify(data)) renderSettlement(data);
       if (hadSkeleton) Motion.revealCards(container);
       if (forceRefresh) {
         showToast('對帳資料已重新讀取', 'success');
       }
     })
     .withFailureHandler(function(err) {
+      syncDone();
       setLoading(false);
-      if (!cachedSt) {
+      if (!cachedSt && !showing) {
         container.innerHTML =
           '<div style="text-align:center;padding:40px 14px;color:var(--muted);">' +
             '<p style="font-size:15px;font-weight:700;">載入失敗</p>' +
@@ -530,11 +536,9 @@ function refreshSettlementAfterAdjust(dateStr, preservedActuals) {
           }
         }
       }
+      Prefetch.afterMutation();
       LocalCache.saveSettlement(data);
-      LocalCache.invalidateOverview();
-      if (typeof window.__invalidateOverviewFlag === 'function') {
-        window.__invalidateOverviewFlag();
-      }
+      settlementLoaded = true;
       updateSettlementLedgerDisplay(data, preservedActuals);
     })
     .withFailureHandler(function(err) {

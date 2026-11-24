@@ -3,6 +3,53 @@ function setLoading(isLoading) {
   if (!isLoading) RefreshSpin.stopAll();
 }
 
+/* SyncStatus（P12）：頁面先用本機快取畫好、背景向伺服器取新資料時，在標題旁顯示「更新中」（不遮畫面、不擋操作）。
+ *   const done = SyncStatus.begin('overview');  …  done();
+ * 同一頁可以同時有好幾件，全部結束才隱藏；150ms 內就結束的不顯示。樣式在 styles/21-ux-enhancements.css。 */
+const SyncStatus = (function() {
+  const SHOW_DELAY_MS = 150;
+  const PAGES = { overview: 'pageOverview', settlement: 'pageSettlement', creditcard: 'pageCreditCard', settings: 'pageSettings', foreign: 'pageForeign' };
+  const counts = Object.create(null);
+
+  function pillFor(page) {
+    const root = PAGES[page] && document.getElementById(PAGES[page]);
+    if (!root) return null;
+    const host = page === 'foreign'
+      ? root.querySelector(root.dataset.view === 'ledger' ? '#fxLedgerTitle' : '#fxListTitle')
+      : root.querySelector('.topbar h1');
+    if (!host) return null;
+    let pill = host.querySelector('.sync-pill');
+    if (!pill) {
+      pill = document.createElement('span');
+      pill.className = 'sync-pill';
+      pill.setAttribute('role', 'status');
+      pill.innerHTML = '<span class="sync-pill-dot" aria-hidden="true"></span><span class="sync-pill-text">更新中</span>';
+      host.appendChild(pill);
+    }
+    return pill;
+  }
+
+  function begin(page) {
+    counts[page] = (counts[page] || 0) + 1;
+    const pill = pillFor(page);
+    if (pill && counts[page] === 1) {
+      clearTimeout(pill._syncTimer);
+      pill._syncTimer = setTimeout(() => { if (counts[page]) pill.classList.add('is-on'); }, SHOW_DELAY_MS);
+    }
+    let ended = false;
+    return function end() {
+      if (ended) return;
+      ended = true;
+      counts[page] = Math.max(0, (counts[page] || 0) - 1);
+      if (counts[page] || !pill) return;
+      clearTimeout(pill._syncTimer);
+      pill.classList.remove('is-on');
+    };
+  }
+
+  return { begin: begin, active: page => (counts[page] || 0) > 0 };
+})();
+
 function showServerError(error) {
   setLoading(false);
   const message = error && error.message ? error.message : String(error || '發生未知錯誤');

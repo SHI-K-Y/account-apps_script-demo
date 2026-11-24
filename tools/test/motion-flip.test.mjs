@@ -129,7 +129,7 @@ test('PageWork：轉場進行中先排隊，ready 之後一幀做一件；沒有
   assert.deepEqual(log, ['now', 'a', 'b', 'c']);
 });
 
-test('頁面切換：update callback 先寫後讀，圖表與設定清單延到轉場開始後', () => {
+test('頁面切換：update callback 先寫後讀，圖表延到轉場開始後、設定清單預先畫好', () => {
   const router = read('scripts/app/router.js');
   const apply = fnSource(router, 'applyPageSwitch');
   assert.match(apply, /loadOverview\(false, \{ defer: PageWork\.defer \}\)/);
@@ -141,9 +141,13 @@ test('頁面切換：update callback 先寫後讀，圖表與設定清單延到�
   assert.match(fnSource(router, 'switchPage'), /transition\.ready\.then\(release/);
 
   const overview = fnSource(read('scripts/pages/overview.js'), 'loadOverview');
-  assert.match(overview, /defer\(function\(\)/, '有快取時圖表延後');
-  assert.match(overview, /chartsJob\.cancelled = true/, '伺服器先回來時取消延後的那件');
-  assert.match(fnSource(read('scripts/pages/settings/core.js'), 'loadSettings'), /defer\(renderSettingsList\)/);
+  assert.match(overview, /if \(defer\) defer\(fn\)/, '圖表的渲染延到轉場開始後');
+  assert.match(overview, /runLater\(function\(\) \{ OverviewCharts\.loadForOverview\(month, forceRefresh, \{ result: chartsResult \}\)/,
+    '延後的圖表用同一個 batchRead 的結果，不另外送請求（P12）');
+  // 設定清單：開機閒置時預先畫好（P12：有資料就不放骨架），切頁時只確認還能用
+  const settings = fnSource(read('scripts/pages/settings/core.js'), 'loadSettings');
+  assert.match(settings, /if \(!settingsPrerendered\(\)\) renderSettingsList\(\)/);
+  assert.match(read('scripts/app/bootstrap.js'), /prerenderSettings\(\)/);
 });
 
 test('互動熱路徑：不用 void el.offsetWidth／getAnimations() 強制排版', () => {

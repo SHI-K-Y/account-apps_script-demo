@@ -68,10 +68,6 @@ function resolveMutationRecent(result, month) {
 
 function handleMutationRecentUpdate(result, fallbackMonth) {
   const targetMonth = (result && result.month) || fallbackMonth || getMonth();
-  LocalCache.invalidateOverview(targetMonth);
-  if (typeof window.__invalidateOverviewFlag === 'function') {
-    window.__invalidateOverviewFlag();
-  }
   const resolved = resolveMutationRecent(result, targetMonth);
   const recent = resolved.recent;
   if (recent) {
@@ -85,6 +81,8 @@ function handleMutationRecentUpdate(result, fallbackMonth) {
       loadRecent(targetMonth, true);
     }
   }
+  // 總覽、對帳、圖表、預算標成過期（不刪除，下次照樣先顯示），寫入都回來後閒置時預取（P12）
+  Prefetch.afterMutation(targetMonth);
 }
 
 function submitExpense() {

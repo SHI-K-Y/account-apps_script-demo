@@ -18,7 +18,51 @@ const DEFAULT_TIME_ZONE_ = 'Asia/Taipei';
 const DOCUMENT_LOCK_TIMEOUT_MS_ = 10000;
 
 function scriptCache_() {
-  return scriptCacheMemo_ || (scriptCacheMemo_ = CacheService.getScriptCache());
+  const raw = scriptCacheMemo_ || (scriptCacheMemo_ = CacheService.getScriptCache());
+  return cacheReadMemo_ ? memoizedCache_(raw, cacheReadMemo_) : raw;
+}
+
+/**
+ * 同一次執行共用快取讀取（P12，batchRead 用）：fn 執行期間 scriptCache_() 回傳的快取會記住讀過的值
+ * （包含「查過但沒有」），之後同一個鍵不再呼叫 CacheService；寫入、刪除照常送出並同步更新記住的值。
+ */
+let cacheReadMemo_ = null;
+function withCacheReadMemo_(fn) {
+  if (cacheReadMemo_) return fn();
+  cacheReadMemo_ = Object.create(null);
+  try { return fn(); } finally { cacheReadMemo_ = null; }
+}
+
+function memoizedCache_(raw, memo) {
+  const known = function (k) { return Object.prototype.hasOwnProperty.call(memo, k); };
+  return {
+    get: function (k) {
+      if (!known(k)) memo[k] = raw.get(k);
+      return memo[k];
+    },
+    getAll: function (keys) {
+      const miss = keys.filter(function (k) { return !known(k); });
+      if (miss.length) {
+        const got = raw.getAll(miss) || {};
+        miss.forEach(function (k) { memo[k] = got[k] != null ? got[k] : null; });
+      }
+      const out = {};
+      keys.forEach(function (k) { if (memo[k] != null) out[k] = memo[k]; });
+      return out;
+    },
+    put: function (k, v, ttl) {
+      const r = ttl === undefined ? raw.put(k, v) : raw.put(k, v, ttl);
+      memo[k] = String(v);
+      return r;
+    },
+    putAll: function (values, ttl) {
+      const r = ttl === undefined ? raw.putAll(values) : raw.putAll(values, ttl);
+      Object.keys(values).forEach(function (k) { memo[k] = String(values[k]); });
+      return r;
+    },
+    remove: function (k) { memo[k] = null; return raw.remove(k); },
+    removeAll: function (keys) { keys.forEach(function (k) { memo[k] = null; }); return raw.removeAll(keys); },
+  };
 }
 
 function scriptProps_() {

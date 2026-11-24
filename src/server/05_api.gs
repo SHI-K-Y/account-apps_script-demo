@@ -47,6 +47,7 @@ function apiRoutes_() {
     // 總覽與圖表
     getAssetOverview:       { handler: getAssetOverview_ },
     getOverviewCharts:      { handler: getOverviewCharts_ },
+    batchRead:              { handler: batchRead_ },
 
     // 對帳與信用卡對帳
     getSettlementData:      { handler: getSettlementData_, write: true },
@@ -114,6 +115,72 @@ function resolveApiRequest_(request) {
     throw new Error('資料格式錯誤，請重新整理頁面後再試一次。');
   }
   return { action: action, route: route, args: args };
+}
+
+/**
+ * 批次讀取（P12）：batchRead([{ action, args }, …]) 在同一次執行裡依序做好幾個唯讀操作，
+ * 每一項各自回傳 { ok: true, data } 或 { ok: false, error }（一項失敗不影響其他項）。
+ * - 只接受 BATCH_READ_ACTIONS_（與前端 core/api.js 的 READ_ACTIONS 相同，不含 batchRead 本身），最多 BATCH_READ_MAX_ 項。
+ * - 同一次執行共用試算表（getSpreadsheet_ 本來就只開一次）與快取讀取（withCacheReadMemo_）：
+ *   已知會用到的快取鍵先一次 getAll 讀回（primeBatchReadCache_），各操作自己的 getAll 就直接命中，不再呼叫 CacheService。
+ */
+const BATCH_READ_ACTIONS_ = Object.freeze([
+  'getInitialData', 'getRecentRecords', 'getFullRecords', 'searchRecords', 'getCreditCardRecords',
+  'getAssetOverview', 'getOverviewCharts', 'getSettingsOptions',
+  'getFxLedgers', 'getFxLedgerData', 'getFxRates', 'getBudgetSettings',
+]);
+const BATCH_READ_MAX_ = 8;
+
+function batchRead_(requests) {
+  if (!Array.isArray(requests) || !requests.length || requests.length > BATCH_READ_MAX_) {
+    throw new Error('批次讀取的參數格式錯誤（1–' + BATCH_READ_MAX_ + ' 項）。');
+  }
+  return withCacheReadMemo_(function () {
+    primeBatchReadCache_(requests);
+    return requests.map(function (req) {
+      const action = isPlainObject_(req) && typeof req.action === 'string' ? req.action : '';
+      try {
+        if (BATCH_READ_ACTIONS_.indexOf(action) === -1) {
+          throw new Error('批次讀取不支援的操作：' + String(isPlainObject_(req) ? req.action : req).slice(0, 60));
+        }
+        const resolved = resolveApiRequest_(req);
+        return { ok: true, data: resolved.route.handler.apply(null, resolved.args) };
+      } catch (err) {
+        console.error('[api] batchRead ' + action + ' 失敗：' + (err && err.stack ? err.stack : err));
+        return { ok: false, error: String(err && err.message ? err.message : err) };
+      }
+    });
+  });
+}
+
+/** 總覽、圖表、預算設定會用到的快取鍵（與各自的快取優先路徑相同）合成一次 getAll；其他操作照舊自己讀。 */
+function primeBatchReadCache_(requests) {
+  const K = CONFIG.CACHE_KEYS;
+  const keys = [];
+  const add = function (k) { if (keys.indexOf(k) === -1) keys.push(k); };
+  const addMonthData = function (month) { add(K.MONTH_DATA_PREFIX + month); add(largeCacheChunkKey_(K.MONTH_DATA_PREFIX + month, 0)); };
+  let today = null;
+  const currentMonth = function () { return (today || (today = budgetToday_())).month; };
+  requests.forEach(function (req) {
+    if (!isPlainObject_(req)) return;
+    const args = Array.isArray(req.args) ? req.args : [];
+    if (req.action === 'getAssetOverview' && !args[0]) {
+      add(K.OVERVIEW_PREFIX + currentMonth());
+      add(K.MONTHS_LIST);
+    } else if (req.action === 'getOverviewCharts' && !args[1] && /^\d{4}\.\d{2}$/.test(String(args[0]))) {
+      add(K.CHARTS_PREFIX + args[0]);
+      add(K.OPTIONS_SIMPLE);
+      add(K.BUDGET_CONFIG);
+      add(K.BUDGET_OPENING_PREFIX + args[0]);
+      addMonthData(args[0]);
+    } else if (req.action === 'getBudgetSettings' && !args[0]) {
+      add(K.BUDGET_CONFIG);
+      add(K.BUDGET_OPENING_PREFIX + currentMonth());
+      addMonthData(currentMonth());
+    }
+  });
+  if (keys.length < 2) return;
+  try { scriptCache_().getAll(keys); } catch (e) {}
 }
 
 function dispatchApi_(request) {

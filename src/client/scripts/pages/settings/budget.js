@@ -15,7 +15,8 @@ const BudgetSettings = (function() {
   const MONTHS_AHEAD = 12;
 
   const st = {
-    data: null,      // getBudgetSettings 的結果
+    data: null,      // getBudgetSettings 的結果（P12：先用本機快取／預取的，再背景更新）
+    fetched: false,  // 這份資料是不是這次開啟後從伺服器拿到的（或剛預取的）
     loading: false,
     error: '',
     month: '',
@@ -86,19 +87,38 @@ const BudgetSettings = (function() {
   function load(container) {
     st.loading = true;
     st.error = '';
+    const hadData = Boolean(st.data);
+    const done = hadData ? SyncStatus.begin('settings') : function() {};
     Api.call('getBudgetSettings', false)
       .then(data => {
+        done();
         st.loading = false;
+        st.fetched = true;
+        LocalCache.saveBudgetSettings(data);
+        const changed = !hadData || JSON.stringify(st.data) !== JSON.stringify(data);
         st.data = data;
         if (!st.month || st.month < data.currentMonth) selectMonth(data.currentMonth);
         else st.draft = st.draft || makeDraft(st.month);
-        if (settingsState.currentTab === 'budget') render(container);
+        // 背景更新拿到一樣的資料：不重畫（使用者可能正在輸入）
+        if (changed && settingsState.currentTab === 'budget') render(container);
       })
       .catch(err => {
+        done();
         st.loading = false;
+        if (hadData) return;   // 畫面上的舊資料照樣可以用
         st.error = (err && err.message) || '發生未知錯誤';
         if (settingsState.currentTab === 'budget') render(container);
       });
+  }
+
+  /** 還沒有資料時先拿本機快取（開機或記帳後預取的，P12）。本月已經換了就不用舊的。 */
+  function adoptCached() {
+    if (st.data) return;
+    const cached = LocalCache.getBudgetSettings();
+    if (!cached || cached.currentMonth !== getClientToday().currentMonth) return;
+    st.data = cached;
+    st.fetched = Prefetch.isFresh('budget');
+    if (!st.month || st.month < cached.currentMonth) selectMonth(cached.currentMonth);
   }
 
   /* ----------------------------------- 畫面 ----------------------------------- */
@@ -287,6 +307,7 @@ const BudgetSettings = (function() {
                      '<span class="settings-list-title">預算</span>' +
                    '</div></div>';
 
+    adoptCached();
     if (!st.data) {
       if (st.error) {
         container.innerHTML = header +
@@ -321,6 +342,9 @@ const BudgetSettings = (function() {
       '</div>';
     // 分段控制由建立它的渲染函式直接啟用（P06）
     container.querySelectorAll('.pref-segmented').forEach(el => Motion.segmented(el, '.pref-seg-btn'));
+    // 記帳之後預算狀態（已花、今天還能花）會變：快取標成過期時也重新讀
+    const cacheStatus = LocalCache.status('budget');
+    if ((!st.fetched || (cacheStatus && cacheStatus.stale)) && !st.loading) load(container);
   }
 
   /* ----------------------------------- 操作 ----------------------------------- */
@@ -346,6 +370,7 @@ const BudgetSettings = (function() {
 
   function applyResult(res, container, message) {
     st.data = res;
+    st.fetched = true;
     st.saving = false;
     st.confirmDelete = false;
     st.draft = makeDraft(st.month);
@@ -354,7 +379,8 @@ const BudgetSettings = (function() {
       state.budget = res.status;
       updateTodayExpenseUI();
     }
-    LocalCache.invalidateCharts(res.currentMonth);
+    LocalCache.markChartsStale(res.currentMonth);
+    LocalCache.saveBudgetSettings(res);
     if (typeof window.__invalidateOverviewFlag === 'function') window.__invalidateOverviewFlag();
     render(container);
     showToast(message, 'success');
@@ -499,8 +525,9 @@ const BudgetSettings = (function() {
 
   return {
     render: render,
+    /** 重新讀取（設定頁的重新整理）：畫面上的資料留著，下次畫的時候背景更新。 */
     invalidate: function() {
-      st.data = null;
+      st.fetched = false;
       st.error = '';
       st.draft = null;
     },

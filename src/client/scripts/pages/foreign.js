@@ -275,34 +275,50 @@ const ForeignPage = (function () {
     const token = ++ui.listToken;
     ui.listLoading = true;
     if (ui.active && fxState.view === 'list' && !fxState.ledgersLoaded && !(fxState.ledgers || []).length) renderList();
+    // 已經有帳簿可以顯示（P12）：照樣顯示，標題旁「更新中」
+    const syncDone = ui.active && (fxState.ledgers || []).length ? SyncStatus.begin('foreign') : function() {};
     run('getFxLedgers', [Boolean(force)], res => {
+      syncDone();
       if (token !== ui.listToken) return;
-      ui.listLoading = false;
-      RefreshSpin.stop($('fxListRefreshBtn'));
-      fxState.ledgers = (res && Array.isArray(res.ledgers)) ? res.ledgers : [];
-      fxState.ledgersLoaded = true;
-      LocalCache.saveFxList(fxState.ledgers);
-      fxState.ledgers.forEach(l => {
-        const d = fxState.dataById[keyOf(l.id)];
-        if (d && !isBusy(keyOf(l.id))) d.ledger = Object.assign({}, d.ledger || {}, l);
-      });
-      if (ui.active) {
-        if (fxState.view === 'list') renderList();
-        else if (fxState.view === 'ledger' && !currentLedger()) {
-          showToast('這本帳簿已不存在，已回到帳簿列表。', 'error');
-          setView('list', 'back');
-        } else if (fxState.view === 'ledger') renderLedgerHeader();
-      }
-      updateTripHint();
-      if (options.prefetchHint) prefetchHintLedger();
-      if (force && !options.silent) showToast('已重新讀取國外帳簿', 'success');
+      applyLedgerList(res, force, options);
     }, err => {
+      syncDone();
       if (token !== ui.listToken) return;
       ui.listLoading = false;
       RefreshSpin.stop($('fxListRefreshBtn'));
       if (ui.active && fxState.view === 'list') renderList(errMsg(err));
       if (!options.silent) showToast('讀取國外帳簿失敗：' + errMsg(err), 'error');
     });
+  }
+
+  function applyLedgerList(res, force, options) {
+    ui.listLoading = false;
+    RefreshSpin.stop($('fxListRefreshBtn'));
+    fxState.ledgers = (res && Array.isArray(res.ledgers)) ? res.ledgers : [];
+    fxState.ledgersLoaded = true;
+    LocalCache.saveFxList(fxState.ledgers);
+    fxState.ledgers.forEach(l => {
+      const d = fxState.dataById[keyOf(l.id)];
+      if (d && !isBusy(keyOf(l.id))) d.ledger = Object.assign({}, d.ledger || {}, l);
+    });
+    if (ui.active) {
+      if (fxState.view === 'list') renderList();
+      else if (fxState.view === 'ledger' && !currentLedger()) {
+        showToast('這本帳簿已不存在，已回到帳簿列表。', 'error');
+        setView('list', 'back');
+      } else if (fxState.view === 'ledger') renderLedgerHeader();
+    }
+    updateTripHint();
+    if (options.prefetchHint) prefetchHintLedger();
+    if (force && !options.silent) showToast('已重新讀取國外帳簿', 'success');
+  }
+
+  /** 開機預取（app/prefetch.js）的 batchRead 一起讀回的帳簿列表：當作這次的列表，不用再自己讀一次。 */
+  function acceptPrefetchedList(res) {
+    if (!res || !Array.isArray(res.ledgers) || ui.listLoading) return;
+    ui.listPrefetched = true;
+    ++ui.listToken;
+    applyLedgerList(res, false, { silent: true, prefetchHint: true });
   }
 
   function ledgerCardHtml(l, today) {
@@ -2251,7 +2267,7 @@ const ForeignPage = (function () {
     if (cached) fxState.ledgers = cached.ledgers;
     updateTripHint();
     const kick = () => scheduleIdle(() => {
-      if (ui.active) return;
+      if (ui.active || ui.listPrefetched) return;
       loadLedgerList(false, { silent: true, prefetchHint: true });
     }, 5000);
     if (document.readyState === 'complete') setTimeout(kick, 800);
@@ -2264,5 +2280,6 @@ const ForeignPage = (function () {
     onEnter: onEnter,
     onLeave: onLeave,
     updateTripHint: updateTripHint,
+    acceptPrefetchedList: acceptPrefetchedList,
   };
 })();

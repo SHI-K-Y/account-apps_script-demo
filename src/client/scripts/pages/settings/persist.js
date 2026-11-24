@@ -159,20 +159,8 @@ function persistPaymentSettingsToServer(metaObj, btnEl, defaultBtnLabel, onSucce
 
         if ((result.updatedRowsCount && result.updatedRowsCount > 0) || hasRenames) {
           ccState.recordsByMonth = {};
-          LocalCache.invalidateOverview();
-          if (typeof window.__invalidateOverviewFlag === 'function') {
-            window.__invalidateOverviewFlag();
-          }
-          try {
-            var keysToRemove = [];
-            for (var i = 0; i < localStorage.length; i++) {
-              var k = localStorage.key(i);
-              if (k && k.indexOf(LocalCache.KEY_RECENT_PREFIX) === 0) {
-                keysToRemove.push(k);
-              }
-            }
-            keysToRemove.forEach(function(k) { localStorage.removeItem(k); });
-          } catch (e) {}
+          Prefetch.afterMutation();
+          LocalCache.clearRecents();
         }
 
         renderSettingsList();

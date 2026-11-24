@@ -80,6 +80,7 @@
     "core/uv-fx.js",
     "core/background.js",
     "core/press-feedback.js",
+    "core/kv-store.js",
     "core/local-cache.js",
     "core/image-optimizer.js",
     "core/state.js",
@@ -105,6 +106,7 @@
     "app/router.js",
     "app/ux.js",
     "app/reminder-prompt.js",
+    "app/prefetch.js",
     "app/start.js"
   ],
   "deferredScripts": [

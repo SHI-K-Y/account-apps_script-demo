@@ -585,11 +585,12 @@ var SETTINGS_SKELETON_HTML =
     '<div class="skel-block skel-row"></div>' +
   '</div>';
 
-// opts.defer（頁面切換時由 router 傳入）：已有資料時，長清單交給 PageWork 在轉場動畫開始後再畫，先放骨架。
+// 有資料就直接顯示（P12：不放骨架）：開機閒置時已經用同一份資料預先畫好（prerenderSettings）就什麼都不用做，
+// 否則當場畫。重新讀取時畫面上的內容留著，標題旁顯示「更新中」；完全沒有資料時才放骨架。
+// opts 保留給 router（以前用來把長清單延後到轉場開始之後）。
 function loadSettings(forceRefresh, opts) {
   var container = document.getElementById('settingsListContainer');
   if (!container) return;
-  var defer = opts && typeof opts.defer === 'function' ? opts.defer : null;
 
   ensureMetadataInitialized();
   updateSettingsTopControls();
@@ -599,25 +600,24 @@ function loadSettings(forceRefresh, opts) {
   if (forceRefresh) ReminderSettings.invalidate();
 
   if (!forceRefresh && settingsState.data) {
-    if (defer && !container.children.length) {
-      container.innerHTML = SETTINGS_SKELETON_HTML;
-      defer(renderSettingsList);
-    } else {
-      renderSettingsList();
-    }
+    if (!settingsPrerendered()) renderSettingsList();
     return;
   }
+  settingsPrerenderSig = null;
 
+  var showing = Boolean(settingsState.data) && container.children.length > 0 && !container.querySelector('.overview-skeleton');
   if (isSettingsPanelTab(settingsState.currentTab)) {
     renderSettingsList();
-  } else {
+  } else if (!showing) {
     container.innerHTML = SETTINGS_SKELETON_HTML;
   }
+  var syncDone = showing || isSettingsPanelTab(settingsState.currentTab) ? SyncStatus.begin('settings') : function() {};
 
   settingsState.loading = true;
 
   Api.server
     .withSuccessHandler(function(data) {
+      syncDone();
       settingsState.loading = false;
       if (data && data.options) {
         settingsState.data = data.options;
@@ -645,9 +645,10 @@ function loadSettings(forceRefresh, opts) {
       }
     })
     .withFailureHandler(function(err) {
+      syncDone();
       settingsState.loading = false;
       RefreshSpin.stopAll();
-      if (isSettingsPanelTab(settingsState.currentTab)) {
+      if (isSettingsPanelTab(settingsState.currentTab) || showing) {
         showToast('載入設定失敗：' + (err.message || err), 'error');
         return;
       }
@@ -659,4 +660,26 @@ function loadSettings(forceRefresh, opts) {
       showToast('載入設定失敗：' + (err.message || err), 'error');
     })
     .getSettingsOptions(Boolean(forceRefresh));
+}
+
+// 開機第三段（閒置時，app/bootstrap.js）先把設定頁目前的分頁畫進隱藏的頁面容器（P12）：
+// 第一次切到設定時不用在轉場的 update callback 裡畫長清單，也不用先放骨架。
+var settingsPrerenderSig = null;
+function prerenderSettings() {
+  var container = document.getElementById('settingsListContainer');
+  if (!container || !settingsState.data || settingsLoaded || document.body.dataset.page === 'settings') return false;
+  ensureMetadataInitialized();
+  updateSettingsTopControls();
+  renderSettingsList();
+  settingsPrerenderSig = { data: settingsState.data, meta: settingsState.metadata, tab: settingsState.currentTab };
+  return true;
+}
+
+/** 預先畫好的內容還能用（同一份選項、metadata、同一個分頁）。只能用一次。 */
+function settingsPrerendered() {
+  var sig = settingsPrerenderSig;
+  settingsPrerenderSig = null;
+  var container = document.getElementById('settingsListContainer');
+  return Boolean(sig && container && container.children.length &&
+    sig.data === settingsState.data && sig.meta === settingsState.metadata && sig.tab === settingsState.currentTab);
 }

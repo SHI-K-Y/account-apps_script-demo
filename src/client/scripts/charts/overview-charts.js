@@ -182,8 +182,12 @@ const OverviewCharts = (function() {
     MiniCharts.releaseDetached();
   }
 
-  function load(month, force) {
+  /* 先畫本機快取（過期的也照樣畫，P12），再向伺服器取新資料。
+   * opts.result：總覽頁的 batchRead 已經在讀這個月份 → 等它的結果（{ ok, data, error }），不另外送請求
+   * opts.noFetch：快取是剛預取的最新資料 → 不問伺服器（沒有快取時照常讀） */
+  function load(month, force, opts) {
     if (!st.root || !month) return;
+    const o = opts || {};
     st.month = month;
     renderMonthSelect();
     const token = ++st.token;
@@ -192,44 +196,57 @@ const OverviewCharts = (function() {
     st.error = null;
 
     if (cached) {
+      const changed = !showingSameMonth || JSON.stringify(st.data) !== JSON.stringify(cached);
       st.data = cached;
-      st.focus = null;
-      render(!showingSameMonth);
+      if (changed) {
+        st.focus = null;
+        render(!showingSameMonth);
+      }
     } else if (!showingSameMonth) {
       st.data = null;
       body().style.minHeight = body().offsetHeight ? body().offsetHeight + 'px' : '';
       renderSkeleton();
     }
+    if (o.noFetch && cached) {
+      st.root.classList.remove('is-refreshing');
+      return;
+    }
+    // 使用者按「重新讀取」時淡化舊圖表；背景更新（快取過期）不淡化，只在標題旁顯示「更新中」
     st.root.classList.toggle('is-refreshing', Boolean(force && st.data));
 
-    Api.server
-      .withSuccessHandler(function(data) {
-        if (token !== st.token) return;
-        st.root.classList.remove('is-refreshing');
-        body().style.minHeight = '';
-        if (!data) return;
-        LocalCache.saveCharts(month, data);
-        const wasEmpty = !st.data;
-        const changed = wasEmpty || JSON.stringify(st.data) !== JSON.stringify(data);
-        st.data = data;
-        if (changed) {
-          st.focus = null;
-          render(wasEmpty);
-        }
-      })
-      .withFailureHandler(function(err) {
-        if (token !== st.token) return;
-        st.root.classList.remove('is-refreshing');
-        body().style.minHeight = '';
-        const message = err && err.message ? err.message : '發生未知錯誤';
-        if (st.data && st.data.month === month) {
-          st.error = message;
-          render(false);
-        } else {
-          renderError(message);
-        }
-      })
-      .getOverviewCharts(month, Boolean(force));
+    const onData = function(data) {
+      if (token !== st.token) return;
+      st.root.classList.remove('is-refreshing');
+      body().style.minHeight = '';
+      if (!data) return;
+      LocalCache.saveCharts(month, data);
+      const wasEmpty = !st.data;
+      const changed = wasEmpty || JSON.stringify(st.data) !== JSON.stringify(data);
+      st.data = data;
+      if (changed) {
+        st.focus = null;
+        render(wasEmpty);
+      }
+    };
+    const onError = function(err) {
+      if (token !== st.token) return;
+      st.root.classList.remove('is-refreshing');
+      body().style.minHeight = '';
+      const message = err && err.message ? err.message : '發生未知錯誤';
+      if (st.data && st.data.month === month) {
+        st.error = message;
+        render(false);
+      } else {
+        renderError(message);
+      }
+    };
+    if (o.result && typeof o.result.then === 'function') {
+      o.result.then(r => (r && r.ok ? onData(r.data) : onError(r && r.error)), onError);
+      return;
+    }
+    const done = SyncStatus.begin('overview');
+    Api.call('getOverviewCharts', month, Boolean(force))
+      .then(data => { done(); onData(data); }, err => { done(); onError(err); });
   }
 
   function setMonth(month) {
@@ -633,16 +650,26 @@ const OverviewCharts = (function() {
       if (placeholder && placeholder !== root) placeholder.replaceWith(root);
       if (!st.month) {
         st.month = st.overviewMonth;
-        renderSkeleton();
+        // 有本機快取就直接畫（P12：預先畫好的總覽連圖表一起，切過去時不會先看到骨架）。
+        // 畫在隱藏的頁面時寬度量不到，先用預設寬度，顯示後 ResizeObserver 會照實際寬度重畫
+        const cached = st.month ? LocalCache.getCharts(st.month) : null;
+        if (cached) {
+          st.data = cached;
+          render(false);
+        } else {
+          renderSkeleton();
+        }
       }
       renderMonthSelect();
     },
 
-    loadForOverview: function(overviewMonth, force) {
+    /** opts 見 load()：result（batchRead 的結果）只在要載入的就是 overviewMonth 時使用。 */
+    loadForOverview: function(overviewMonth, force, opts) {
       if (overviewMonth) st.overviewMonth = overviewMonth;
       const keepPicked = st.userPicked && st.month && st.months.indexOf(st.month) !== -1;
       if (!keepPicked) st.userPicked = false;
-      load(keepPicked ? st.month : st.overviewMonth, force);
+      const month = keepPicked ? st.month : st.overviewMonth;
+      load(month, force, month === overviewMonth ? opts : null);
     },
 
     needsReloadFor: function(overviewMonth) {

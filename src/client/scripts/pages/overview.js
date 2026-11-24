@@ -5,36 +5,32 @@ if (overviewRefreshBtn) {
   });
 }
 
-// opts.defer（頁面切換時由 router 傳入）：圖表的渲染比較重，交給 PageWork 在轉場動畫開始後再做；
-// 卡片本身用 LocalCache 的資料直接畫（圖表區先是骨架）。
+/* 總覽（P12：先顯示、再更新）
+ * - 有本機快取就直接畫（不顯示骨架、不顯示忙碌條），標題旁顯示「更新中」，背景用一次 batchRead 讀總覽＋圖表＋預算；
+ *   新資料回來時數字用 Motion.countUp 從畫面上的值補間到新值，內容沒變就不重畫。
+ * - 快取沒有過期、而且是剛預取的（Prefetch.isFresh）：完全不問伺服器。
+ * - 還有記帳寫入沒回來：先顯示舊資料＋「更新中」，等寫入都回來再讀（Prefetch.waitForWrites）。
+ * - 完全沒有本機資料時才顯示骨架。
+ * opts.defer（頁面切換時由 router 傳入）：圖表的渲染比較重，交給 PageWork 在轉場動畫開始後再做。 */
+var overviewSyncSeq = 0;
 function loadOverview(forceRefresh, opts) {
   var container = document.getElementById('overviewContent');
   if (!container) return;
   var defer = opts && typeof opts.defer === 'function' ? opts.defer : null;
+  var runLater = function(fn) { if (defer) defer(fn); else fn(); };
 
   var cachedOv = !forceRefresh ? LocalCache.getOverview() : null;
-  var chartsStarted = false;
-  var chartsJob = null;
-  var prerendered = Boolean(cachedOv) && overviewPrerenderSig !== '' && overviewPrerenderSig === JSON.stringify(cachedOv) &&
-    Boolean(container.querySelector('.ov-hero'));
-  overviewPrerenderSig = '';
+  var shownOv = cachedOv || (forceRefresh ? overviewShownData : null);
   if (cachedOv) {
-    // 開機時已經用同一份快取畫好（prerenderOverview）：只播放數字動畫，不重建整頁
-    if (prerendered) animateOverviewNumbers(container, overviewNumbers(cachedOv));
-    else renderOverview(cachedOv);
-    if (defer) {
-      chartsJob = { cancelled: false };
-      var job = chartsJob;
-      defer(function() {
-        if (job.cancelled) return;
-        chartsJob = null;
-        OverviewCharts.loadForOverview(cachedOv.month, forceRefresh);
-      });
+    // 開機或預取時已經用同一份快取畫好（prerenderOverview）：只播放數字動畫，不重建整頁
+    var sig = JSON.stringify(cachedOv);
+    if (overviewRenderedSig === sig && container.querySelector('.ov-hero')) {
+      if (overviewRenderedPrerender) animateOverviewNumbers(container, overviewNumbers(cachedOv));
+      overviewRenderedPrerender = false;
     } else {
-      OverviewCharts.loadForOverview(cachedOv.month, forceRefresh);
+      renderOverview(cachedOv);
     }
-    chartsStarted = true;
-  } else {
+  } else if (!shownOv || !container.querySelector('.ov-hero')) {
     container.innerHTML =
       '<div class="overview-skeleton">' +
         '<div class="skel-block skel-hero"></div>' +
@@ -45,48 +41,75 @@ function loadOverview(forceRefresh, opts) {
     setLoading(true);
   }
 
-  Api.server
-    .withSuccessHandler(function(data) {
+  var month = (shownOv && shownOv.month) || (state.data && state.data.currentMonth) || getClientToday().currentMonth;
+  var fresh = Boolean(cachedOv) && !forceRefresh && Prefetch.isFresh('overview') && Prefetch.isFresh('charts', month);
+  if (fresh) {
+    overviewLoaded = true;
+    runLater(function() { OverviewCharts.loadForOverview(month, false, { noFetch: true }); });
+    return;
+  }
+  if (cachedOv && !forceRefresh && Api.pendingWrites() > 0) {
+    // 剛記的帳還沒寫進試算表：現在讀只會拿到舊數字。圖表先畫快取，寫入回來後 Prefetch 會再呼叫 loadOverview
+    var waitDone = SyncStatus.begin('overview');
+    overviewWaitEnd = waitDone;
+    Prefetch.waitForWrites();
+    runLater(function() { OverviewCharts.loadForOverview(month, false, { noFetch: true }); });
+    return;
+  }
+  if (overviewWaitEnd) { overviewWaitEnd(); overviewWaitEnd = null; }
+
+  var seq = ++overviewSyncSeq;
+  var version = state.mutationVersion;
+  var done = SyncStatus.begin('overview');
+  var batch = Api.batch(Prefetch.requestsFor(month, forceRefresh));
+  var chartsResult = batch.then(function(r) { return r[1]; });
+  // 圖表：先畫快取，批次的結果回來再更新（同一個月份才用；總覽換了月份時 onOverview 會另外讀）
+  runLater(function() { OverviewCharts.loadForOverview(month, forceRefresh, { result: chartsResult }); });
+
+  batch.then(function(results) {
+    done();
+    Prefetch.store(results, month, version);
+    if (seq !== overviewSyncSeq) return;
+    var ov = results[0];
+    if (!ov.ok) {
       setLoading(false);
-      overviewLoaded = true;
-      LocalCache.saveOverview(data);
-      var hadSkeleton = Boolean(container.querySelector('.overview-skeleton'));
-      renderOverview(data);
-      if (hadSkeleton) Motion.revealCards(container);
-      if (chartsJob) {
-        // 延後的圖表工作還沒輪到：直接用最新的月份載入，原本那件取消
-        chartsJob.cancelled = true;
-        chartsJob = null;
-        if (data) OverviewCharts.loadForOverview(data.month, forceRefresh);
-      } else if (data && (!chartsStarted || OverviewCharts.needsReloadFor(data.month))) {
-        OverviewCharts.loadForOverview(data.month, forceRefresh);
-      }
-      if (forceRefresh) {
-        showToast('資產總覽已重新讀取', 'success');
-      }
-    })
-    .withFailureHandler(function(err) {
-      setLoading(false);
-      if (!cachedOv) {
+      if (!container.querySelector('.ov-hero')) {
         container.innerHTML =
           '<div style="text-align:center;padding:40px 14px;color:var(--muted);">' +
             '<p style="font-size:15px;font-weight:700;">載入失敗</p>' +
-            '<p style="font-size:13px;">' + escHtml(err && err.message ? err.message : '發生未知錯誤') + '</p>' +
+            '<p style="font-size:13px;">' + escHtml(ov.error && ov.error.message ? ov.error.message : '發生未知錯誤') + '</p>' +
           '</div>';
+      } else if (forceRefresh) {
+        showToast('資產總覽讀取失敗：' + (ov.error && ov.error.message ? ov.error.message : '發生未知錯誤'), 'error');
       }
-    })
-    .getAssetOverview(Boolean(forceRefresh));
+      return;
+    }
+    var data = ov.data;
+    setLoading(false);
+    overviewLoaded = true;
+    var hadSkeleton = Boolean(container.querySelector('.overview-skeleton'));
+    if (!data || JSON.stringify(data) !== overviewRenderedSig || hadSkeleton) {
+      renderOverview(data);
+      if (hadSkeleton) Motion.revealCards(container);
+    }
+    if (data && data.month !== month) OverviewCharts.loadForOverview(data.month, forceRefresh);
+    if (forceRefresh) showToast('資產總覽已重新讀取', 'success');
+  });
 }
 
-// 開機第三段（閒置時，app/bootstrap.js）用 LocalCache 先把總覽畫進隱藏的頁面容器（P08）：
-// 第一次切到總覽時，轉場的 update callback 裡就不用重建整頁，只播放數字動畫（見 loadOverview）。
-var overviewPrerenderSig = '';
+// 開機第三段、預取之後（閒置時）用 LocalCache 先把總覽畫進隱藏的頁面容器（P08）：
+// 切到總覽時，轉場的 update callback 裡就不用重建整頁，只播放數字動畫（見 loadOverview）。
+var overviewRenderedSig = '';
+var overviewRenderedPrerender = false;
+var overviewShownData = null;
+var overviewWaitEnd = null;
 function prerenderOverview() {
   var container = document.getElementById('overviewContent');
   var cached = LocalCache.getOverview();
-  if (!container || !cached || overviewLoaded || overviewPrerenderSig) return false;
+  if (!container || !cached || document.body.dataset.page === 'overview') return false;
+  var sig = JSON.stringify(cached);
+  if (sig === overviewRenderedSig && container.querySelector('.ov-hero')) return false;
   renderOverview(cached, { prerender: true });
-  overviewPrerenderSig = JSON.stringify(cached);
   return true;
 }
 
@@ -98,7 +121,9 @@ function overviewNumbers(d) {
 function renderOverview(d, opts) {
   var container = document.getElementById('overviewContent');
   if (!container || !d) return;
-  overviewPrerenderSig = '';
+  overviewRenderedSig = JSON.stringify(d);
+  overviewRenderedPrerender = Boolean(opts && opts.prerender);
+  overviewShownData = d;
 
   var html = '';
   var noticeWasOpen = Boolean(container.querySelector('.ov-layout-notice[open]'));

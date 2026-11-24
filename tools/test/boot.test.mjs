@@ -6,7 +6,7 @@
 //   3. 網路慢的時候：首屏不等頁面下載完（boot-ready 在 DOMContentLoaded 之前），缺的卡面圖片與延後程式到齊後自動補上，
 //      在那之前切頁會等延後程式到了再切。
 //   4. 有本機快取時不用等伺服器：伺服器完全不回應也能開機、點項目、按數字鍵；總覽頁已用快取預先畫好。
-//   5. LocalCache 寫回：內容沒變就不寫。
+//   5. LocalCache 寫回：見 cache-stale.test.mjs（P12）。
 // 2–4 在真的 Chromium 裡跑（本機預覽伺服器＋合成資料），其餘是原始碼與建置產物檢查。
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -165,45 +165,9 @@ test('結構：每個無限循環的裝飾動畫在開機期間都被 26-motion-
 });
 
 /* ---------------------------------------------------------------------------
- * 5. LocalCache：內容沒變就不寫
+ * 5. LocalCache：P12 起改存 IndexedDB、寫入合併到閒置時間一次寫回（同一個鍵只寫最後一份），
+ *    開機時的寫回不再佔用主執行緒的同步 localStorage。測試在 tools/test/cache-stale.test.mjs。
  * ------------------------------------------------------------------------- */
-test('LocalCache：saveBoot／saveSettingsMetadata 內容沒變就不寫；結果與以前相同', () => {
-  const store = new Map();
-  const writes = [];
-  const localStorage = {
-    get length() { return store.size; },
-    key: i => Array.from(store.keys())[i],
-    getItem: k => (store.has(k) ? store.get(k) : null),
-    setItem: (k, v) => { writes.push(k); store.set(k, String(v)); },
-    removeItem: k => { store.delete(k); },
-  };
-  const ctx = vm.createContext({ localStorage, JSON, Date, Object, Array });
-  vm.runInContext(read('scripts/core/local-cache.js') + '\nthis.LocalCache = LocalCache;', ctx);
-  const LC = ctx.LocalCache;
-  const recent = { month: '2026.11', expenses: [{ row: 5, amount: 120 }], incomes: [] };
-  const data = { selectedMonth: '2026.11', months: ['2026.10', '2026.11'], options: { a: 1 }, cachedAt: 100, initialRecent: recent };
-
-  LC.saveBoot(data);
-  assert.deepEqual(writes.sort(), [LC.KEY_BOOT, LC.KEY_RECENT_PREFIX + '2026.11'].sort(), '第一次：開機資料與最近紀錄都寫入');
-  const saved = JSON.parse(store.get(LC.KEY_BOOT));
-  assert.ok(saved.cachedAt > 100, 'initialRecent 是目前月份：cachedAt 改成現在（與以前經由 saveRecent 相同）');
-  assert.deepEqual(JSON.parse(store.get(LC.KEY_RECENT_PREFIX + '2026.11')), recent);
-
-  writes.length = 0;
-  LC.saveBoot(Object.assign({}, data, { cachedAt: 999 }));
-  assert.deepEqual(writes, [], '內容相同（只有 cachedAt 不同）時不寫');
-
-  LC.saveBoot(Object.assign({}, data, { months: ['2026.11'] }));
-  assert.deepEqual(writes, [LC.KEY_BOOT], '開機資料變了才寫；最近紀錄沒變不寫');
-
-  writes.length = 0;
-  const meta = { cards: [{ id: 'c1', name: '卡', customImage: "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20428%20270%22%20role%3D%22img%22%20aria-label%3D%22customImage%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g1oxu5wj%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%235b4bb3%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%232c2466%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22428%22%20height%3D%22270%22%20rx%3D%2222%22%20fill%3D%22url%28%23g1oxu5wj%29%22%2F%3E%3Ccircle%20cx%3D%22372%22%20cy%3D%2256%22%20r%3D%22120%22%20fill%3D%22%23fff%22%20opacity%3D%22.07%22%2F%3E%3Ccircle%20cx%3D%22300%22%20cy%3D%22290%22%20r%3D%22150%22%20fill%3D%22%23fff%22%20opacity%3D%22.05%22%2F%3E%3Crect%20x%3D%2234%22%20y%3D%2292%22%20width%3D%2252%22%20height%3D%2240%22%20rx%3D%227%22%20fill%3D%22%23f3d58a%22%2F%3E%3Cpath%20d%3D%22M34%20106h52M34%20118h52M54%2092v40M68%2092v40%22%20stroke%3D%22%23b8923a%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%2F%3E%3Ctext%20x%3D%2234%22%20y%3D%2254%22%20font-family%3D%22system-ui%2C%27PingFang%20TC%27%2C%27Noto%20Sans%20TC%27%2C%27Microsoft%20JhengHei%27%2Csans-serif%22%20font-size%3D%2222%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%3EDEMO%20BANK%3C%2Ftext%3E%3Ctext%20x%3D%2234%22%20y%3D%22186%22%20font-family%3D%22system-ui%2C%27PingFang%20TC%27%2C%27Noto%20Sans%20TC%27%2C%27Microsoft%20JhengHei%27%2Csans-serif%22%20font-size%3D%2226%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%3EcustomImage%3C%2Ftext%3E%3Ctext%20x%3D%2234%22%20y%3D%22232%22%20font-family%3D%22system-ui%2C%27PingFang%20TC%27%2C%27Noto%20Sans%20TC%27%2C%27Microsoft%20JhengHei%27%2Csans-serif%22%20font-size%3D%2217%22%20letter-spacing%3D%223%22%20fill%3D%22%23fff%22%20opacity%3D%22.8%22%3E%E2%80%A2%E2%80%A2%E2%80%A2%E2%80%A2%20DEMO%3C%2Ftext%3E%3Ctext%20x%3D%22394%22%20y%3D%22232%22%20font-family%3D%22system-ui%2C%27PingFang%20TC%27%2C%27Noto%20Sans%20TC%27%2C%27Microsoft%20JhengHei%27%2Csans-serif%22%20font-size%3D%2215%22%20font-weight%3D%22700%22%20text-anchor%3D%22end%22%20fill%3D%22%23fff%22%20opacity%3D%22.85%22%3ECREDIT%3C%2Ftext%3E%3C%2Fsvg%3E" }] };
-  LC.saveSettingsMetadata(meta);
-  assert.deepEqual(writes, [LC.KEY_SETTINGS_METADATA, LC.KEY_CUSTOM_IMAGES]);
-  writes.length = 0;
-  LC.saveSettingsMetadata(JSON.parse(JSON.stringify(meta)));
-  assert.deepEqual(writes, [], 'metadata 沒變：不寫（卡面也已經存過）');
-});
 
 /* ---------------------------------------------------------------------------
  * 2. 分段與動畫

@@ -10,14 +10,19 @@
  *                   → 送出背景同步 → __boot.done() 移除載入畫面
  *   第二段：收入面板（選項、鍵盤）、最近收入、完整的月份選單、次要的事件綁定、提醒卡片判斷、
  *           各模組用 BootPhase.later() 登記的工作
- *   第三段（requestIdleCallback）：LocalCache 寫回（內容沒變就不寫）、設定 metadata 快取、執行延後程式（P07）、
- *           用 LocalCache 預先渲染總覽與對帳頁（畫在隱藏的頁面容器裡）、各模組用 BootPhase.idle() 登記的工作
+ *   第三段（requestIdleCallback）：LocalCache 寫回、設定 metadata 快取、執行延後程式（P07）、
+ *           用 LocalCache 預先渲染總覽、對帳與設定頁（畫在隱藏的頁面容器裡）、閒置預取總覽＋本月圖表＋預算（P12，
+ *           app/prefetch.js，一次 batchRead）、各模組用 BootPhase.idle() 登記的工作
+ *
+ * LocalCache 的資料在 IndexedDB（P12）：local-cache.js 一執行就開始讀，第一段之前最多等 LOCAL_CACHE_WAIT_MS
+ * （通常和等第一幀同時就讀完了）；超過時間還沒讀完就照樣用伺服器內嵌的資料開機。
  *
  * 有本機快取時，第一段完全不用等伺服器：用 __INITIAL_DATA__ 與 LocalCache 裡比較新的那份；背景同步回來後
  * 照舊由 applyInitialData() 一次更新全部（同步途中也可以正常操作）。都沒有資料時才保留載入畫面等同步結果。
  * 內嵌圖片在 DOMContentLoaded 時才一定到齊：那時補上支付方式的卡面與 App 圖示（onAssetsLoaded）。
  * ============================================================================= */
 const AppBoot = (function() {
+  const LOCAL_CACHE_WAIT_MS = 250;
   let started = false;
   const pendingLocalSaves = { boot: false, meta: null };
 
@@ -125,11 +130,16 @@ const AppBoot = (function() {
     if (typeof prerenderOverview === 'function') prerenderOverview();
     if (typeof prerenderSettlement === 'function') prerenderSettlement();
   }
+  function prerenderSettingsPage() {
+    if (!DeferredApp.loaded() || (document.body.dataset.page || 'bookkeeping') !== 'bookkeeping') return;
+    if (typeof prerenderSettings === 'function') prerenderSettings();
+  }
 
   async function run() {
     // 先等一幀：開機程式的編譯與頂層執行自成一個任務；已經解析好的頁面骨架在這一幀先算好樣式與排版
-    // （載入畫面還蓋著，看不到），首屏加上的選項、清單在下一幀只要增量計算，不會擠成一個長任務
-    await BootPhase.nextFrame();
+    // （載入畫面還蓋著，看不到），首屏加上的選項、清單在下一幀只要增量計算，不會擠成一個長任務。
+    // 同時等 LocalCache 從 IndexedDB 讀完（P12）
+    await Promise.all([BootPhase.nextFrame(), LocalCache.whenReady(LOCAL_CACHE_WAIT_MS)]);
     try {
       stageFirstScreen();
     } catch (e) {
@@ -147,7 +157,12 @@ const AppBoot = (function() {
 
     BootPhase.idle(saveLocalCaches);
     // 執行延後程式（P07）；頁面還沒下載完時等它到齊，執行完再排一次閒置時間預先渲染總覽與對帳頁
-    BootPhase.idle(() => DeferredApp.whenAvailable(true).then(() => BootPhase.idle(prerenderPages)));
+    BootPhase.idle(() => DeferredApp.whenAvailable(true).then(() => {
+      BootPhase.idle(prerenderPages);
+      BootPhase.idle(prerenderSettingsPage);
+      // 閒置預取（P12）：切到總覽、設定時已經是最新的
+      BootPhase.idle(Prefetch.boot);
+    }));
     await BootPhase.flushIdle();
   }
 

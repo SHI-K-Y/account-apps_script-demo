@@ -24,6 +24,8 @@
 // P08 新增：「開機（有本機快取）」＝先不降速開一次讓 LocalCache 有資料，再降速重新載入量開機；
 //          「開機後立刻互動」＝boot-ready 一出現就點支出項目、按數字鍵（不等資料同步），量 Event Timing。
 //          結尾印出 P08 的驗收檢查（boot-ready、最長長任務、開機後立刻互動）。
+// P12 新增：「送出記帳的主執行緒時間」＝按下送出到回應處理完、閒置寫回也做完，主執行緒任務與腳本的總時間（60 筆支出、記 5 筆取中位數）。
+//          --submit-only：只跑這一段。
 // 注意：headless 是軟體繪圖，絕對數字比真機悲觀，只拿來比較「改之前／改之後」的相對變化。
 import fs from 'node:fs';
 import os from 'node:os';
@@ -67,6 +69,7 @@ const OPT = {
   autoBaseline: !args['no-baseline'],
   saveBaseline: Boolean(args['save-baseline']),
   listsOnly: Boolean(args['lists-only']),
+  submitOnly: Boolean(args['submit-only']),
 };
 if (args.net && args.net !== 'fast3g') fail('--net 只支援 fast3g');
 
@@ -798,6 +801,86 @@ async function measureFlip(browser) {
 }
 
 /* ---------------------------------------------------------------------------
+ * h. 送出記帳的主執行緒時間（P12）：從按下送出到伺服器回應處理完、閒置寫回本機快取也做完為止，
+ *    主執行緒上所有任務（RunTask）的總時間，以及其中執行腳本的時間（腳本事件取聯集，不重複計算巢狀）。
+ *    合成資料加長到 60 筆支出（接近實際一個月的量），記 SUBMIT_SAMPLES 筆取中位數。
+ *    時間窗：送出前 → 資料請求都回來、安靜 800ms → 再等 SUBMIT_TAIL_MS（閒置寫回）。
+ * ------------------------------------------------------------------------- */
+const SUBMIT_SAMPLES = 5;
+const SUBMIT_TAIL_MS = 1500;
+const SUBMIT_CATS = ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'v8.execute'];
+const SCRIPT_EVENTS = new Set(['FunctionCall', 'EventDispatch', 'TimerFire', 'FireIdleCallback', 'FireAnimationFrame',
+  'RunMicrotasks', 'EvaluateScript', 'v8.callFunction', 'v8.run', 'V8.Execute']);
+metric('submit.mainThreadMs', '送出記帳：主執行緒任務總時間（含回應與寫回）', 'ms', 'down');
+metric('submit.scriptMs', '送出記帳：其中的腳本時間', 'ms', 'down');
+
+function unionMs(intervals) {
+  const xs = intervals.filter(x => x[1] > x[0]).sort((a, b) => a[0] - b[0]);
+  let total = 0;
+  let cur = null;
+  for (const x of xs) {
+    if (!cur || x[0] > cur[1]) { if (cur) total += cur[1] - cur[0]; cur = x.slice(); }
+    else cur[1] = Math.max(cur[1], x[1]);
+  }
+  if (cur) total += cur[1] - cur[0];
+  return total / 1000;
+}
+
+function mainThreadInWindow(buf, startMark, endMark) {
+  const ev = JSON.parse(buf.toString()).traceEvents;
+  const main = ev.find(e => e.name === 'thread_name' && e.args && e.args.name === 'CrRendererMain');
+  const mark = n => ev.find(e => e.name === 'TimeStamp' && e.args && e.args.data && e.args.data.message === n);
+  const a = mark(startMark);
+  const b = mark(endMark);
+  if (!main || !a || !b) return { mainThreadMs: null, scriptMs: null };
+  const onMain = ev.filter(e => e.pid === main.pid && e.tid === main.tid && e.ph === 'X' && e.ts >= a.ts && e.ts <= b.ts);
+  const clip = e => [e.ts, Math.min(e.ts + (e.dur || 0), b.ts)];
+  // 各類事件的時間（同名取聯集；不同類之間可能重疊，只用來看大概花在哪裡）
+  const byName = {};
+  onMain.forEach(e => { if (e.name !== 'RunTask') (byName[e.name] = byName[e.name] || []).push(clip(e)); });
+  const breakdown = Object.fromEntries(Object.entries(byName).map(([k, v]) => [k, round(unionMs(v), 1)])
+    .filter(x => x[1] >= 1).sort((x, y) => y[1] - x[1]).slice(0, 12));
+  return {
+    mainThreadMs: unionMs(onMain.filter(e => e.name === 'RunTask').map(clip)),
+    scriptMs: unionMs(onMain.filter(e => SCRIPT_EVENTS.has(e.name)).map(clip)),
+    tasks: onMain.filter(e => e.name === 'RunTask').length,
+    windowMs: round((b.ts - a.ts) / 1000),
+    breakdown,
+  };
+}
+
+async function measureSubmitCost(browser) {
+  const app = await startApp({ extraExpenses: 52 });
+  const { context, page } = await newPage(browser, { throttle: true });
+  const samples = [];
+  try {
+    await boot(page, app.url);
+    await settle(page);
+    for (let i = 0; i < SUBMIT_SAMPLES; i++) {
+      await page.locator('#expenseItemChoices .choice').nth(i % 3).tap();
+      await sleep(400);
+      await prepareSubmit(page);
+      await page.locator('#expenseKeypad .key:text-is("1")').tap();
+      await sleep(600);
+      await browser.startTracing(page, { categories: SUBMIT_CATS });
+      await page.evaluate(() => console.timeStamp('perf-submit-start'));
+      await page.locator('#expenseSubmit').tap();
+      await settle(page, SUBMIT_TAIL_MS);
+      await page.evaluate(() => console.timeStamp('perf-submit-end'));
+      samples.push(mainThreadInWindow(await browser.stopTracing(), 'perf-submit-start', 'perf-submit-end'));
+    }
+  } finally {
+    await context.close();
+    await app.close();
+  }
+  return {
+    'submit.mainThreadMs': median(samples.map(s => s.mainThreadMs)),
+    'submit.scriptMs': median(samples.map(s => s.scriptMs)),
+    samples,
+  };
+}
+
+/* ---------------------------------------------------------------------------
  * g. 長清單（P06）
  * ------------------------------------------------------------------------- */
 const LIST_SUBMITS = 8;
@@ -1029,6 +1112,39 @@ function printListsOnly(listRuns) {
   console.log('\n結果：' + path.relative(ROOT, outFile));
 }
 
+function printSubmitOnly(submitRuns) {
+  const metrics = {};
+  for (const m of METRICS.filter(x => x.key.startsWith('submit.'))) {
+    metrics[m.key] = round(median(submitRuns.map(r => r[m.key]).filter(v => typeof v === 'number')), 2);
+  }
+  let base = null;
+  if (OPT.baseline) {
+    const f = resolveResultFile(OPT.baseline);
+    if (!f) fail('找不到 --baseline 指定的結果檔：' + OPT.baseline);
+    base = JSON.parse(fs.readFileSync(f, 'utf8'));
+  }
+  console.log('');
+  for (const m of METRICS.filter(x => x.key.startsWith('submit.'))) {
+    const v = metrics[m.key];
+    let line = padR(m.label, 52) + padL(fmt(v, m.unit), 8) + ' ' + m.unit;
+    const b = base && base.metrics && base.metrics[m.key];
+    if (typeof b === 'number' && typeof v === 'number') {
+      line += '   基準 ' + fmt(b, m.unit) + (b !== 0 ? '（' + (v - b > 0 ? '+' : '') + round((v - b) / Math.abs(b) * 100, 1) + '%）' : '');
+    }
+    console.log(line);
+  }
+  const result = {
+    label: OPT.label, createdAt: new Date().toISOString(), submitOnly: true,
+    conditions: { cpu: OPT.cpu, net: OPT.net, runs: OPT.runs, rasterThreads: OPT.rasterThreads,
+      dist: !OPT.dist ? 'dist' : (path.relative(ROOT, OPT.dist).startsWith('..') ? '(外部) ' + OPT.dist.split(path.sep).slice(-2).join('/') : path.relative(ROOT, OPT.dist)) },
+    metrics, submitCost: submitRuns,
+  };
+  fs.mkdirSync(RESULTS_DIR, { recursive: true });
+  const outFile = path.join(RESULTS_DIR, stamp(new Date()) + '-' + OPT.label + '.json');
+  fs.writeFileSync(outFile, JSON.stringify(result, null, 2) + '\n');
+  console.log('\n結果：' + path.relative(ROOT, outFile));
+}
+
 /** P08 驗收：4 倍降速 boot-ready ≤ 0.8 秒、最長長任務 ≤ 100ms；開機後立刻互動 ≤ 200ms；
  *  6 倍＋Fast 3G 時 boot-ready 比基準（--baseline）快 35% 以上。 */
 function printBootChecks(result, base) {
@@ -1079,9 +1195,19 @@ async function main() {
   let stat;
   let flip = {};
   const listRuns = [];
+  const submitRuns = [];
   try {
     console.log('暖機…');
     await warmup(browser);
+    if (OPT.submitOnly) {
+      for (let i = 1; i <= OPT.runs; i++) {
+        submitRuns.push(await measureSubmitCost(browser));
+        console.log('  送出記帳第 ' + i + ' 次：主執行緒 ' + round(submitRuns[i - 1]['submit.mainThreadMs'], 1) + 'ms、腳本 ' +
+          round(submitRuns[i - 1]['submit.scriptMs'], 1) + 'ms');
+      }
+      await browser.close();
+      return printSubmitOnly(submitRuns);
+    }
     if (OPT.listsOnly) {
       for (let i = 1; i <= OPT.runs; i++) {
         listRuns.push(await measureLists(browser));
@@ -1099,6 +1225,8 @@ async function main() {
     flip = await measureFlip(browser);
     console.log('長清單（30 筆記帳、300 筆捲動）…');
     for (let i = 0; i < OPT.runs; i++) listRuns.push(await measureLists(browser));
+    console.log('送出記帳的主執行緒時間…');
+    for (let i = 0; i < OPT.runs; i++) submitRuns.push(await measureSubmitCost(browser));
   } finally {
     if (browser.isConnected()) await browser.close();
   }
@@ -1108,8 +1236,8 @@ async function main() {
   for (const m of METRICS) {
     if (m.key.startsWith('static.')) continue;
     if (m.key.startsWith('flip.')) { metrics[m.key] = flip[m.key] == null ? null : flip[m.key]; continue; }
-    if (m.key.startsWith('longlist.')) {
-      const ys = listRuns.map(r => r[m.key]).filter(v => typeof v === 'number');
+    if (m.key.startsWith('longlist.') || m.key.startsWith('submit.')) {
+      const ys = (m.key.startsWith('submit.') ? submitRuns : listRuns).map(r => r[m.key]).filter(v => typeof v === 'number');
       metrics[m.key] = round(median(ys), 2);
       if (ys.length > 1) spread[m.key] = [round(Math.min(...ys), 2), round(Math.max(...ys), 2)];
       continue;
@@ -1137,6 +1265,7 @@ async function main() {
     spread,
     runs: runs.map(r => r.metrics),
     longLists: listRuns,
+    submitCost: submitRuns,
     inputEvents: runs.map(r => r.inputEvents),
     animations: stat.inventory,
     screenshots: { dir: stat.dir, files: stat.files },

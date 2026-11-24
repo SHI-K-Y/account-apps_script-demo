@@ -1,7 +1,7 @@
 // 公開 Demo 的瀏覽器端進入點（由 tools/demo/build-demo.mjs 打包後內嵌到 docs/index.html 的 <head>）。
 //
 // 在主程式載入之前做四件事：
-//   1. 清掉上一次瀏覽留在 localStorage 的資料快取，確保「重新整理就還原」。
+//   1. 清掉上一次瀏覽留在 localStorage 與 IndexedDB 的資料快取，確保「重新整理就還原」。
 //   2. 在記憶體裡啟動後端（真正的 dist/code.gs ＋ 虛構的範例活頁簿）。
 //   3. 提供 google.script.run 的替身：前端的 Api 層完全不用改，呼叫會直接進到記憶體裡的後端。
 //   4. 顯示「Demo 模式」提示，並攔下通往 Google 試算表的連結（Demo 沒有真實的試算表）。
@@ -13,6 +13,7 @@ import SERVER_SOURCE from 'demo:server-source';
 const STORAGE_PREFIX = 'FAST_BOOKKEEPING_';
 // 純粹的介面偏好（動畫效果、自動捲動）保留，其餘以這個前綴開頭的都是資料快取，一律清掉。
 const KEEP_KEYS = new Set(['FAST_BOOKKEEPING_PREFS_V1']);
+const DATA_DB_NAME = 'FAST_BOOKKEEPING_V1';
 const LATENCY_MS = [90, 220]; // 模擬一點點網路延遲，讓讀取中、送出中的動畫看得到
 
 function clearDataCaches() {
@@ -23,6 +24,9 @@ function clearDataCaches() {
       if (key && key.indexOf(STORAGE_PREFIX) === 0 && !KEEP_KEYS.has(key)) localStorage.removeItem(key);
     });
   } catch (e) { /* 隱私模式下可能無法存取 localStorage，略過即可 */ }
+  // P12 起大型資料快取存在 IndexedDB（src/client/scripts/core/kv-store.js 的 DB_NAME）：整個資料庫刪掉。
+  // 刪除排在主程式開啟資料庫之前，IndexedDB 會等刪除完成才開啟，主程式讀到的一定是空的。
+  try { indexedDB.deleteDatabase(DATA_DB_NAME); } catch (e) { /* 沒有 IndexedDB 時略過 */ }
 }
 
 function createScriptRun(backend) {

@@ -466,7 +466,9 @@ function loadCreditCardAll(forceRefresh, onlyMonths) {
   var hadSkeleton = !collectCcRecords().length;
   ccState.loadingProgress = { done: 0, total: pending.length };
   renderCreditCardPage();
-  setLoading(true);
+  // 已經有月份可以顯示（P12）：照樣顯示，標題旁「更新中」；完全沒有資料時才用忙碌條＋骨架
+  var syncDone = hadSkeleton ? function() {} : SyncStatus.begin('creditcard');
+  if (hadSkeleton) setLoading(true);
 
   var batches = [];
   for (var i = 0; i < pending.length; i += CC_MONTHS_PER_BATCH) {
@@ -475,6 +477,7 @@ function loadCreditCardAll(forceRefresh, onlyMonths) {
   var failedMonths = [];
 
   function finish() {
+    syncDone();
     ccState.loadingProgress = null;
     setLoading(false);
     renderCreditCardPage();
@@ -487,12 +490,12 @@ function loadCreditCardAll(forceRefresh, onlyMonths) {
   }
 
   function next(idx) {
-    if (seq !== ccLoadSeq) return;
+    if (seq !== ccLoadSeq) { syncDone(); return; }
     if (idx >= batches.length) { finish(); return; }
     var batch = batches[idx];
     Api.call('getCreditCardRecords', batch, Boolean(forceRefresh))
       .then(function(res) {
-        if (seq !== ccLoadSeq) return;
+        if (seq !== ccLoadSeq) { syncDone(); return; }
         var byMonth = (res && res.recordsByMonth) || {};
         Object.keys(byMonth).forEach(function(m) {
           ccState.recordsByMonth[m] = byMonth[m] || [];
@@ -506,7 +509,9 @@ function loadCreditCardAll(forceRefresh, onlyMonths) {
         next(idx + 1);
       })
       .catch(function(err) {
+        syncDone();
         if (seq !== ccLoadSeq) return;
+        setLoading(false);
         ccState.loadingProgress = null;
         renderCreditCardPage();
         showServerError(err);
@@ -832,14 +837,11 @@ function applyCreditCardMutationResult(month, res) {
     // 本機清單比後端舊：不拿它蓋掉信用卡頁的資料，重新讀取這個月份
     loadRecent(month, true);
   }
-  LocalCache.invalidateOverview(month);
+  Prefetch.afterMutation(month);
 }
 
 function afterCreditCardMutations() {
-  LocalCache.saveSettlement(null);
-  if (typeof window.__invalidateOverviewFlag === 'function') {
-    window.__invalidateOverviewFlag();
-  }
+  Prefetch.afterMutation();
 }
 
 function toggleSingleCreditCardPaid(month, rowNum, targetPaid) {

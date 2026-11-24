@@ -18,13 +18,17 @@
  *     所以這些寫入遇到暫時性錯誤也可以安全地自動重試一次。其他寫入照舊不重試。
  *   - 讀取類操作超過時限沒有回應就回報逾時（寫入類不設時限，避免「其實已寫入卻顯示失敗」）。
  *   - 把 Apps Script 的英文／技術性錯誤訊息換成看得懂的說法；原始訊息保留在 error.rawMessage。
+ *   - 相同的讀取（同一個 action＋參數）正在進行中時合併成一次（P12）：後來的呼叫拿到同一份結果的複本。
+ *   - 批次讀取（P12）：Api.batch([{ action, args }, …]) 用一次伺服器執行（後端 batchRead）讀好幾樣東西，
+ *     回傳 Promise<[{ ok, data } | { ok: false, error }]>（順序同輸入）。只接受 READ_ACTIONS 裡的操作；
+ *     其中已經在進行中的讀取直接沿用、不重送；只剩一項時改用一般呼叫；後端還沒有 batchRead（版本不一致）時逐項送出。
  * ============================================================================= */
 const Api = (function() {
   // 只讀取、不修改試算表的操作：可以安全地重試與設定逾時。
   const READ_ACTIONS = new Set([
     'getInitialData', 'getRecentRecords', 'getFullRecords', 'searchRecords', 'getCreditCardRecords',
     'getAssetOverview', 'getOverviewCharts', 'getSettingsOptions',
-    'getFxLedgers', 'getFxLedgerData', 'getFxRates', 'getBudgetSettings'
+    'getFxLedgers', 'getFxLedgerData', 'getFxRates', 'getBudgetSettings', 'batchRead'
   ]);
   // 後端支援 opId 去重的寫入（src/server/21_records.gs）：第一個參數是表單（addRecords 是表單陣列）
   const OP_ACTIONS = new Set([
@@ -185,12 +189,86 @@ const Api = (function() {
     }
   }
 
+  /* ------------------------- 合併進行中的相同讀取（P12） ------------------------- */
+  const inflight = new Map();   // action＋參數 → 原始的 Promise（還沒回來的讀取）
+
+  function readKey(action, args) {
+    if (!READ_ACTIONS.has(action) || action === 'batchRead') return '';
+    try { return action + '\u0000' + JSON.stringify(args); } catch (e) { return ''; }
+  }
+  function copyOf(v) {
+    if (v == null || typeof v !== 'object') return v;
+    try { if (typeof structuredClone === 'function') return structuredClone(v); } catch (e) {}
+    return JSON.parse(JSON.stringify(v));
+  }
+  const same = function(v) { return v; };
+
+  /* 第一個呼叫者拿到原始結果，之後合併進來的拿到複本（各自修改不會互相影響）。
+   * 先在原始 Promise 上掛一個 same：第一個呼叫者的處理函式排在所有複本做完之後，複本一定是還沒被改過的。 */
+  function track(key, raw) {
+    inflight.set(key, raw);
+    const done = function() { if (inflight.get(key) === raw) inflight.delete(key); };
+    raw.then(done, done);
+    return raw.then(same);
+  }
+  function joinInflight(key) {
+    const raw = key && inflight.get(key);
+    return raw ? raw.then(copyOf) : null;
+  }
+
+  function request(action, args) {
+    const key = readKey(action, args);
+    const joined = joinInflight(key);
+    if (joined) return joined;
+    const raw = new Promise(function(resolve, reject) { send(action, args, resolve, reject, 0); });
+    return key ? track(key, raw) : raw;
+  }
+
   /** Promise 介面：Api.call('addExpense', form) */
   function call(action) {
-    const args = Array.prototype.slice.call(arguments, 1);
-    return new Promise(function(resolve, reject) {
-      send(action, args, resolve, reject, 0);
+    return request(action, Array.prototype.slice.call(arguments, 1));
+  }
+
+  /** 批次讀取：Api.batch([{ action: 'getAssetOverview', args: [false] }, …]) */
+  function batch(requests) {
+    const items = (Array.isArray(requests) ? requests : []).map(function(r) {
+      return { action: r && r.action, args: r && Array.isArray(r.args) ? r.args : [] };
     });
+    const results = new Array(items.length);
+    const toSend = [];
+    items.forEach(function(it, i) {
+      if (!READ_ACTIONS.has(it.action) || it.action === 'batchRead') {
+        results[i] = Promise.reject(toError('批次讀取只接受唯讀操作：' + it.action, true));
+        return;
+      }
+      const joined = joinInflight(readKey(it.action, it.args));
+      if (joined) results[i] = joined; else toSend.push(i);
+    });
+    if (toSend.length === 1) {
+      results[toSend[0]] = request(items[toSend[0]].action, items[toSend[0]].args);
+    } else if (toSend.length > 1) {
+      const payload = toSend.map(function(i) { return { action: items[i].action, args: items[i].args }; });
+      const whole = new Promise(function(resolve, reject) { send('batchRead', [payload], resolve, reject, 0); });
+      toSend.forEach(function(i, j) {
+        const it = items[i];
+        const raw = whole.then(function(out) {
+          const r = Array.isArray(out) ? out[j] : null;
+          if (r && r.ok) return r.data;
+          throw toError(r && r.error ? r.error : '批次讀取沒有回傳這一項的結果', true);
+        }, function(err) {
+          // 後端還沒有 batchRead（剛部署、頁面是新版但後端是舊版）：逐項送出
+          if (/不支援的操作/.test(err && err.rawMessage || '')) {
+            return new Promise(function(resolve, reject) { send(it.action, it.args, resolve, reject, 0); });
+          }
+          throw err;
+        });
+        const key = readKey(it.action, it.args);
+        results[i] = key ? track(key, raw) : raw;
+      });
+    }
+    return Promise.all(results.map(function(p) {
+      return p.then(function(data) { return { ok: true, data: data }; }, function(error) { return { ok: false, error: error }; });
+    }));
   }
 
   /** 與 google.script.run 相同的鏈式介面，讓既有呼叫點只需要換掉開頭。 */
@@ -205,13 +283,21 @@ const Api = (function() {
           const args = Array.prototype.slice.call(arguments);
           const ok = handlers.ok;
           const failHandler = handlers.fail;
-          send(
-            prop,
-            args,
-            ok ? function(result) { return handlers.hasUser ? ok(result, handlers.user) : ok(result); } : null,
-            failHandler ? function(err) { return handlers.hasUser ? failHandler(err, handlers.user) : failHandler(err); } : null,
-            0
-          );
+          const onOk = ok ? function(result) { return handlers.hasUser ? ok(result, handlers.user) : ok(result); } : null;
+          const onErr = failHandler ? function(err) { return handlers.hasUser ? failHandler(err, handlers.user) : failHandler(err); } : null;
+          const key = readKey(prop, args);
+          if (!key) { send(prop, args, onOk, onErr, 0); return; }
+          // 讀取：和進行中的相同讀取合併
+          // 處理函式自己丟出的錯誤照舊是「未捕捉的錯誤」（不要變成 Promise 的 rejection 被吞掉）
+          const rethrow = function(e) { setTimeout(function() { throw e; }, 0); };
+          request(prop, args).then(function(result) {
+            try { if (onOk) onOk(result); } catch (e) { rethrow(e); }
+          }, function(err) {
+            try {
+              if (onErr) onErr(err);
+              else console.error('[Api] ' + prop + ' 失敗：', err);
+            } catch (e) { rethrow(e); }
+          });
         };
       }
     });
@@ -219,6 +305,7 @@ const Api = (function() {
 
   return {
     call: call,
+    batch: batch,
     get server() { return makeRunner({}); },
     pending: function() { return pending; },
     pendingWrites: function() { return pendingWrites; },
