@@ -34,24 +34,50 @@ function parseLargeCacheManifest_(text) {
   return { version: parts[1], count: count };
 }
 
+/**
+ * 把一個可能超過 100 KB 的值編碼成要 putAll 的鍵值（manifest＋各資料塊），加進 entries。
+ * 讓呼叫端把好幾個值（例如月份明細＋冪等結果）合在同一次 putAll 寫入（P10）。太大時丟錯。
+ */
+function addLargeCacheEntries_(entries, key, value) {
+  const data = encodeLargeCacheValue_(value);
+  const count = Math.max(1, Math.ceil(data.length / LARGE_CACHE_CHUNK_CHARS_));
+  if (count > LARGE_CACHE_MAX_CHUNKS_) throw new Error('快取值太大：' + key + '（' + data.length + ' 字元）');
+  const version = Date.now().toString(36) + Math.floor(Math.random() * 1e9).toString(36);
+  for (let i = 0; i < count; i++) {
+    entries[largeCacheChunkKey_(key, i)] = version + '|' + data.slice(i * LARGE_CACHE_CHUNK_CHARS_, (i + 1) * LARGE_CACHE_CHUNK_CHARS_);
+  }
+  entries[key] = LARGE_CACHE_FORMAT_ + '|' + version + '|' + count;
+  return entries;
+}
+
 /** 存一個可能超過 100 KB 的值；成功回傳 true。失敗時刪掉主鍵，避免留下舊版本被當成最新的。 */
 function cachePutLarge_(key, value, ttl) {
   const cache = scriptCache_();
   try {
-    const data = encodeLargeCacheValue_(value);
-    const count = Math.max(1, Math.ceil(data.length / LARGE_CACHE_CHUNK_CHARS_));
-    if (count > LARGE_CACHE_MAX_CHUNKS_) throw new Error('快取值太大：' + key + '（' + data.length + ' 字元）');
-    const version = Date.now().toString(36) + Math.floor(Math.random() * 1e9).toString(36);
-    const entries = {};
-    for (let i = 0; i < count; i++) {
-      entries[largeCacheChunkKey_(key, i)] = version + '|' + data.slice(i * LARGE_CACHE_CHUNK_CHARS_, (i + 1) * LARGE_CACHE_CHUNK_CHARS_);
-    }
-    entries[key] = LARGE_CACHE_FORMAT_ + '|' + version + '|' + count;
-    cache.putAll(entries, ttl || CONFIG.CACHE_TTL);
+    cache.putAll(addLargeCacheEntries_({}, key, value), ttl || CONFIG.CACHE_TTL);
     return true;
   } catch (e) {
     console.warn('[cache] 無法存入 ' + key + '：' + (e && e.message ? e.message : e));
     try { cache.remove(key); } catch (err) {}
+    return false;
+  }
+}
+
+/**
+ * 一次 putAll 寫入好幾個值（P10）：large 是 { 鍵: 物件 }（大型值格式），plain 是 { 鍵: 字串 }。
+ * 任何一個大型值編碼失敗或 putAll 失敗，就刪掉所有大型值的主鍵（不留下舊版本），回傳 false；不會丟錯。
+ */
+function cachePutAllMixed_(large, plain, ttl) {
+  const cache = scriptCache_();
+  const largeKeys = Object.keys(large || {});
+  try {
+    const entries = Object.assign({}, plain || {});
+    largeKeys.forEach(function (k) { addLargeCacheEntries_(entries, k, large[k]); });
+    if (Object.keys(entries).length) cache.putAll(entries, ttl || CONFIG.CACHE_TTL);
+    return true;
+  } catch (e) {
+    console.warn('[cache] 無法存入 ' + largeKeys.concat(Object.keys(plain || {})).join(',') + '：' + (e && e.message ? e.message : e));
+    try { if (largeKeys.length) cache.removeAll(largeKeys); } catch (err) {}
     return false;
   }
 }
@@ -106,13 +132,13 @@ function cacheGetAllMixed_(largeKeys, plainKeys) {
 function invalidateOptionsCache_() {
   try {
     var cache = scriptCache_();
-    cache.removeAll([CONFIG.CACHE_KEYS.OPTIONS_ALL, 'OPTIONS_SIMPLE', 'OPTIONS_RAW']);
+    cache.removeAll([CONFIG.CACHE_KEYS.OPTIONS_ALL, CONFIG.CACHE_KEYS.OPTIONS_SIMPLE, 'OPTIONS_SIMPLE', 'OPTIONS_RAW']);
   } catch (e) {}
 }
 
 /**
  * 記帳（新增／修改／刪除／標記已繳）之後：清掉這個月份的總覽、圖表與之後月份的月初餘額。
- * 啟動快取（BOOT_JSON）不在這裡清：寫入時已經用 syncBootSnapshotWithMonthData_ 更新成最新的，
+ * 啟動快取（BOOT_JSON）不在這裡清：讀出來時會用最新的月份明細快取蓋過裡面的清單（P10），
  * 清掉的話下次開頁只能拿 PropertiesService 裡的舊快照，前端還得再背景同步一次（P09 修正）。
  */
 function invalidateOverviewAndSettlementCache_(month) {
@@ -147,6 +173,7 @@ function invalidateAllCaches_() {
       CONFIG.CACHE_KEYS.BOOT_JSON,
       CONFIG.CACHE_KEYS.MONTHS_LIST,
       CONFIG.CACHE_KEYS.OPTIONS_ALL,
+      CONFIG.CACHE_KEYS.OPTIONS_SIMPLE,
       CONFIG.CACHE_KEYS.BUDGET_CONFIG,
     ];
     const props = scriptProps_();

@@ -13,29 +13,53 @@ function readSummaryDirty_(props) {
   }
 }
 
-function markSummaryDirty_(months) {
+/**
+ * 標記月份彙總需要重建（P10）：先看快取裡「已標記的月份」（指令碼屬性的鏡像），全部都標記過就不碰指令碼屬性；
+ * 真的要寫時才讀寫屬性，並盡量拿文件鎖（和重建時的 unmarkSummaryDirty_ 互斥，避免互相蓋掉）。
+ * 可以在鎖外呼叫（記帳寫入完成、放掉鎖之後）。
+ * @param marksJson  選用：呼叫端已經一次 getAll 讀回的鏡像字串（null 表示讀過但沒命中）
+ */
+function markSummaryDirty_(months, marksJson) {
   const list = (Array.isArray(months) ? months : [months])
     .map(function (m) { return String(m == null ? '' : m).trim(); })
     .filter(function (m) { return CONFIG.MONTH_PATTERN.test(m); });
   if (!list.length) return;
-  try {
-    const props = scriptProps_();
-    const current = readSummaryDirty_(props);
-    let changed = false;
-    list.forEach(function (m) {
-      if (current.indexOf(m) === -1) {
-        current.push(m);
-        changed = true;
-      }
-    });
-    if (changed) props.setProperty(CONFIG.PROP_KEYS.SUMMARY_DIRTY, JSON.stringify(current));
-  } catch (e) {}
+  const marked = readSummaryDirtyMirror_(marksJson);
+  if (marked && list.every(function (m) { return marked.indexOf(m) !== -1; })) return;
+  withDocumentLockIfAvailable_(function () {
+    try {
+      const props = scriptProps_();
+      const current = readSummaryDirty_(props);
+      let changed = false;
+      list.forEach(function (m) {
+        if (current.indexOf(m) === -1) {
+          current.push(m);
+          changed = true;
+        }
+      });
+      if (changed) props.setProperty(CONFIG.PROP_KEYS.SUMMARY_DIRTY, JSON.stringify(current));
+      writeSummaryDirtyMirror_(current);
+    } catch (e) {}
+  }, 5000);
 }
 
 function markSummaryDirtyWithLock_(months) {
-  withDocumentLockIfAvailable_(function () {
-    markSummaryDirty_(months);
-  }, 5000);
+  markSummaryDirty_(months);
+}
+
+/** 快取裡的已標記月份；沒有快取時回傳 null（要讀屬性才知道）。 */
+function readSummaryDirtyMirror_(marksJson) {
+  try {
+    const raw = marksJson !== undefined ? marksJson : scriptCache_().get(CONFIG.CACHE_KEYS.SUMMARY_DIRTY_MARKS);
+    const arr = raw ? JSON.parse(raw) : null;
+    return Array.isArray(arr) ? arr : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function writeSummaryDirtyMirror_(months) {
+  try { scriptCache_().put(CONFIG.CACHE_KEYS.SUMMARY_DIRTY_MARKS, JSON.stringify(months || []), CONFIG.CACHE_TTL); } catch (e) {}
 }
 
 function unmarkSummaryDirty_(months) {
@@ -45,12 +69,18 @@ function unmarkSummaryDirty_(months) {
     const removeSet = new Set(months);
     const current = readSummaryDirty_(props);
     const next = current.filter(function (m) { return !removeSet.has(m); });
-    if (next.length === current.length) return;
+    if (next.length === current.length) {
+      writeSummaryDirtyMirror_(current);
+      return;
+    }
+    // 先清鏡像再改屬性：中途失敗時最多只是下次多讀一次屬性，不會讓已取消的標記被當成還在
+    try { scriptCache_().remove(CONFIG.CACHE_KEYS.SUMMARY_DIRTY_MARKS); } catch (e) {}
     if (next.length) {
       props.setProperty(CONFIG.PROP_KEYS.SUMMARY_DIRTY, JSON.stringify(next));
     } else {
       props.deleteProperty(CONFIG.PROP_KEYS.SUMMARY_DIRTY);
     }
+    writeSummaryDirtyMirror_(next);
   } catch (e) {}
 }
 

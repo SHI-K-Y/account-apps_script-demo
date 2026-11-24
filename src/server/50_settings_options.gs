@@ -5,8 +5,13 @@ function getSettingsOptions_(forceRefresh) {
 
 function readAllOptionsData_(ss, forceRefresh) {
   if (!forceRefresh) {
-    const cached = cacheGetLarge_(CONFIG.CACHE_KEYS.OPTIONS_ALL);
-    if (cached) return cached;
+    const got = cacheGetAllMixed_([CONFIG.CACHE_KEYS.OPTIONS_ALL], [CONFIG.CACHE_KEYS.OPTIONS_SIMPLE]);
+    const cached = got.large[CONFIG.CACHE_KEYS.OPTIONS_ALL];
+    if (cached) {
+      // 舊版只存了 OPTIONS_ALL：補上記帳驗證用的簡易選項
+      if (!got.plain[CONFIG.CACHE_KEYS.OPTIONS_SIMPLE] && cached.simple) saveSimpleOptionsCache_(cached.simple);
+      return cached;
+    }
   }
 
   const settings = getSettingsSheet_(ss);
@@ -70,14 +75,47 @@ function readAllOptionsData_(ss, forceRefresh) {
 
   const combined = { raw, simple, metadata };
   // 以前還會另存一份到指令碼屬性（OPTIONS_SNAPSHOT），但沒有任何地方讀它，只是多一次慢的寫入（P09 拿掉）。
-  cachePutLarge_(CONFIG.CACHE_KEYS.OPTIONS_ALL, combined, CONFIG.CACHE_TTL);
+  // 完整選項與簡易選項（記帳驗證用，P10）同一次 putAll 寫入。
+  const simpleJson = JSON.stringify(simple);
+  const plain = {};
+  if (simpleJson.length < 90 * 1024) plain[CONFIG.CACHE_KEYS.OPTIONS_SIMPLE] = simpleJson;
+  const large = {};
+  large[CONFIG.CACHE_KEYS.OPTIONS_ALL] = combined;
+  if (!cachePutAllMixed_(large, plain, CONFIG.CACHE_TTL)) {
+    try { scriptCache_().remove(CONFIG.CACHE_KEYS.OPTIONS_SIMPLE); } catch (e) {}
+  }
 
   return combined;
 }
 
-function readOptions_(ssOrSettings) {
-  const cached = cacheGetLarge_(CONFIG.CACHE_KEYS.OPTIONS_ALL);
-  if (cached && cached.simple) return cached.simple;
+function saveSimpleOptionsCache_(simple) {
+  try {
+    const json = JSON.stringify(simple);
+    if (json.length < 90 * 1024) scriptCache_().put(CONFIG.CACHE_KEYS.OPTIONS_SIMPLE, json, CONFIG.CACHE_TTL);
+  } catch (e) {}
+}
+
+/** 簡易選項快取的字串 → 物件；格式不對時回傳 null（當作沒命中）。 */
+function parseSimpleOptionsCache_(json) {
+  if (typeof json !== 'string' || !json) return null;
+  try {
+    const simple = JSON.parse(json);
+    return simple && Array.isArray(simple.expenseItems) && Array.isArray(simple.paymentMethods) ? simple : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * 記帳驗證用的簡易選項（P10）：先讀小的 OPTIONS_SIMPLE（一般 JSON），不用每次解整份 OPTIONS_ALL（含 metadata 與圖片）。
+ * @param ssOrSettings  試算表或設定工作表（快取沒命中時才用到）
+ * @param simpleJson    選用：呼叫端已經一次 getAll 讀回的 OPTIONS_SIMPLE 字串（null 表示讀過但沒命中）
+ */
+function readOptions_(ssOrSettings, simpleJson) {
+  const fromCache = parseSimpleOptionsCache_(simpleJson !== undefined ? simpleJson : (function () {
+    try { return scriptCache_().get(CONFIG.CACHE_KEYS.OPTIONS_SIMPLE); } catch (e) { return null; }
+  })());
+  if (fromCache) return fromCache;
   const ss = (ssOrSettings && typeof ssOrSettings.getSheetByName === 'function')
     ? ssOrSettings
     : (ssOrSettings && typeof ssOrSettings.getParent === 'function' ? ssOrSettings.getParent() : null);

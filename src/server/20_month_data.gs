@@ -21,7 +21,12 @@ function saveMonthDataCache_(month, monthData) {
   cachePutLarge_(CONFIG.CACHE_KEYS.MONTH_DATA_PREFIX + month, monthData, CONFIG.CACHE_TTL);
 }
 
-function readMonthSheetDataFromSheet_(sheet, month) {
+/**
+ * 從工作表讀出整月明細。預設會存進快取；options.save === false 時不存
+ * （記帳寫入在鎖內會把明細和冪等結果合在同一次 putAll 存，P10）。
+ */
+function readMonthSheetDataFromSheet_(sheet, month, options) {
+  const save = !(options && options.save === false);
   const maxRows = Math.min(CONFIG.MAX_DATA_ROW, sheet.getMaxRows());
   const lastRow = Math.min(sheet.getLastRow(), maxRows);
   const rowCount = Math.max(0, lastRow - CONFIG.MIN_DATA_ROW + 1);
@@ -35,7 +40,7 @@ function readMonthSheetDataFromSheet_(sheet, month) {
       blankExpenseRows: [CONFIG.MIN_DATA_ROW],
       blankIncomeRows: [CONFIG.MIN_DATA_ROW],
     };
-    if (month) saveMonthDataCache_(month, emptyData);
+    if (month && save) saveMonthDataCache_(month, emptyData);
     return emptyData;
   }
 
@@ -135,7 +140,7 @@ function readMonthSheetDataFromSheet_(sheet, month) {
     blankIncomeRows,
   };
 
-  if (month) {
+  if (month && save) {
     saveMonthDataCache_(month, monthData);
   }
   return monthData;
@@ -157,7 +162,8 @@ function computeDailyExpenses_(expenses) {
   return dailyTotals;
 }
 
-function buildRecentPayload_(month, monthData, expLimit, incLimit) {
+/** @param budget  選用：已經算好的預算狀態（一次執行只算一次，P10）；沒給時在這裡算。 */
+function buildRecentPayload_(month, monthData, expLimit, incLimit, budget) {
   const allExpenses = (monthData && monthData.expenses) || [];
   const allIncomes = (monthData && monthData.incomes) || [];
   const expenses = (expLimit && expLimit > 0) ? allExpenses.slice(0, expLimit) : allExpenses;
@@ -169,6 +175,6 @@ function buildRecentPayload_(month, monthData, expLimit, incLimit) {
     fullExpenses: allExpenses,
     fullIncomes: allIncomes,
     dailyExpenses: (monthData && monthData.dailyExpenses) || {},
-    budget: budgetStatusForMonth_(month, monthData),
+    budget: budget !== undefined ? budget : budgetStatusForMonth_(month, monthData),
   };
 }

@@ -46,17 +46,17 @@ test('預算：記帳後的回應立刻帶著新的今天還能花；不計入�
   const b = createBackend();
   const daily = b.call('saveBudgetSettings', fixed(30000)).status.daily;
   const added = b.call('addExpense', expenseForm({ amount: 120 }));
-  assert.equal(added.recent.budget.todaySpent, 120);
-  assert.equal(added.recent.budget.todayLeft, daily - 120);
-  assert.equal(added.recent.budget.daily, daily, '今天的支出不改變今天的每日額度');
+  assert.equal(added.budget.todaySpent, 120);
+  assert.equal(added.budget.todayLeft, daily - 120);
+  assert.equal(added.budget.daily, daily, '今天的支出不改變今天的每日額度');
 
   const savings = b.call('addExpense', expenseForm({ item: '其他', category: '存款', amount: 500 }));
-  assert.equal(savings.recent.budget.todayLeft, daily - 120);
+  assert.equal(savings.budget.todayLeft, daily - 120);
 
   const updated = b.call('updateExpense', expenseForm({ row: added.row, amount: 300 }));
-  assert.equal(updated.recent.budget.todayLeft, daily - 300);
+  assert.equal(updated.budget.todayLeft, daily - 300);
   const deleted = b.call('deleteExpense', { month: '2026.11', row: added.row });
-  assert.equal(deleted.recent.budget.todayLeft, daily);
+  assert.equal(deleted.budget.todayLeft, daily);
   assert.equal(b.call('getOverviewCharts', '2026.11', false).budget.spent, LIVING);
 });
 
@@ -76,14 +76,14 @@ test('預算：不計入每日額度的項目用預留法（先扣預留、今�
   assert.equal(s.daily, Math.floor(base / 18));
   assert.deepEqual(s.reserves, [{ item: '房租', amount: 12000, spent: 0 }, { item: '娛樂', amount: 2000, spent: 2860 }]);
 
-  const rent = b.call('addExpense', expenseForm({ item: '房租', amount: 12000, payment: '轉帳-測試銀行' })).recent.budget;
+  const rent = b.call('addExpense', expenseForm({ item: '房租', amount: 12000, payment: '轉帳-測試銀行' })).budget;
   assert.equal(rent.spent, LIVING + 12000, '本月已花照樣包含房租');
   assert.equal(rent.daily, s.daily, '今天付房租不影響今天的每日額度');
   assert.equal(rent.todaySpent, 0, '預留範圍內的付款不算進今天已花');
   assert.equal(rent.todayLeft, s.daily);
 
   const row = b.call('getFullRecords', '2026.11', 'expense', false).records.find(r => r.item === '房租').row;
-  const over = b.call('updateExpense', expenseForm({ row, item: '房租', amount: 12500, payment: '轉帳-測試銀行' })).recent.budget;
+  const over = b.call('updateExpense', expenseForm({ row, item: '房租', amount: 12500, payment: '轉帳-測試銀行' })).budget;
   assert.equal(over.todaySpent, 500, '超出預留的 500 算進今天');
   assert.equal(over.todayLeft, s.daily - 500);
   // 應花到的位置：已付的預留（房租 12000 ＋ 娛樂 2000）＋ 其餘 16000 照天數分攤
@@ -114,7 +114,7 @@ test('預算：已超支時每日額度為 0，並回報本月超支金額', () 
   assert.equal(s.daily, 0, '每日額度最低到 0');
   assert.equal(s.shortfall, LIVING - 3000);
   assert.equal(s.todayLeft, 0);
-  assert.equal(b.call('addExpense', expenseForm({ amount: 100 })).recent.budget.todayLeft, -100);
+  assert.equal(b.call('addExpense', expenseForm({ amount: 100 })).budget.todayLeft, -100);
 });
 
 test('預算：扣除預留後不足（還沒超支）時，每日額度為 0 並回報不足金額', () => {
@@ -133,7 +133,7 @@ test('預算：預算為 0 是有效設定，任何支出都是超支', () => {
   assert.equal(s.daily, 0);
   assert.equal(s.overspent, LIVING);
   assert.equal(s.expected, 0);
-  assert.equal(b.call('addExpense', expenseForm({ amount: 50 })).recent.budget.todayLeft, -50);
+  assert.equal(b.call('addExpense', expenseForm({ amount: 50 })).budget.todayLeft, -50);
 });
 
 test('預算：當月還沒有任何紀錄；上個月變成「過去月份」只回報預算與實際', () => {
@@ -199,7 +199,7 @@ test('預算：以當月生活費收入作為預算（可限定收入項目，�
   assert.equal(salary.amount, 0);
   assert.equal(salary.awaitingIncome, true);
 
-  const after = b.call('addIncome', incomeForm({ category: '生活費', amount: 20000, day: 13 })).recent.budget;
+  const after = b.call('addIncome', incomeForm({ category: '生活費', amount: 20000, day: 13 })).budget;
   assert.equal(after.amount, 20000);
   assert.equal(after.awaitingIncome, false);
   assert.equal(after.daily, Math.floor((20000 - LIVING) / 18));
@@ -220,9 +220,9 @@ test('預算：以生活費餘額作為預算（月初餘額＋當月生活費�
   assert.deepEqual(recentBudget(b), s);
   assert.deepEqual(b.rowValues('_預算設定', 2, 'A', 3), ['2026.11', '生活費餘額', '']);
 
-  const withIncome = b.call('addIncome', incomeForm({ item: '家裡', category: '生活費', amount: 2000 })).recent.budget;
+  const withIncome = b.call('addIncome', incomeForm({ item: '家裡', category: '生活費', amount: 2000 })).budget;
   assert.equal(withIncome.amount, 5755 + 5000, '所有生活費收入都會進到餘額，不看收入項目');
-  const spent = b.call('addExpense', expenseForm({ amount: 120 })).recent.budget;
+  const spent = b.call('addExpense', expenseForm({ amount: 120 })).budget;
   assert.equal(spent.remaining, 5000 + 2000 - 120);
   assert.equal(spent.todaySpent, 120);
 
@@ -346,12 +346,12 @@ test('預算：排除項目完全不計入預算（本月已花、每日額度�
   assert.equal(s.daily, Math.floor((30000 - (LIVING - 2860)) / 18));
   assert.equal(s.expected, 13000, '排除項目不影響應花到的位置');
 
-  const big = b.call('addExpense', expenseForm({ item: '娛樂', amount: 8000, note: '演唱會' })).recent.budget;
+  const big = b.call('addExpense', expenseForm({ item: '娛樂', amount: 8000, note: '演唱會' })).budget;
   assert.equal(big.todaySpent, 0, '今天的排除項目不算進今天已花');
   assert.equal(big.todayLeft, s.daily);
   assert.equal(big.spent, s.spent);
   assert.equal(big.excludedSpent, 2860 + 8000);
-  const normal = b.call('addExpense', expenseForm({ amount: 120 })).recent.budget;
+  const normal = b.call('addExpense', expenseForm({ amount: 120 })).budget;
   assert.equal(normal.todayLeft, s.daily - 120, '其他項目照常計算');
 
   // 只排除計入總類裡的支出；存款的「其他」本來就不計入，不會出現在排除金額

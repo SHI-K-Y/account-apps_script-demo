@@ -2,12 +2,17 @@
  * 啟動資料（BOOT_JSON）：doGet 內嵌在頁面裡、前端開機第一段就用它畫首屏。
  * 快取裡存的是精簡格式（P09）：initialRecent 只放整月的 fullExpenses／fullIncomes，前端自己取前 8 筆；
  * 對外的 getInitialData（google.script.run 與 HTTP API）由 expandBootPayload_ 補回 expenses／incomes，回傳格式不變。
+ * 記帳寫入不再更新 BOOT_JSON（P10）：裡面的清單可能比較舊，讀出來時一律用月份明細快取（MONTH_DATA）蓋過，
+ * 明細快取沒有時從工作表重讀。
  */
 function getInitialData_(forceRefresh) {
   const isForce = Boolean(forceRefresh);
 
   if (!isForce) {
-    const parsed = cacheGetLarge_(CONFIG.CACHE_KEYS.BOOT_JSON);
+    // 啟動資料和（通常就是它要的）本月明細一次 getAll 讀回
+    const guessKey = CONFIG.CACHE_KEYS.MONTH_DATA_PREFIX + budgetToday_().month;
+    const got = cacheGetAllMixed_([CONFIG.CACHE_KEYS.BOOT_JSON, guessKey], []).large;
+    const parsed = got[CONFIG.CACHE_KEYS.BOOT_JSON];
     if (parsed) {
       try {
         const now = new Date();
@@ -15,9 +20,17 @@ function getInitialData_(forceRefresh) {
         const todayISO = Utilities.formatDate(now, tz, 'yyyy-MM-dd');
         const currentMonth = Utilities.formatDate(now, tz, 'yyyy.MM');
         if (parsed.currentMonth === currentMonth && parsed.options && parsed.initialRecent) {
-          parsed.todayISO = todayISO;
-          parsed.fromFreshCache = true;
-          return expandBootPayload_(refreshBootBudget_(parsed));
+          const recentMonth = parsed.initialRecent.month;
+          let monthData = !recentMonth ? null
+            : (CONFIG.CACHE_KEYS.MONTH_DATA_PREFIX + recentMonth === guessKey ? got[guessKey] : getCachedMonthData_(recentMonth));
+          if (!monthData && recentMonth) {
+            try { monthData = getMonthData_(null, recentMonth, true); } catch (e) { monthData = null; }
+          }
+          if (monthData) {
+            parsed.todayISO = todayISO;
+            parsed.fromFreshCache = true;
+            return expandBootPayload_(refreshBootBudget_(parsed, monthData));
+          }
         }
       } catch (e) {}
     }
@@ -122,17 +135,16 @@ function readBootForUpdate_() {
   return { boot: null, inCache: false };
 }
 
-/** 記帳之後：把啟動資料的最近紀錄換成最新的月份明細並存回（快取裡的啟動資料因此一直是最新的）。 */
-function syncBootSnapshotWithMonthData_(month, monthData) {
-  try {
-    const current = readBootForUpdate_();
-    const boot = current.boot;
-    if (boot && boot.selectedMonth === month) {
-      boot.initialRecent = buildBootRecent_(month, monthData);
-      boot.cachedAt = Date.now();
-      saveBootSnapshot_(boot, { snapshotOnly: !current.inCache });
-    }
-  } catch (e) {}
+/** 用最新的月份明細蓋過啟動資料裡的最近紀錄（就地修改並回傳 boot；不含預算）。 */
+function overlayBootRecent_(boot, monthData) {
+  const recent = boot && boot.initialRecent;
+  if (!recent || !monthData) return boot;
+  recent.fullExpenses = monthData.expenses || [];
+  recent.fullIncomes = monthData.incomes || [];
+  recent.dailyExpenses = monthData.dailyExpenses || {};
+  delete recent.expenses;
+  delete recent.incomes;
+  return boot;
 }
 
 function getMonthsList_(ss, forceRefresh) {

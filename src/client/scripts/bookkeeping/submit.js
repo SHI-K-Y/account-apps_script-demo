@@ -1,13 +1,84 @@
+/* 寫入回應（P10）：後端預設回傳差量 { op, type, month, row, record, rows, paid, dailyExpenses, budget, counts }，
+ * 這裡合併進該月份現有的整月清單（本機快取的最近紀錄，或畫面上的狀態），組成和舊格式 result.recent 一樣的資料。
+ * 舊的完整格式（result.recent）照樣接受。 */
+function recentMergeBase(month) {
+  const cached = LocalCache.getRecent(month);
+  if (cached && Array.isArray(cached.fullExpenses) && Array.isArray(cached.fullIncomes)) return cached;
+  const rs = state.recentState;
+  if (month === getMonth() && rs && rs.expense && rs.income &&
+      Array.isArray(rs.expense.fullRecords) && Array.isArray(rs.income.fullRecords)) {
+    return {
+      month: month,
+      fullExpenses: rs.expense.fullRecords.filter(r => !r.isPending),
+      fullIncomes: rs.income.fullRecords.filter(r => !r.isPending),
+      budget: state.budget || null,
+    };
+  }
+  return null;
+}
+
+function applyMutationDelta(base, result) {
+  const isIncome = result.type === 'income';
+  let list = (isIncome ? base.fullIncomes : base.fullExpenses).slice();
+  const row = Number(result.row);
+  if (result.op === 'add' || result.op === 'update') {
+    if (!result.record) return null;
+    list = list.filter(r => Number(r.row) !== row);
+    list.push(result.record);
+    list.sort((a, b) => Number(b.row) - Number(a.row));
+  } else if (result.op === 'delete') {
+    // 後端刪除一列時下方的紀錄會往上遞補（src/server/21_records.gs 的 removeLedgerRow_）
+    list = list
+      .filter(r => Number(r.row) !== row)
+      .map(r => (Number(r.row) > row ? Object.assign({}, r, { row: Number(r.row) - 1 }) : r));
+  } else if (result.op === 'paid') {
+    const rows = new Set((Array.isArray(result.rows) ? result.rows : [result.row]).map(Number));
+    list = list.map(r => (rows.has(Number(r.row)) ? Object.assign({}, r, { paid: result.paid }) : r));
+  } else {
+    return null;
+  }
+  const fullExpenses = isIncome ? base.fullExpenses.slice() : list;
+  const fullIncomes = isIncome ? list : base.fullIncomes.slice();
+  return {
+    month: result.month,
+    expenses: fullExpenses.slice(0, 8),
+    incomes: fullIncomes.slice(0, 8),
+    fullExpenses: fullExpenses,
+    fullIncomes: fullIncomes,
+    dailyExpenses: result.dailyExpenses || base.dailyExpenses || {},
+    budget: Object.prototype.hasOwnProperty.call(result, 'budget') ? result.budget : (base.budget || null),
+  };
+}
+
+/**
+ * 寫入成功的回應 → { recent, stale }。recent 是該月份最新的完整資料（沒辦法合併時為 null）；
+ * stale 表示合併後的筆數和後端不同（本機清單本來就比較舊），呼叫端要重新讀取。
+ */
+function resolveMutationRecent(result, month) {
+  if (!result) return { recent: null, stale: false };
+  if (result.recent) return { recent: result.recent, stale: false };
+  if (!result.op) return { recent: null, stale: false };
+  const base = recentMergeBase(month);
+  const recent = base ? applyMutationDelta(base, Object.assign({ month: month }, result)) : null;
+  const counts = result.counts;
+  const stale = Boolean(recent && counts &&
+    (recent.fullExpenses.length !== counts.expenses || recent.fullIncomes.length !== counts.incomes));
+  return { recent: recent, stale: stale };
+}
+
 function handleMutationRecentUpdate(result, fallbackMonth) {
   const targetMonth = (result && result.month) || fallbackMonth || getMonth();
   LocalCache.invalidateOverview(targetMonth);
   if (typeof window.__invalidateOverviewFlag === 'function') {
     window.__invalidateOverviewFlag();
   }
-  if (result && result.recent) {
-    LocalCache.saveRecent(targetMonth, result.recent);
-    if (targetMonth === getMonth() && (!result.recent.month || result.recent.month === targetMonth)) {
-      renderRecent(result.recent);
+  const resolved = resolveMutationRecent(result, targetMonth);
+  const recent = resolved.recent;
+  if (recent) {
+    LocalCache.saveRecent(targetMonth, recent);
+    if (targetMonth === getMonth() && (!recent.month || recent.month === targetMonth)) {
+      renderRecent(recent);
+      if (resolved.stale) loadRecent(targetMonth, true);
     }
   } else {
     if (targetMonth === getMonth()) {

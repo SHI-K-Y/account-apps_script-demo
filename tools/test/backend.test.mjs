@@ -21,7 +21,9 @@ test('新增支出：寫入第一個空白列，文字不會被當成公式', ()
   assert.deepEqual(b.rowValues('2026.11', 13, 'B', 7), [13, '午餐', '生活費', '信用卡-測試一卡', 'X', 1234, '=HYPERLINK("http://x")']);
   assert.equal(b.sheet('2026.11').getRange('H13').getFormula(), '', '備註必須是純文字而不是公式');
   assert.equal(res.record.amount, 1234);
-  assert.equal(res.recent.expenses[0].row, 13);
+  assert.equal(res.recent, undefined, '預設是差量格式（P10）');
+  assert.equal(res.op, 'add');
+  assert.equal(res.dailyExpenses[13].total, 1234);
 
   const second = b.call('addExpense', expenseForm({ amount: 50 }));
   assert.equal(second.row, 14, '連續新增會往下一列寫');

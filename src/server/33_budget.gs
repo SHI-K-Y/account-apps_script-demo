@@ -332,16 +332,19 @@ function budgetStatusForMonth_(month, monthData) {
 }
 
 /**
- * 啟動快取裡的預算狀態可能是前幾天算的：用快取裡的完整支出重新計算。
- * 沒有完整資料可用（精簡過的快照）而且不是今天算的，就拿掉，讓前端等背景同步。
+ * 啟動快取裡的預算狀態可能是前幾天算的、清單也可能比較舊（記帳寫入不更新 BOOT_JSON，P10）：
+ * 有月份明細時用它蓋過清單並重新計算；沒有完整資料可用（精簡過的快照）而且不是今天算的，就拿掉，讓前端等背景同步。
+ * @param monthData  選用：呼叫端已經讀好的月份明細
  */
-function refreshBootBudget_(boot) {
+function refreshBootBudget_(boot, monthData) {
   const recent = boot && boot.initialRecent;
   if (!recent || !recent.month) return boot;
-  const monthData = getCachedMonthData_(recent.month) ||
+  const md = monthData || getCachedMonthData_(recent.month);
+  if (md) overlayBootRecent_(boot, md);
+  const lists = md ||
     (Array.isArray(recent.fullExpenses) ? { expenses: recent.fullExpenses, incomes: recent.fullIncomes || [] } : null);
-  if (monthData) {
-    recent.budget = budgetStatusForMonth_(recent.month, monthData);
+  if (lists) {
+    recent.budget = budgetStatusForMonth_(recent.month, lists);
   } else if (recent.budget && recent.budget.todayISO !== budgetToday_().iso) {
     recent.budget = null;
   }

@@ -21,6 +21,11 @@ let apiRoutesMemo_ = null;
  *   handler  實際執行的函式
  *   form     true 表示第一個參數必須是物件（表單），閘道會先擋掉格式不對的請求
  *   write    true 表示會修改試算表（外部 HTTP API 可用來區分唯讀／可寫入的權杖）
+ *
+ * 記帳寫入（addExpense…batchMarkCreditCardPaid、addRecords，P10）：
+ *   - 表單可帶 opId（8–80 個英數字、-、_）：同一個 opId 在 6 小時內重送只會寫入一次，回傳上次的結果（replayed: true）。
+ *   - 回應預設是差量格式 { ok, op, type, month, row, record, dailyExpenses, budget, counts }；
+ *     表單帶 full: true（或經由 HTTP API 而且沒帶 full: false）時是舊的完整格式 { ok, type, month, row, record, recent }。
  */
 function apiRoutes_() {
   if (apiRoutesMemo_) return apiRoutesMemo_;
@@ -35,6 +40,7 @@ function apiRoutes_() {
     updateIncome:           { handler: updateIncome_, form: true, write: true },
     deleteExpense:          { handler: deleteExpense_, form: true, write: true },
     deleteIncome:           { handler: deleteIncome_, form: true, write: true },
+    addRecords:             { handler: addRecords_, write: true },
     createNewMonthSheet:    { handler: createNewMonthSheet_, write: true },
     searchRecords:          { handler: searchRecords_ },
 

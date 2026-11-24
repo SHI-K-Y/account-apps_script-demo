@@ -109,7 +109,7 @@ test('Demo：一打開就有預算，記帳頁看得到今天還能花，過去�
   assert.equal(typeof budget.todayLeft, 'number');
 
   const added = b.call('addExpense', expense(b, { amount: '250' }));
-  assert.equal(added.recent.budget.todayLeft, budget.todayLeft - 250, '記一筆後立刻扣掉');
+  assert.equal(added.budget.todayLeft, budget.todayLeft - 250, '記一筆後立刻扣掉');
 
   const charts = b.call('getOverviewCharts', '2026.11', false);
   assert.equal(charts.budget.amount, 31000);

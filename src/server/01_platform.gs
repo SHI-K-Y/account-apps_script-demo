@@ -7,6 +7,7 @@
  * 這裡的暫存變數只在單次執行（一次請求）內有效；Apps Script 每次執行都會重新初始化全域變數。
  */
 let spreadsheetMemo_ = null;
+let spreadsheetIdMemo_ = null;
 let scriptCacheMemo_ = null;
 let scriptPropsMemo_ = null;
 let documentLockDepth_ = 0;
@@ -22,11 +23,21 @@ function scriptProps_() {
   return scriptPropsMemo_ || (scriptPropsMemo_ = PropertiesService.getScriptProperties());
 }
 
-/** 取得記帳用的試算表；同一次執行內只開啟一次。 */
+/**
+ * 取得記帳用的試算表；同一次執行內只開啟一次。
+ * 試算表 ID 先找 primeSpreadsheetId_ 給的（寫入時和其他快取一次 getAll 讀回）→ CacheService → 指令碼屬性（P10）。
+ */
 function getSpreadsheet_() {
   if (spreadsheetMemo_) return spreadsheetMemo_;
 
-  const savedId = scriptProps_().getProperty(CONFIG.PROP_KEYS.SPREADSHEET_ID);
+  let savedId = spreadsheetIdMemo_;
+  if (!savedId) {
+    try { savedId = scriptCache_().get(CONFIG.CACHE_KEYS.SPREADSHEET_ID); } catch (e) { savedId = null; }
+  }
+  if (!savedId) {
+    savedId = scriptProps_().getProperty(CONFIG.PROP_KEYS.SPREADSHEET_ID);
+    if (savedId) rememberSpreadsheetId_(savedId);
+  }
   if (savedId) {
     spreadsheetMemo_ = SpreadsheetApp.openById(savedId);
     return spreadsheetMemo_;
@@ -38,6 +49,20 @@ function getSpreadsheet_() {
   }
   spreadsheetMemo_ = active;
   return active;
+}
+
+/** 呼叫端已經從快取讀到試算表 ID 時先告訴這裡，getSpreadsheet_ 就不用再讀一次。 */
+function primeSpreadsheetId_(id) {
+  if (typeof id === 'string' && id) spreadsheetIdMemo_ = id;
+}
+
+/** 把試算表 ID 放進快取（setup() 與快取沒命中時）。 */
+function rememberSpreadsheetId_(id) {
+  spreadsheetIdMemo_ = id || null;
+  try {
+    if (id) scriptCache_().put(CONFIG.CACHE_KEYS.SPREADSHEET_ID, id, CONFIG.CACHE_TTL);
+    else scriptCache_().remove(CONFIG.CACHE_KEYS.SPREADSHEET_ID);
+  } catch (e) {}
 }
 
 function getActiveSpreadsheet_() {

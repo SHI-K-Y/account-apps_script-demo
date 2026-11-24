@@ -818,15 +818,19 @@ function describeCreditCardRecord(month, rec) {
 }
 
 // 寫入成功後，用後端回傳的該月最新資料更新畫面與快取
+// 後端回傳差量（P10）時合併進該月份現有的清單；沒有可合併的清單時，畫面上已經先改好的狀態就是結果
 function applyCreditCardMutationResult(month, res) {
-  if (res && res.recent) {
-    LocalCache.saveRecent(month, res.recent);
-    if (Array.isArray(res.recent.fullExpenses)) {
-      ccState.recordsByMonth[month] = res.recent.fullExpenses;
+  var resolved = resolveMutationRecent(res, month);
+  var recent = resolved.recent;
+  if (recent && !resolved.stale) {
+    LocalCache.saveRecent(month, recent);
+    if (Array.isArray(recent.fullExpenses)) {
+      ccState.recordsByMonth[month] = recent.fullExpenses;
     }
-    if (month === getMonth()) {
-      renderRecent(res.recent);
-    }
+    if (month === getMonth()) renderRecent(recent);
+  } else if (recent && month === getMonth()) {
+    // 本機清單比後端舊：不拿它蓋掉信用卡頁的資料，重新讀取這個月份
+    loadRecent(month, true);
   }
   LocalCache.invalidateOverview(month);
 }

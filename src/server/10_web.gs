@@ -35,6 +35,10 @@ function doGet(e) {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   marks.template = Date.now();
 
+  // 指令碼屬性的備援快照（快取全空時用）不在記帳寫入時更新（P10），改在這裡低頻更新
+  if (snap.snapshotDue) refreshBootSnapshotFromDoGet_(snap);
+  marks.snapshot = Date.now();
+
   if (config.iconUrl) {
     try {
       output.setFaviconUrl(config.iconUrl);
@@ -51,6 +55,7 @@ function doGet(e) {
       authMs: marks.auth - marks.cache,
       bootMs: marks.boot - marks.auth,
       templateMs: marks.template - marks.boot,
+      snapshotMs: marks.snapshot - marks.template,
       bootHit: Boolean(snap.boot),
       monthHit: Boolean(snap.monthData),
       configHit: snap.configHit,
@@ -68,7 +73,7 @@ function readDoGetSnapshot_() {
   const K = CONFIG.CACHE_KEYS;
   const monthKey = K.MONTH_DATA_PREFIX + today.month;
   const openingKey = K.BUDGET_OPENING_PREFIX + today.month;
-  const got = cacheGetAllMixed_([K.BOOT_JSON, monthKey], [K.DOGET_CONFIG, K.BUDGET_CONFIG, openingKey]);
+  const got = cacheGetAllMixed_([K.BOOT_JSON, monthKey], [K.DOGET_CONFIG, K.BUDGET_CONFIG, openingKey, K.BOOT_SNAPSHOT_STAMP]);
 
   let config = null;
   try { config = got.plain[K.DOGET_CONFIG] ? JSON.parse(got.plain[K.DOGET_CONFIG]) : null; } catch (e) { config = null; }
@@ -83,9 +88,23 @@ function readDoGetSnapshot_() {
     monthData: got.large[monthKey],
     budgetConfigJson: got.plain[K.BUDGET_CONFIG],
     openingJson: got.plain[openingKey],
+    snapshotStamp: Number(got.plain[K.BOOT_SNAPSHOT_STAMP]) || 0,
+    snapshotDue: false,
+    bootForSnapshot: null,
     budgetPending: false,
     bootBytes: 0,
   };
+}
+
+/**
+ * 把這次 doGet 組好的最新啟動資料寫進指令碼屬性的備援快照（P10）：只有快取命中、清單已用最新明細蓋過時才寫，
+ * 而且距離上次超過 CONFIG.BOOT_SNAPSHOT_INTERVAL_MS（上次的時間記在快取裡，和其他快取同一次 getAll 讀回）。
+ */
+function refreshBootSnapshotFromDoGet_(snap) {
+  try {
+    saveBootSnapshot_(snap.bootForSnapshot, { snapshotOnly: true });
+    scriptCache_().put(CONFIG.CACHE_KEYS.BOOT_SNAPSHOT_STAMP, String(Date.now()), CONFIG.CACHE_TTL);
+  } catch (e) {}
 }
 
 /** doGet 用的設定：允許名單、App 圖示網址、網頁網址、偵錯旗標。setup()、setupAppIcon() 與快取沒命中時更新。 */
@@ -113,6 +132,8 @@ function refreshDoGetConfig_() {
  * 組出內嵌在頁面裡的啟動資料（精簡格式，見 11_bootstrap.gs）。
  *   fromFreshCache  快取命中、而且是這個月的資料：前端不用再背景同步
  *   budgetPending   預算算不出來（預算快取沒命中）：沒有 budget，前端要背景同步
+ * 記帳寫入不更新 BOOT_JSON（P10）：清單一律用本月明細快取蓋過；蓋不了（明細快取沒命中、或啟動資料不是本月）時
+ * 清單可能比較舊，標成不是最新的，讓前端背景同步。
  */
 function buildDoGetBootJson_(snap) {
   let boot = snap.boot;
@@ -133,13 +154,8 @@ function buildDoGetBootJson_(snap) {
     const recent = boot.initialRecent;
     if (recent && recent.month) {
       const monthData = recent.month === snap.today.month && snap.monthData ? snap.monthData : null;
-      if (monthData) {
-        recent.fullExpenses = monthData.expenses || [];
-        recent.fullIncomes = monthData.incomes || [];
-        recent.dailyExpenses = monthData.dailyExpenses || {};
-        delete recent.expenses;
-        delete recent.incomes;
-      }
+      if (monthData) overlayBootRecent_(boot, monthData);
+      else fresh = false;
       const lists = Array.isArray(recent.fullExpenses)
         ? { expenses: recent.fullExpenses, incomes: recent.fullIncomes || [] }
         : null;
@@ -160,6 +176,10 @@ function buildDoGetBootJson_(snap) {
   boot.fromFreshCache = fresh;
   if (snap.budgetPending) boot.budgetPending = true;
   else delete boot.budgetPending;
+  if (fresh && snap.boot && Date.now() - snap.snapshotStamp >= CONFIG.BOOT_SNAPSHOT_INTERVAL_MS) {
+    snap.snapshotDue = true;
+    snap.bootForSnapshot = boot;
+  }
   const json = sanitizeJsonForScriptTag_(JSON.stringify(boot));
   snap.bootBytes = json.length;
   return json;
@@ -211,7 +231,13 @@ function handleHttpApiRequest_(e) {
   const resolved = resolveApiRequest_({ action: request.action, args: request.args });
   if (resolved.route.write && scope !== 'write') throw new Error('這個權杖只能讀取資料。');
 
-  return { ok: true, data: dispatchApi_({ action: request.action, args: request.args }) };
+  // 記帳寫入的回應：HTTP API 預設維持舊的完整格式（iOS 捷徑等既有呼叫端不用改，見 wantsFullResponse_）
+  httpApiFullResponse_ = true;
+  try {
+    return { ok: true, data: dispatchApi_({ action: request.action, args: request.args }) };
+  } finally {
+    httpApiFullResponse_ = false;
+  }
 }
 
 function setupAppIcon() {
@@ -314,6 +340,7 @@ function setup() {
   }
 
   scriptProps_().setProperty(CONFIG.PROP_KEYS.SPREADSHEET_ID, ss.getId());
+  rememberSpreadsheetId_(ss.getId());
   refreshDoGetConfig_();
 
   try {

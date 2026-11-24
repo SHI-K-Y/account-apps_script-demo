@@ -14,6 +14,8 @@
  * 這一層統一處理：
  *   - 離線時，寫入類操作立刻回報失敗（不會讓畫面卡在等待）。
  *   - 讀取類操作遇到暫時性錯誤（網路不穩、Google 伺服器忙碌）自動重試一次。
+ *   - 記帳寫入（OP_ACTIONS）每次都帶一個 opId（P10）：後端用它去重，同一個 opId 只會寫入一次、重送時回傳上次的結果，
+ *     所以這些寫入遇到暫時性錯誤也可以安全地自動重試一次。其他寫入照舊不重試。
  *   - 讀取類操作超過時限沒有回應就回報逾時（寫入類不設時限，避免「其實已寫入卻顯示失敗」）。
  *   - 把 Apps Script 的英文／技術性錯誤訊息換成看得懂的說法；原始訊息保留在 error.rawMessage。
  * ============================================================================= */
@@ -23,6 +25,11 @@ const Api = (function() {
     'getInitialData', 'getRecentRecords', 'getFullRecords', 'searchRecords', 'getCreditCardRecords',
     'getAssetOverview', 'getOverviewCharts', 'getSettingsOptions',
     'getFxLedgers', 'getFxLedgerData', 'getFxRates', 'getBudgetSettings'
+  ]);
+  // 後端支援 opId 去重的寫入（src/server/21_records.gs）：第一個參數是表單（addRecords 是表單陣列）
+  const OP_ACTIONS = new Set([
+    'addExpense', 'addIncome', 'updateExpense', 'updateIncome', 'deleteExpense', 'deleteIncome',
+    'markCreditCardPaid', 'batchMarkCreditCardPaid', 'addRecords'
   ]);
   const READ_TIMEOUT_MS = 45000;
   const RETRY_DELAY_MS = 700;
@@ -66,8 +73,43 @@ const Api = (function() {
     return out;
   }
 
+  function newOpId() {
+    try {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    } catch (e) {}
+    let out = '';
+    try {
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      for (let i = 0; i < bytes.length; i++) out += (bytes[i] + 256).toString(16).slice(1);
+      return out;
+    } catch (e) {}
+    for (let i = 0; i < 4; i++) out += Math.floor(Math.random() * 0x100000000).toString(16).padStart(8, '0');
+    return out;
+  }
+
+  function isPlainObject(v) {
+    return v !== null && typeof v === 'object' && !Array.isArray(v);
+  }
+
+  /** 第一次送出前替表單加上 opId（複製一份，不改呼叫端的物件）；重試時沿用同一份參數。回傳是否帶了 opId。 */
+  function attachOpIds(action, args) {
+    if (!OP_ACTIONS.has(action) || !args.length) return false;
+    const withId = function(form) {
+      if (!isPlainObject(form)) return form;
+      return form.opId ? form : Object.assign({}, form, { opId: newOpId() });
+    };
+    if (Array.isArray(args[0])) {
+      args[0] = args[0].map(withId);
+      return args[0].length > 0 && args[0].every(function(f) { return isPlainObject(f) && f.opId; });
+    }
+    args[0] = withId(args[0]);
+    return Boolean(isPlainObject(args[0]) && args[0].opId);
+  }
+
   function send(action, args, onOk, onErr, attempt) {
     const isRead = READ_ACTIONS.has(action);
+    const idempotent = !isRead && !attempt ? attachOpIds(action, args) : (!isRead && OP_ACTIONS.has(action));
     const fail = function(err) {
       if (typeof onErr === 'function') onErr(err);
       else console.error('[Api] ' + action + ' 失敗：', err);
@@ -121,7 +163,7 @@ const Api = (function() {
         .withFailureHandler(function(err) {
           if (!settle()) return;
           const error = toError(err, isRead);
-          if (isRead && error.transient && !attempt) {
+          if ((isRead || idempotent) && error.transient && !attempt) {
             setTimeout(function() { send(action, args, onOk, onErr, 1); }, RETRY_DELAY_MS);
             return;
           }
@@ -171,6 +213,7 @@ const Api = (function() {
     get server() { return makeRunner({}); },
     pending: function() { return pending; },
     pendingWrites: function() { return pendingWrites; },
-    isReadAction: function(action) { return READ_ACTIONS.has(action); }
+    isReadAction: function(action) { return READ_ACTIONS.has(action); },
+    newOpId: newOpId
   };
 })();
