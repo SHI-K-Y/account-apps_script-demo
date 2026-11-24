@@ -3,19 +3,37 @@ const CHARTS_UNNAMED_ITEM_ = '未填項目';
 const CHARTS_TREND_MONTHS_ = 6;
 const CACHE_VALUE_MAX_BYTES_ = 100000;
 
+/**
+ * 總覽圖表。先查快取（P11）：圖表、簡易選項、預算設定、月初餘額、這個月的明細一次 getAll 讀回，
+ * 命中時分類用 OPTIONS_SIMPLE（不解整份 OPTIONS_ALL）、預算用同一次讀到的明細當場算，不開試算表。
+ */
 function getOverviewCharts_(month, forceRefresh) {
   validateMonthFormat_(month);
   const isForce = Boolean(forceRefresh);
   const cache = scriptCache_();
-  const cacheKey = CONFIG.CACHE_KEYS.CHARTS_PREFIX + month;
+  const K = CONFIG.CACHE_KEYS;
+  const cacheKey = K.CHARTS_PREFIX + month;
+  const monthKey = K.MONTH_DATA_PREFIX + month;
+  const openingKey = K.BUDGET_OPENING_PREFIX + month;
 
+  // 預算要用的快取字串；undefined 表示沒有先讀（強制重建），由 budgetStatusForMonth_ 自己讀
+  let prefetched = { monthData: null, simpleJson: undefined, configJson: undefined, openingJson: undefined };
   if (!isForce) {
-    const cached = cache.get(cacheKey);
+    const got = cacheGetAllMixed_([monthKey], [cacheKey, K.OPTIONS_SIMPLE, K.BUDGET_CONFIG, openingKey]);
+    prefetched = {
+      monthData: got.large[monthKey],
+      simpleJson: got.plain[K.OPTIONS_SIMPLE],
+      configJson: got.plain[K.BUDGET_CONFIG],
+      openingJson: got.plain[openingKey],
+    };
+    const cached = got.plain[cacheKey];
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        parsed.categories = getChartExpenseCategories_(null);
-        parsed.budget = chartsBudgetStatus_(null, month);
+        // 簡易選項不在快取時，沿用圖表快取裡存的分類（產生圖表當時的設定），不為了它解 OPTIONS_ALL 或開試算表
+        const simple = parseSimpleOptionsCache_(prefetched.simpleJson);
+        if (simple) parsed.categories = chartCategoriesFrom_(simple);
+        parsed.budget = chartsBudgetStatus_(month, prefetched);
         return parsed;
       } catch (e) {}
     }
@@ -50,7 +68,9 @@ function getOverviewCharts_(month, forceRefresh) {
 
   trendMonths.forEach(function (m) {
     if (m === month) {
-      statsByMonth[m] = buildChartMonthStats_(m, getMonthData_(ss, m, isForce));
+      // 這個月的明細：沿用 getAll 已經讀到的那份，預算也用同一份算
+      if (!prefetched.monthData) prefetched.monthData = getMonthData_(ss, m, isForce);
+      statsByMonth[m] = buildChartMonthStats_(m, prefetched.monthData);
     } else if (m === prevMonth) {
       statsFromDetail(m);
     } else {
@@ -73,7 +93,7 @@ function getOverviewCharts_(month, forceRefresh) {
   const result = {
     month: month,
     generatedAt: Date.now(),
-    categories: getChartExpenseCategories_(ss),
+    categories: getChartExpenseCategories_(ss, prefetched.simpleJson),
     current: statsByMonth[month],
     previous: statsByMonth[prevMonth] || null,
     trend: trendMonths
@@ -96,13 +116,23 @@ function getOverviewCharts_(month, forceRefresh) {
   } catch (e) {}
 
   // 預算狀態不放進圖表快取：每次當場算，改預算或跨日都不必清圖表快取。
-  result.budget = chartsBudgetStatus_(ss, month);
+  result.budget = chartsBudgetStatus_(month, prefetched);
   return result;
 }
 
-function chartsBudgetStatus_(ss, month) {
+/**
+ * 圖表回應裡的預算狀態：用這次執行已經讀到的明細與快取字串算；缺的才各自去讀（可能開試算表）。
+ * @param prefetched  { monthData, configJson, openingJson }（getOverviewCharts_ 一次 getAll 讀回的）
+ */
+function chartsBudgetStatus_(month, prefetched) {
   try {
-    return budgetStatusForMonth_(month, getMonthData_(ss, month, false));
+    const p = prefetched || {};
+    const monthData = p.monthData || getMonthData_(null, month, false);
+    if (typeof p.configJson === 'string') {
+      const fromCache = budgetStatusFromCache_(month, monthData, p.configJson, p.openingJson, month);
+      if (fromCache) return fromCache.status;
+    }
+    return budgetStatusForMonth_(month, monthData);
   } catch (e) {
     return null;
   }
@@ -206,20 +236,24 @@ function chartMonthStatsFromSummary_(month, monthSummary) {
   };
 }
 
-function getChartExpenseCategories_(ss) {
+/** @param simpleJson  選用：已經讀回的 OPTIONS_SIMPLE 字串（見 readOptions_）。 */
+function getChartExpenseCategories_(ss, simpleJson) {
   try {
-    const options = readOptions_(ss);
-    const seen = new Set();
-    return ((options && options.expenseCategories) || [])
-      .map(function (c) { return String(c == null ? '' : c).trim(); })
-      .filter(function (c) {
-        if (!c || seen.has(c)) return false;
-        seen.add(c);
-        return true;
-      });
+    return chartCategoriesFrom_(readOptions_(ss, simpleJson));
   } catch (e) {
     return [];
   }
+}
+
+function chartCategoriesFrom_(options) {
+  const seen = new Set();
+  return ((options && options.expenseCategories) || [])
+    .map(function (c) { return String(c == null ? '' : c).trim(); })
+    .filter(function (c) {
+      if (!c || seen.has(c)) return false;
+      seen.add(c);
+      return true;
+    });
 }
 
 function chartAmount_(value) {

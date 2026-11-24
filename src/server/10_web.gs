@@ -11,7 +11,8 @@ const INCLUDABLE_FILES_ = Object.freeze(['style', 'app', 'assets']);
 /**
  * 回傳記帳網頁（P09）：所有需要的快取（啟動資料、本月明細、預算設定、月初餘額、doGet 設定）用一次 getAll 讀齊，
  * 絕不開試算表——預算需要的快取沒命中時，啟動資料不帶 budget、標示 budgetPending，交給前端的背景同步補上。
- * 偵錯：網址加 ?timing=1，或指令碼屬性 DEBUG_DOGET_TIMING=1（執行 setup() 後生效），各階段耗時會印到「執行項目」的紀錄。
+ * 偵錯：網址加 ?timing=1，或指令碼屬性 DEBUG_DOGET_TIMING=1（執行 setup() 後生效），各階段耗時會印到「執行項目」的紀錄；
+ * 這個頁面之後的每個 API 呼叫也會印 [api-timing]（見 05_api.gs）。
  */
 function doGet(e) {
   const marks = { start: Date.now() };
@@ -25,6 +26,7 @@ function doGet(e) {
   marks.auth = Date.now();
 
   const template = HtmlService.createTemplateFromFile('Index');
+  snap.debugTiming = timing;
   template.initialDataJson = buildDoGetBootJson_(snap);
   template.execUrl = config.execUrl || '#';
   marks.boot = Date.now();
@@ -120,10 +122,11 @@ function readDoGetConfigFromProps_() {
   return config;
 }
 
-function refreshDoGetConfig_() {
+/** @param ttl  選用：快取存活秒數（預熱觸發器用比較長的 CONFIG.WARM_DOGET_CONFIG_TTL，撐到下一次預熱） */
+function refreshDoGetConfig_(ttl) {
   const config = readDoGetConfigFromProps_();
   try {
-    scriptCache_().put(CONFIG.CACHE_KEYS.DOGET_CONFIG, JSON.stringify(config), CONFIG.DOGET_CONFIG_TTL);
+    scriptCache_().put(CONFIG.CACHE_KEYS.DOGET_CONFIG, JSON.stringify(config), ttl || CONFIG.DOGET_CONFIG_TTL);
   } catch (e) {}
   return config;
 }
@@ -180,7 +183,8 @@ function buildDoGetBootJson_(snap) {
     snap.snapshotDue = true;
     snap.bootForSnapshot = boot;
   }
-  const json = sanitizeJsonForScriptTag_(JSON.stringify(boot));
+  // 開了計時：讓前端之後的 API 呼叫都帶 timing（只放在這次的頁面裡，不寫進快照）
+  const json = sanitizeJsonForScriptTag_(JSON.stringify(snap.debugTiming ? Object.assign({}, boot, { debugTiming: true }) : boot));
   snap.bootBytes = json.length;
   return json;
 }
@@ -339,18 +343,44 @@ function setup() {
     throw new Error('找不到像 2026.10 這種格式的月份工作表。');
   }
 
-  scriptProps_().setProperty(CONFIG.PROP_KEYS.SPREADSHEET_ID, ss.getId());
+  const props = scriptProps_();
+  props.setProperty(CONFIG.PROP_KEYS.SPREADSHEET_ID, ss.getId());
   rememberSpreadsheetId_(ss.getId());
   refreshDoGetConfig_();
+  // P09 之後已經沒有人讀的選項快照：留著只是佔指令碼屬性的總量
+  try { props.deleteProperty(CONFIG.PROP_KEYS.OPTIONS_SNAPSHOT); } catch (e) {}
 
+  const notes = [];
+  // 全站固定用台北時間（P11）：試算表時區不同時，日期儲存格可能差一天，提醒一下
   try {
-    getInitialData_(true);
+    const sheetTz = ss.getSpreadsheetTimeZone();
+    if (sheetTz && sheetTz !== DEFAULT_TIME_ZONE_) {
+      notes.push('試算表時區是 ' + sheetTz + '，記帳簿固定使用 ' + DEFAULT_TIME_ZONE_ + '；請到「檔案 → 設定」把時區改成 (GMT+08:00) 台北。');
+    }
   } catch (e) {}
 
-  return {
+  // 預熱觸發器（P11）：先刪同名舊觸發器再建立，接著馬上預熱一次
+  let warmTriggerId = '';
+  try {
+    warmTriggerId = installWarmCachesTrigger_();
+  } catch (e) {
+    notes.push('無法安裝快取預熱觸發器：' + (e && e.message ? e.message : e));
+  }
+  let warm = null;
+  try {
+    warm = runWarmCaches_();
+  } catch (e) {
+    notes.push('快取預熱失敗：' + (e && e.message ? e.message : e));
+  }
+
+  const result = {
     ok: true,
     spreadsheetName: ss.getName(),
     months,
-    message: `設定完成，目前連結的試算表：${ss.getName()}`,
+    warmTriggerId: warmTriggerId,
+    warmMs: warm ? warm.totalMs : null,
+    message: `設定完成，目前連結的試算表：${ss.getName()}` + (notes.length ? '\n' + notes.join('\n') : ''),
   };
+  if (notes.length) console.warn('[setup] ' + notes.join(' / '));
+  return result;
 }

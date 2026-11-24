@@ -34,20 +34,130 @@ function getDefaultSettingsMetadata_() {
   };
 }
 
+/* ------------------------- 舊版試算表儲存格的一次性遷移（P11） -------------------------
+ * 很舊的版本把 metadata 存在「資料選單設定區」的 O1:Q1。清掉之後在指令碼屬性寫 LEGACY_META_CLEANED=1，
+ * 之後不再讀試算表（以前每次讀 metadata 都要開試算表看一次這三格）。
+ */
+let legacyMetaCleanedMemo_ = false;
+
+function isLegacyMetaCleaned_() {
+  if (legacyMetaCleanedMemo_) return true;
+  try {
+    legacyMetaCleanedMemo_ = scriptProps_().getProperty(CONFIG.PROP_KEYS.LEGACY_META_CLEANED) === '1';
+  } catch (e) {}
+  return legacyMetaCleanedMemo_;
+}
+
+function markLegacyMetaCleaned_() {
+  scriptProps_().setProperty(CONFIG.PROP_KEYS.LEGACY_META_CLEANED, '1');
+  legacyMetaCleanedMemo_ = true;
+}
+
+/** 清掉 O1:Q1 的舊 metadata（只做一次）。呼叫前要確定裡面的資料已經存進指令碼屬性。 */
 function cleanLegacySheetMetadataCells_(ss) {
+  if (isLegacyMetaCleaned_()) return;
   try {
     const targetSs = ss || getSpreadsheet_();
     const sheet = targetSs.getSheetByName(CONFIG.SETTINGS_SHEET);
-    if (!sheet || sheet.getMaxColumns() < 15) return;
-    const vals = sheet.getRange('O1:Q1').getDisplayValues()[0];
-    const hasLegacyJson = vals.some(v => {
-      const s = String(v || '').trim();
-      return s.startsWith('{') || s.includes('base64') || s.length > 100;
-    });
-    if (hasLegacyJson) {
-      sheet.getRange('O1:Q1').clearContent();
+    if (!sheet) return; // 找不到工作表不算完成，下次再試
+    if (sheet.getMaxColumns() >= 15) {
+      const vals = sheet.getRange('O1:Q1').getDisplayValues()[0];
+      const hasLegacyJson = vals.some(v => {
+        const s = String(v || '').trim();
+        return s.startsWith('{') || s.includes('base64') || s.length > 100;
+      });
+      if (hasLegacyJson) {
+        sheet.getRange('O1:Q1').clearContent();
+      }
+    }
+    markLegacyMetaCleaned_();
+  } catch (e) {}
+}
+
+/** 從 O1:Q1 讀舊版 metadata（還沒遷移、指令碼屬性裡也沒有 metadata 時才會用到）。 */
+function readLegacySheetMetadata_(ss) {
+  const targetSs = ss || getSpreadsheet_();
+  const sheet = targetSs.getSheetByName(CONFIG.SETTINGS_SHEET);
+  if (!sheet || sheet.getMaxColumns() < 16) return null;
+  const cellVal = String(sheet.getRange('P1').getDisplayValue() || '').trim();
+  const meta = cellVal && cellVal.startsWith('{') ? JSON.parse(cellVal) : null;
+  if (meta && sheet.getMaxColumns() >= 17) {
+    const imgVal = String(sheet.getRange('Q1').getDisplayValue() || '').trim();
+    if (imgVal && imgVal.startsWith('{')) {
+      const imgMap = JSON.parse(imgVal);
+      if (Array.isArray(meta.cards)) {
+        meta.cards.forEach(c => {
+          if (c && c.id && imgMap[c.id]) {
+            c.customImage = imgMap[c.id];
+            c.image = imgMap[c.id];
+          }
+        });
+      }
+      if (Array.isArray(meta.banks)) {
+        meta.banks.forEach(b => {
+          if (b && b.id && imgMap[b.id]) {
+            b.customLogo = imgMap[b.id];
+            b.logo = imgMap[b.id];
+          }
+        });
+      }
+    }
+  }
+  return meta;
+}
+
+/* ------------------------------ 圖片（指令碼屬性，P11） ------------------------------
+ * 每張卡片／每家銀行的自訂圖片各存一個屬性（IMG_CARD_<id>／IMG_BANK_<id>），
+ * 另外用 SETTINGS_IMAGE_INDEX 記下目前存了哪些圖片鍵，讀取時只讀索引裡、而且 metadata 用得到的鍵，
+ * 不用 getProperties() 把所有屬性（含啟動快照等）整包讀回來。
+ */
+function isImagePropKey_(key) {
+  return String(key).indexOf('IMG_CARD_') === 0 || String(key).indexOf('IMG_BANK_') === 0;
+}
+
+/** 目前存了哪些圖片鍵。舊版沒有索引時用 getKeys()（只有鍵名）建立一次。 */
+function readImageIndex_(props) {
+  const indexKey = CONFIG.PROP_KEYS.SETTINGS_IMAGE_INDEX;
+  try {
+    const raw = props.getProperty(indexKey);
+    if (raw) {
+      const list = JSON.parse(raw);
+      if (Array.isArray(list)) return list.filter(isImagePropKey_);
     }
   } catch (e) {}
+  const keys = (props.getKeys() || []).filter(isImagePropKey_).sort();
+  try { props.setProperty(indexKey, JSON.stringify(keys)); } catch (e) {}
+  return keys;
+}
+
+/** 讀出 metadata 用得到的圖片，回傳 { 鍵: 圖片 }。 */
+function readMetadataImages_(props, meta) {
+  const index = new Set(readImageIndex_(props));
+  const out = {};
+  const want = [];
+  (meta.cards || []).forEach(c => { if (c && c.id) want.push('IMG_CARD_' + c.id); });
+  (meta.banks || []).forEach(b => { if (b && b.id) want.push('IMG_BANK_' + b.id); });
+  want.forEach(key => {
+    if (!index.has(key) || Object.prototype.hasOwnProperty.call(out, key)) return;
+    const value = props.getProperty(key);
+    if (value) out[key] = value;
+  });
+  return out;
+}
+
+/** 拿掉卡片／銀行的自訂圖片（啟動快照的精簡版用）；不改動傳入的物件。 */
+function stripMetadataImages_(meta) {
+  if (!meta || typeof meta !== 'object') return meta;
+  const strip = (list, fields) => (Array.isArray(list) ? list.map(item => {
+    if (!item || typeof item !== 'object') return item;
+    const copy = Object.assign({}, item);
+    fields.forEach(f => { delete copy[f]; });
+    return copy;
+  }) : list);
+  return Object.assign({}, meta, {
+    cards: strip(meta.cards, ['customImage', 'image']),
+    banks: strip(meta.banks, ['customLogo', 'logo']),
+  });
 }
 
 function normalizeCardsMetadataList_(cards) {
@@ -103,76 +213,38 @@ function buildDefaultSettingsMetadata_() {
   return getDefaultSettingsMetadata_();
 }
 
+/** metadata 本體：先讀單一鍵，沒有時讀分塊（_CHUNKS＋_0、_1…）；新舊兩種鍵名都看。只讀需要的鍵（P11）。 */
+function readSettingsMetadataProps_(props) {
+  const read = function (base) {
+    const raw = props.getProperty(base);
+    if (raw) return JSON.parse(raw);
+    const count = parseInt(props.getProperty(base + '_CHUNKS'), 10) || 0;
+    if (!count) return null;
+    let combined = '';
+    for (let i = 0; i < count; i++) combined += (props.getProperty(base + '_' + i) || '');
+    return combined ? JSON.parse(combined) : null;
+  };
+  return read(CONFIG.PROP_KEYS.SETTINGS_METADATA) || read('SETTINGS_METADATA');
+}
+
 function getSettingsMetadata_(ssOrForce) {
   const ss = resolveSpreadsheet_(ssOrForce);
+  const props = scriptProps_();
   let meta = null;
-  let props = null;
-  let allProps = {};
+  let fromSheet = false;
 
-  try {
-    props = scriptProps_();
-    allProps = props.getProperties() || {};
-    const primaryKey = CONFIG.PROP_KEYS.SETTINGS_METADATA;
-    const raw = allProps[primaryKey] || allProps['SETTINGS_METADATA'];
-    if (raw) {
-      meta = JSON.parse(raw);
-    } else {
-      const chunksKey = allProps[primaryKey + '_CHUNKS']
-        ? primaryKey
-        : (allProps['SETTINGS_METADATA_CHUNKS'] ? 'SETTINGS_METADATA' : null);
-      if (chunksKey) {
-        const count = parseInt(allProps[chunksKey + '_CHUNKS'], 10) || 0;
-        let combined = '';
-        for (let i = 0; i < count; i++) {
-          combined += (allProps[chunksKey + '_' + i] || '');
-        }
-        if (combined) meta = JSON.parse(combined);
-      }
-    }
-  } catch (e) {}
+  try { meta = readSettingsMetadataProps_(props); } catch (e) { meta = null; }
 
-  if (!meta) {
+  if (!meta && !isLegacyMetaCleaned_()) {
     try {
-      const targetSs = ss || getSpreadsheet_();
-      const sheet = targetSs.getSheetByName(CONFIG.SETTINGS_SHEET);
-      if (sheet && sheet.getMaxColumns() >= 16) {
-        const cellVal = String(sheet.getRange('P1').getDisplayValue() || '').trim();
-        if (cellVal && cellVal.startsWith('{')) {
-          meta = JSON.parse(cellVal);
-        }
-        if (meta && sheet.getMaxColumns() >= 17) {
-          const imgVal = String(sheet.getRange('Q1').getDisplayValue() || '').trim();
-          if (imgVal && imgVal.startsWith('{')) {
-            const imgMap = JSON.parse(imgVal);
-            if (Array.isArray(meta.cards)) {
-              meta.cards.forEach(c => {
-                if (c && c.id && imgMap[c.id]) {
-                  c.customImage = imgMap[c.id];
-                  c.image = imgMap[c.id];
-                }
-              });
-            }
-            if (Array.isArray(meta.banks)) {
-              meta.banks.forEach(b => {
-                if (b && b.id && imgMap[b.id]) {
-                  b.customLogo = imgMap[b.id];
-                  b.logo = imgMap[b.id];
-                }
-              });
-            }
-          }
-        }
-        cleanLegacySheetMetadataCells_(targetSs);
-      }
-    } catch (e) {
-      cleanLegacySheetMetadataCells_(ss);
-    }
-  } else {
-    cleanLegacySheetMetadataCells_(ss);
+      meta = readLegacySheetMetadata_(ss);
+      fromSheet = Boolean(meta);
+    } catch (e) { meta = null; }
   }
 
   const def = getDefaultSettingsMetadata_();
   if (!meta || typeof meta !== 'object') {
+    cleanLegacySheetMetadataCells_(ss);
     return def;
   }
 
@@ -184,28 +256,31 @@ function getSettingsMetadata_(ssOrForce) {
   meta.banks = Array.isArray(meta.banks) ? meta.banks : def.banks;
   meta.quickCombos = Array.isArray(meta.quickCombos) ? meta.quickCombos : [];
 
-  if (allProps) {
-    meta.cards.forEach(c => {
-      if (c && c.id) {
-        const storedImg = allProps['IMG_CARD_' + c.id];
-        if (storedImg) {
-          c.customImage = storedImg;
-          c.image = storedImg;
-        }
-      }
-    });
-    meta.banks.forEach(b => {
-      if (b && b.id) {
-        const storedLogo = allProps['IMG_BANK_' + b.id];
-        if (storedLogo) {
-          b.customLogo = storedLogo;
-          b.logo = storedLogo;
-        }
-      }
-    });
-  }
+  let images = {};
+  try { images = readMetadataImages_(props, meta); } catch (e) { images = {}; }
+  meta.cards.forEach(c => {
+    const storedImg = c && c.id ? images['IMG_CARD_' + c.id] : '';
+    if (storedImg) {
+      c.customImage = storedImg;
+      c.image = storedImg;
+    }
+  });
+  meta.banks.forEach(b => {
+    const storedLogo = b && b.id ? images['IMG_BANK_' + b.id] : '';
+    if (storedLogo) {
+      b.customLogo = storedLogo;
+      b.logo = storedLogo;
+    }
+  });
 
   meta.cards = normalizeCardsMetadataList_(meta.cards);
+
+  if (fromSheet) {
+    // 舊版資料只在試算表裡：先存進指令碼屬性，存成功才清掉儲存格（saveSettingsMetadata_ 會清並標記完成）
+    saveSettingsMetadata_(meta, ss);
+  } else {
+    cleanLegacySheetMetadataCells_(ss);
+  }
   return meta;
 }
 
@@ -296,29 +371,35 @@ function saveSettingsMetadata_(meta, ss) {
 
   try {
     const props = scriptProps_();
-    const existingProps = props.getProperties() || {};
+    // 只讀鍵名（P11）：不用 getProperties() 把所有屬性的值都讀回來
+    const existingKeys = new Set(props.getKeys() || []);
     const metaKey = CONFIG.PROP_KEYS.SETTINGS_METADATA;
+    const readCount = function (key) {
+      return existingKeys.has(key) ? (parseInt(props.getProperty(key), 10) || 0) : 0;
+    };
 
-    Object.keys(existingProps).forEach(k => {
-      if ((k.startsWith('IMG_CARD_') || k.startsWith('IMG_BANK_')) && !activeImgKeys.has(k)) {
-        props.deleteProperty(k);
-      }
+    const staleImgKeys = [];
+    const keptImgKeys = new Set(Object.keys(imgPropsToSave));
+    existingKeys.forEach(function (k) {
+      if (!isImagePropKey_(k)) return;
+      if (activeImgKeys.has(k)) keptImgKeys.add(k);
+      else staleImgKeys.push(k);
     });
 
     const batchProps = {};
     const staleKeys = [];
 
     const chunks = splitUtf8Chunks_(compactStr, 7500);
-    const oldChunkCount = parseInt(existingProps[metaKey + '_CHUNKS'], 10) || 0;
+    const oldChunkCount = readCount(metaKey + '_CHUNKS');
 
     if (chunks.length === 1) {
       batchProps[metaKey] = compactStr;
       for (let i = 0; i < oldChunkCount; i++) {
         staleKeys.push(metaKey + '_' + i);
       }
-      if (existingProps[metaKey + '_CHUNKS']) staleKeys.push(metaKey + '_CHUNKS');
+      if (existingKeys.has(metaKey + '_CHUNKS')) staleKeys.push(metaKey + '_CHUNKS');
     } else {
-      if (existingProps[metaKey]) staleKeys.push(metaKey);
+      if (existingKeys.has(metaKey)) staleKeys.push(metaKey);
       chunks.forEach(function (chunk, i) {
         batchProps[metaKey + '_' + i] = chunk;
       });
@@ -328,9 +409,9 @@ function saveSettingsMetadata_(meta, ss) {
       }
     }
 
-    if (existingProps['SETTINGS_METADATA']) staleKeys.push('SETTINGS_METADATA');
-    if (existingProps['SETTINGS_METADATA_CHUNKS']) {
-      const oldLegacyChunks = parseInt(existingProps['SETTINGS_METADATA_CHUNKS'], 10) || 0;
+    if (existingKeys.has('SETTINGS_METADATA')) staleKeys.push('SETTINGS_METADATA');
+    if (existingKeys.has('SETTINGS_METADATA_CHUNKS')) {
+      const oldLegacyChunks = readCount('SETTINGS_METADATA_CHUNKS');
       for (let i = 0; i < oldLegacyChunks; i++) {
         staleKeys.push('SETTINGS_METADATA_' + i);
       }
@@ -338,15 +419,17 @@ function saveSettingsMetadata_(meta, ss) {
     }
 
     Object.assign(batchProps, imgPropsToSave);
+    batchProps[CONFIG.PROP_KEYS.SETTINGS_IMAGE_INDEX] = JSON.stringify(Array.from(keptImgKeys).sort());
 
     props.setProperties(batchProps);
 
-    staleKeys.forEach(function (key) {
-      props.deleteProperty(key);
+    staleImgKeys.concat(staleKeys).forEach(function (key) {
+      if (existingKeys.has(key)) props.deleteProperty(key);
     });
     saved = true;
   } catch (e) {}
 
-  cleanLegacySheetMetadataCells_(ss);
+  // 存成功才清舊儲存格：舊版資料若只在儲存格裡，存失敗時不能先刪掉
+  if (saved) cleanLegacySheetMetadataCells_(ss);
   return saved;
 }

@@ -67,11 +67,16 @@ function assertAuthorized_() {
  * 只有擁有者本人可以執行。從 Apps Script 編輯器執行時，目前使用者就是擁有者。
  */
 function assertOwner_() {
-  const active = activeUserEmail_();
-  const owner = effectiveUserEmail_();
-  if (!active || !owner || active !== owner) {
+  if (!isOwnerSession_()) {
     throw new Error('這個功能只能由試算表擁有者從 Apps Script 編輯器執行。');
   }
+}
+
+/** 目前執行的人是不是擁有者本人（目前使用者＝部署者）。 */
+function isOwnerSession_() {
+  const active = activeUserEmail_();
+  const owner = effectiveUserEmail_();
+  return Boolean(active && owner && active === owner);
 }
 
 /** 固定時間的字串比較，避免從回應時間推測權杖內容。 */

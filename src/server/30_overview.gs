@@ -87,30 +87,60 @@ function readOverviewFields_(data) {
   return { values: values, warnings: warnings };
 }
 
+/**
+ * 總覽（本月）。先查快取（P11）：月份用 budgetToday_() 的固定時區算，本月總覽與月份清單一次 getAll，
+ * 命中就直接回傳，不開試算表、不讀時區。沒命中時才拿月份清單決定要讀哪個月份。
+ */
 function getAssetOverview_(forceRefresh) {
   const isForce = Boolean(forceRefresh);
-  const cache = scriptCache_();
+  const K = CONFIG.CACHE_KEYS;
+  const currentMonth = budgetToday_().month;
 
-  const ss = getSpreadsheet_();
-  const timeZone = spreadsheetTimeZone_(ss);
-  const now = new Date();
-  const currentMonth = Utilities.formatDate(now, timeZone, 'yyyy.MM');
-
-  const months = getMonthsList_(ss, isForce);
+  let months = null;
+  if (!isForce) {
+    let got = {};
+    try { got = scriptCache_().getAll([K.OVERVIEW_PREFIX + currentMonth, K.MONTHS_LIST]) || {}; } catch (e) { got = {}; }
+    const hit = parseOverviewCache_(got[K.OVERVIEW_PREFIX + currentMonth]);
+    if (hit) return hit;
+    months = parseMonthsListCache_(got[K.MONTHS_LIST]);
+  }
+  if (!months) months = getMonthsList_(null, isForce);
   if (!months.length) {
     throw new Error('找不到月份工作表。');
   }
 
   const targetMonth = months.includes(currentMonth) ? currentMonth : months[0];
-  const cacheKey = CONFIG.CACHE_KEYS.OVERVIEW_PREFIX + targetMonth;
-
-  if (!isForce) {
-    const cached = cache.get(cacheKey);
-    if (cached) {
-      try { return JSON.parse(cached); } catch (e) {}
-    }
+  if (!isForce && targetMonth !== currentMonth) {
+    let cached = null;
+    try { cached = scriptCache_().get(K.OVERVIEW_PREFIX + targetMonth); } catch (e) { cached = null; }
+    const hit = parseOverviewCache_(cached);
+    if (hit) return hit;
   }
+  return readAssetOverviewFromSheet_(getSpreadsheet_(), targetMonth, months);
+}
 
+function parseOverviewCache_(text) {
+  if (typeof text !== 'string' || !text) return null;
+  try {
+    const parsed = JSON.parse(text);
+    return parsed && typeof parsed === 'object' && parsed.month ? parsed : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function parseMonthsListCache_(text) {
+  if (typeof text !== 'string' || !text) return null;
+  try {
+    const parsed = JSON.parse(text);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/** 從月份工作表讀出總覽並存進快取（快取沒命中與預熱觸發器用）。 */
+function readAssetOverviewFromSheet_(ss, targetMonth, months) {
   const sheet = ss.getSheetByName(targetMonth);
   if (!sheet) {
     throw new Error('找不到「' + targetMonth + '」工作表。');
@@ -129,7 +159,7 @@ function getAssetOverview_(forceRefresh) {
   result.warnings = parsed.warnings;
 
   try {
-    cache.put(cacheKey, JSON.stringify(result), CONFIG.CACHE_TTL);
+    scriptCache_().put(CONFIG.CACHE_KEYS.OVERVIEW_PREFIX + targetMonth, JSON.stringify(result), CONFIG.CACHE_TTL);
   } catch (e) {}
 
   return result;

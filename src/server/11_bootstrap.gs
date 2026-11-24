@@ -9,27 +9,32 @@ function getInitialData_(forceRefresh) {
   const isForce = Boolean(forceRefresh);
 
   if (!isForce) {
-    // 啟動資料和（通常就是它要的）本月明細一次 getAll 讀回
-    const guessKey = CONFIG.CACHE_KEYS.MONTH_DATA_PREFIX + budgetToday_().month;
-    const got = cacheGetAllMixed_([CONFIG.CACHE_KEYS.BOOT_JSON, guessKey], []).large;
-    const parsed = got[CONFIG.CACHE_KEYS.BOOT_JSON];
+    // 啟動資料、（通常就是它要的）本月明細、預算設定與本月月初餘額一次 getAll 讀回（P11：預算不用再各讀一次）
+    const today = budgetToday_();
+    const K = CONFIG.CACHE_KEYS;
+    const guessKey = K.MONTH_DATA_PREFIX + today.month;
+    const openingKey = K.BUDGET_OPENING_PREFIX + today.month;
+    const all = cacheGetAllMixed_([K.BOOT_JSON, guessKey], [K.BUDGET_CONFIG, openingKey]);
+    const got = all.large;
+    const parsed = got[K.BOOT_JSON];
     if (parsed) {
       try {
+        const tz = parsed.timeZone || DEFAULT_TIME_ZONE_;
         const now = new Date();
-        const tz = parsed.timeZone || scriptTimeZone_();
-        const todayISO = Utilities.formatDate(now, tz, 'yyyy-MM-dd');
-        const currentMonth = Utilities.formatDate(now, tz, 'yyyy.MM');
+        const todayISO = tz === DEFAULT_TIME_ZONE_ ? today.iso : Utilities.formatDate(now, tz, 'yyyy-MM-dd');
+        const currentMonth = tz === DEFAULT_TIME_ZONE_ ? today.month : Utilities.formatDate(now, tz, 'yyyy.MM');
         if (parsed.currentMonth === currentMonth && parsed.options && parsed.initialRecent) {
           const recentMonth = parsed.initialRecent.month;
           let monthData = !recentMonth ? null
-            : (CONFIG.CACHE_KEYS.MONTH_DATA_PREFIX + recentMonth === guessKey ? got[guessKey] : getCachedMonthData_(recentMonth));
+            : (K.MONTH_DATA_PREFIX + recentMonth === guessKey ? got[guessKey] : getCachedMonthData_(recentMonth));
           if (!monthData && recentMonth) {
             try { monthData = getMonthData_(null, recentMonth, true); } catch (e) { monthData = null; }
           }
           if (monthData) {
             parsed.todayISO = todayISO;
             parsed.fromFreshCache = true;
-            return expandBootPayload_(refreshBootBudget_(parsed, monthData));
+            const budgetCache = { configJson: all.plain[K.BUDGET_CONFIG], openingJson: all.plain[openingKey], openingMonth: today.month };
+            return expandBootPayload_(refreshBootBudget_(parsed, monthData, budgetCache));
           }
         }
       } catch (e) {}
@@ -37,7 +42,7 @@ function getInitialData_(forceRefresh) {
   }
 
   const ss = getSpreadsheet_();
-  const timeZone = spreadsheetTimeZone_(ss);
+  const timeZone = DEFAULT_TIME_ZONE_;
   const now = new Date();
   const todayISO = Utilities.formatDate(now, timeZone, 'yyyy-MM-dd');
   const currentMonth = Utilities.formatDate(now, timeZone, 'yyyy.MM');
@@ -107,7 +112,10 @@ function saveBootSnapshot_(payload, options) {
       scriptProps_().setProperty(CONFIG.PROP_KEYS.BOOT_SNAPSHOT, jsonStr);
     } else {
       const recent = payload.initialRecent;
+      // 精簡版（P11）：最近紀錄只放前 8 筆、設定裡的卡片／銀行圖片拿掉（圖片動輒數 KB，放著幾乎一定超過 9 KB）。
+      // 用快照開機時 doGet 一定會標成不是最新的，前端背景同步後圖片就補上。
       const compactPayload = Object.assign({}, payload, {
+        settingsMetadata: stripMetadataImages_(payload.settingsMetadata),
         initialRecent: recent ? {
           month: recent.month,
           expenses: (recent.expenses || recent.fullExpenses || []).slice(0, 8),

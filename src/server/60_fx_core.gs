@@ -58,10 +58,6 @@ function readFxOptions_(ss) {
   return options;
 }
 
-function fxTimeZone_(ss) {
-  return spreadsheetTimeZone_(ss);
-}
-
 function isFxLedgerSheetName_(name) {
   const str = String(name || '');
   return str.indexOf(CONFIG.FX_PREFIX) === 0 && str !== CONFIG.FX_TEMPLATE_SHEET && str.length > CONFIG.FX_PREFIX.length;
@@ -310,7 +306,7 @@ function buildFxLedgerObject_(ss, sheet, header, records, options) {
 }
 
 function loadFxLedgerFromSheet_(ss, sheet, options) {
-  const tz = fxTimeZone_(ss);
+  const tz = DEFAULT_TIME_ZONE_;
   const header = readFxHeader_(sheet);
   const parsed = readFxSheetRows_(sheet, tz);
   const payload = {

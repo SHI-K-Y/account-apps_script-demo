@@ -12,6 +12,8 @@ let scriptCacheMemo_ = null;
 let scriptPropsMemo_ = null;
 let documentLockDepth_ = 0;
 
+// 全站固定時區（P11）：日期格式化、「今天」「本月」都用它，不再讀試算表或指令碼的時區設定
+// （每次讀都是一次服務呼叫，而且會讓快取命中前就得先開試算表）。setup() 會檢查試算表時區是否一致。
 const DEFAULT_TIME_ZONE_ = 'Asia/Taipei';
 const DOCUMENT_LOCK_TIMEOUT_MS_ = 10000;
 
@@ -78,8 +80,59 @@ function webAppUrl_() {
   try { return ScriptApp.getService().getUrl() || ''; } catch (e) { return ''; }
 }
 
-function scriptTimeZone_() {
-  return Session.getScriptTimeZone() || DEFAULT_TIME_ZONE_;
+/** 這次執行有沒有開過試算表（API 偵錯計時用來判斷是否整個命中快取）。 */
+function spreadsheetOpened_() {
+  return Boolean(spreadsheetMemo_);
+}
+
+/* ------------------------------ 時間觸發器（P11） ------------------------------
+ * 安裝一律經過 installTimeTrigger_：先刪掉同一個處理函式的舊觸發器再建立，重跑 setup() 不會越裝越多。
+ * 處理函式（公開名稱、不以底線結尾）開頭一定要先過 isTrustedTriggerCall_，其餘來源直接 return。
+ */
+function projectTriggers_() {
+  return ScriptApp.getProjectTriggers();
+}
+
+/** 刪掉某個處理函式的所有觸發器，回傳刪掉幾個。 */
+function removeTriggers_(handlerName) {
+  let removed = 0;
+  projectTriggers_().forEach(function (t) {
+    if (t.getHandlerFunction() === handlerName) {
+      ScriptApp.deleteTrigger(t);
+      removed++;
+    }
+  });
+  return removed;
+}
+
+/**
+ * 安裝時間觸發器：configure(builder) 設定頻率（例如 b => b.everyHours(2)），回傳新觸發器的 ID。
+ */
+function installTimeTrigger_(handlerName, configure) {
+  removeTriggers_(handlerName);
+  const builder = configure(ScriptApp.newTrigger(handlerName).timeBased());
+  return builder.create().getUniqueId();
+}
+
+/**
+ * 觸發器處理函式的守門：只接受
+ *   1. 本專案、而且就是這個處理函式的觸發器傳來的事件（triggerUid 要對得上，偽造的事件物件不算），或
+ *   2. 擁有者本人直接執行（Apps Script 編輯器；沒有參數）。
+ * google.script.run 從網頁呼叫時（帶任何參數、或不是擁有者）一律回傳 false。
+ */
+function isTrustedTriggerCall_(e, handlerName) {
+  if (e !== undefined && e !== null) {
+    if (typeof e !== 'object' || !e.triggerUid) return false;
+    const uid = String(e.triggerUid);
+    try {
+      return projectTriggers_().some(function (t) {
+        return String(t.getUniqueId()) === uid && t.getHandlerFunction() === handlerName;
+      });
+    } catch (err) {
+      return false;
+    }
+  }
+  return isOwnerSession_();
 }
 
 /**
@@ -89,10 +142,6 @@ function scriptTimeZone_() {
 function budgetToday_() {
   const iso = Utilities.formatDate(new Date(), DEFAULT_TIME_ZONE_, 'yyyy-MM-dd');
   return { iso: iso, month: iso.slice(0, 4) + '.' + iso.slice(5, 7), day: Number(iso.slice(8, 10)) };
-}
-
-function spreadsheetTimeZone_(ss) {
-  return (ss && ss.getSpreadsheetTimeZone()) || scriptTimeZone_();
 }
 
 function getSettingsSheet_(ss) {

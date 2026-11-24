@@ -325,7 +325,7 @@ function savePaymentSettingsConfig_(configPayload) {
     var updated = readAllOptionsData_(ss, true);
     updateBootSnapshotOptions_(updated);
 
-    var tz = spreadsheetTimeZone_(ss);
+    var tz = DEFAULT_TIME_ZONE_;
     var currentMonth = (configPayload.currentMonth && allMonths.indexOf(configPayload.currentMonth) !== -1)
       ? configPayload.currentMonth
       : (allMonths && allMonths.length ? allMonths[0] : formatMonth_(new Date(), tz));

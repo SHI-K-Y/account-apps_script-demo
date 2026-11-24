@@ -1,9 +1,7 @@
 function cellToStr_(val) {
   if (val === null || val === undefined || val === '') return '';
-  if (val instanceof Date) {
-    const tz = scriptTimeZone_();
-    return Utilities.formatDate(val, tz, 'yyyy-MM-dd');
-  }
+  // 日期一律用固定時區（P11）：不再每遇到一個日期就呼叫 Session.getScriptTimeZone()
+  if (val instanceof Date) return Utilities.formatDate(val, DEFAULT_TIME_ZONE_, 'yyyy-MM-dd');
   return String(val).trim();
 }
 

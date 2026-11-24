@@ -6,26 +6,52 @@ const BUDGET_MAX_LIST_ = 20;
 const BUDGET_MAX_AMOUNT_ = 999999999;
 const BUDGET_NAME_FORBIDDEN_ = /[=；;、,，\n]/;
 
+/**
+ * 設定頁的預算資料。先查快取（P11）：預算設定、本月明細、本月月初餘額一次 getAll 讀回，全部命中就不開試算表。
+ */
 function getBudgetSettings_(forceRefresh) {
-  const ss = getSpreadsheet_();
-  const config = readBudgetConfig_(ss, Boolean(forceRefresh));
+  const isForce = Boolean(forceRefresh);
   const today = budgetToday_();
+  let prefetched = null;
+  let config = null;
+  if (!isForce) {
+    const K = CONFIG.CACHE_KEYS;
+    const openingKey = K.BUDGET_OPENING_PREFIX + today.month;
+    const got = cacheGetAllMixed_([K.MONTH_DATA_PREFIX + today.month], [K.BUDGET_CONFIG, openingKey]);
+    prefetched = { monthData: got.large[K.MONTH_DATA_PREFIX + today.month], openingJson: got.plain[openingKey] };
+    try {
+      const parsed = got.plain[K.BUDGET_CONFIG] ? JSON.parse(got.plain[K.BUDGET_CONFIG]) : null;
+      if (parsed && Array.isArray(parsed.versions)) config = parsed;
+    } catch (e) { config = null; }
+  }
+  if (!config) config = readBudgetConfig_(null, isForce);
   return {
     todayISO: today.iso,
     currentMonth: today.month,
     versions: config.versions,
-    status: currentBudgetStatus_(ss, config, today, Boolean(forceRefresh)),
+    status: currentBudgetStatus_(null, config, today, isForce, prefetched),
   };
 }
 
-function currentBudgetStatus_(ss, config, today, forceRefresh) {
-  let monthData = null;
-  try {
-    if (ss.getSheetByName(today.month)) monthData = getMonthData_(ss, today.month, false);
-  } catch (e) {}
+/**
+ * 本月的預算狀態。ss 可以是 null：明細與月初餘額都在快取時不開試算表。
+ * @param prefetched  選用：{ monthData, openingJson }（已經從快取讀回的）
+ */
+function currentBudgetStatus_(ss, config, today, forceRefresh, prefetched) {
+  let monthData = (!forceRefresh && prefetched && prefetched.monthData) || null;
+  if (!monthData && !forceRefresh && !prefetched) monthData = getCachedMonthData_(today.month);
+  if (!monthData) {
+    try {
+      const spreadsheet = ss || getSpreadsheet_();
+      if (spreadsheet.getSheetByName(today.month)) monthData = getMonthData_(spreadsheet, today.month, true);
+    } catch (e) {}
+  }
   const version = resolveBudgetVersion_(config, today.month);
   let extras = null;
-  try { extras = budgetExtras_(ss, version, today.month, forceRefresh); } catch (e) {}
+  try {
+    const opening = !forceRefresh && version && version.source === 'balance' ? parseBudgetOpeningCache_(prefetched && prefetched.openingJson) : undefined;
+    extras = opening !== undefined ? { openingBalance: opening } : budgetExtras_(ss, version, today.month, forceRefresh);
+  } catch (e) {}
   return computeBudgetStatus_(version, today.month, monthData, today, extras);
 }
 

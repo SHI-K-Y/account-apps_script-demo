@@ -274,7 +274,7 @@ function toSimpleOptions_(rawOpts) {
 
 function formatMonth_(date, timeZone) {
   var d = (date instanceof Date) ? date : new Date();
-  var tz = timeZone || scriptTimeZone_();
+  var tz = timeZone || DEFAULT_TIME_ZONE_;
   return Utilities.formatDate(d, tz, 'yyyy.MM');
 }
 

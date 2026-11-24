@@ -147,13 +147,10 @@ function budgetOpeningBalance_(ss, month, forceRefresh) {
   const key = CONFIG.CACHE_KEYS.BUDGET_OPENING_PREFIX + month;
   const cache = scriptCache_();
   if (!forceRefresh) {
-    const cached = cache.get(key);
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (parsed && (parsed.value === null || typeof parsed.value === 'number')) return parsed.value;
-      } catch (e) {}
-    }
+    let cached = null;
+    try { cached = cache.get(key); } catch (e) { cached = null; }
+    const value = parseBudgetOpeningCache_(cached);
+    if (value !== undefined) return value;
   }
 
   const spreadsheet = ss || getSpreadsheet_();
@@ -170,6 +167,16 @@ function budgetOpeningBalance_(ss, month, forceRefresh) {
   const value = nums.every(Number.isFinite) ? budgetRound_(nums[0] - nums[1] + nums[2]) : null;
   try { cache.put(key, JSON.stringify({ value: value }), CONFIG.CACHE_TTL); } catch (e) {}
   return value;
+}
+
+/** 月初餘額快取字串 → 數字或 null；沒有快取或格式不對時回傳 undefined（當作沒命中）。 */
+function parseBudgetOpeningCache_(text) {
+  if (typeof text !== 'string' || !text) return undefined;
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && (parsed.value === null || typeof parsed.value === 'number')) return parsed.value;
+  } catch (e) {}
+  return undefined;
 }
 
 /** 某個月份有異動時，之後月份的月初餘額都要重算（往後一年）。 */
@@ -334,9 +341,10 @@ function budgetStatusForMonth_(month, monthData) {
 /**
  * 啟動快取裡的預算狀態可能是前幾天算的、清單也可能比較舊（記帳寫入不更新 BOOT_JSON，P10）：
  * 有月份明細時用它蓋過清單並重新計算；沒有完整資料可用（精簡過的快照）而且不是今天算的，就拿掉，讓前端等背景同步。
- * @param monthData  選用：呼叫端已經讀好的月份明細
+ * @param monthData    選用：呼叫端已經讀好的月份明細
+ * @param budgetCache  選用：{ configJson, openingJson, openingMonth }，已經讀回的預算快取字串
  */
-function refreshBootBudget_(boot, monthData) {
+function refreshBootBudget_(boot, monthData, budgetCache) {
   const recent = boot && boot.initialRecent;
   if (!recent || !recent.month) return boot;
   const md = monthData || getCachedMonthData_(recent.month);
@@ -344,7 +352,11 @@ function refreshBootBudget_(boot, monthData) {
   const lists = md ||
     (Array.isArray(recent.fullExpenses) ? { expenses: recent.fullExpenses, incomes: recent.fullIncomes || [] } : null);
   if (lists) {
-    recent.budget = budgetStatusForMonth_(recent.month, lists);
+    // 呼叫端已經一次 getAll 讀回預算設定與月初餘額時直接用（P11），缺的才由 budgetStatusForMonth_ 自己讀
+    const fromCache = budgetCache
+      ? budgetStatusFromCache_(recent.month, lists, budgetCache.configJson, budgetCache.openingJson, budgetCache.openingMonth)
+      : null;
+    recent.budget = fromCache ? fromCache.status : budgetStatusForMonth_(recent.month, lists);
   } else if (recent.budget && recent.budget.todayISO !== budgetToday_().iso) {
     recent.budget = null;
   }

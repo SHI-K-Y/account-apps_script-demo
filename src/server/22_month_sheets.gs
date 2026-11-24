@@ -32,7 +32,7 @@ function createNewMonthSheet_(targetMonth) {
       flushSpreadsheet_();
       a1Range.copyTo(a1Range, { contentsOnly: true });
     } catch (e) {
-      const tz = spreadsheetTimeZone_(ss);
+      const tz = DEFAULT_TIME_ZONE_;
       const monthStr = String(monthNumber).padStart(2, '0');
       const safeDate = Utilities.parseDate(`${year}-${monthStr}-01 12:00:00`, tz, 'yyyy-MM-dd HH:mm:ss');
       a1Range.setValue(safeDate);

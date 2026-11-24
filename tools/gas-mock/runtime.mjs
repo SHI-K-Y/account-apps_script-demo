@@ -135,7 +135,7 @@ export function createGasRuntime(opts) {
   const files = options.files || {};
   const log = options.log || (() => {});
   // spreadsheetApp：呼叫 SpreadsheetApp 的次數（doGet 不可以開試算表，測試用它檢查）；cacheGetAll：getAll 的次數
-  const stats = { reads: 0, writes: 0, cacheHits: 0, cacheMisses: 0, spreadsheetApp: 0, cacheGetAll: 0 };
+  const stats = { reads: 0, writes: 0, cacheHits: 0, cacheMisses: 0, spreadsheetApp: 0, cacheGetAll: 0, openById: 0 };
 
   // 公式重算：寫入時只做記號，等到下一次讀取才重算一次。
   const recalc = typeof options.recalc === 'function' ? options.recalc : null;
@@ -424,6 +424,7 @@ export function createGasRuntime(opts) {
     getActiveSpreadsheet: () => { stats.spreadsheetApp++; return spreadsheet; },
     openById: id => {
       stats.spreadsheetApp++;
+      stats.openById++;
       if (id !== spreadsheet.id) throw new Error('找不到試算表：' + id);
       return spreadsheet;
     },
@@ -563,9 +564,41 @@ export function createGasRuntime(opts) {
     getEffectiveUser: () => user(options.effectiveUserEmail == null ? 'owner@example.com' : options.effectiveUserEmail),
   };
 
+  // 觸發器（P11）：只記錄安裝了哪些，不會真的定時執行；測試用 runtime.triggers 取出 ID 自己呼叫處理函式
+  const triggers = [];
+  let triggerSeq = 0;
   const ScriptApp = {
     getService: () => ({ getUrl: () => options.serviceUrl || '/' }),
     getScriptId: () => 'mock-script-id',
+    getProjectTriggers: () => triggers.slice(),
+    deleteTrigger(trigger) {
+      const i = triggers.indexOf(trigger);
+      if (i >= 0) triggers.splice(i, 1);
+    },
+    newTrigger(handler) {
+      const spec = { handler: String(handler) };
+      const builder = {
+        timeBased() { spec.type = 'CLOCK'; return builder; },
+        everyMinutes(n) { spec.everyMinutes = n; return builder; },
+        everyHours(n) { spec.everyHours = n; return builder; },
+        everyDays(n) { spec.everyDays = n; return builder; },
+        atHour(h) { spec.atHour = h; return builder; },
+        nearMinute(m) { spec.nearMinute = m; return builder; },
+        inTimezone(tz) { spec.timeZone = tz; return builder; },
+        create() {
+          const uid = String(9000000 + (++triggerSeq));
+          const trigger = {
+            spec,
+            getUniqueId: () => uid,
+            getHandlerFunction: () => spec.handler,
+            getEventType: () => spec.type || 'CLOCK',
+          };
+          triggers.push(trigger);
+          return trigger;
+        },
+      };
+      return builder;
+    },
   };
 
   /* -------------------------------- HtmlService ------------------------------ */
@@ -677,7 +710,7 @@ export function createGasRuntime(opts) {
   }
 
   return {
-    globals, load, spreadsheet, stats,
+    globals, load, spreadsheet, stats, triggers,
     cache: cacheStore, properties: propStore,
     clearCache: () => cacheStore.clear(),
     /** 把整本試算表（值／公式／格式）輸出成可比較的純物件。 */

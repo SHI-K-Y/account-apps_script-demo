@@ -37,6 +37,15 @@ const Api = (function() {
 
   let pending = 0;
   let pendingWrites = 0;
+  let timingFlag = null;
+
+  /** 偵錯計時（P11）：doGet 開了計時（?timing=1 或 DEBUG_DOGET_TIMING）時，每個呼叫都請後端印出耗時。 */
+  function debugTiming() {
+    if (timingFlag === null) {
+      try { timingFlag = Boolean(window.__INITIAL_DATA__ && window.__INITIAL_DATA__.debugTiming); } catch (e) { timingFlag = false; }
+    }
+    return timingFlag;
+  }
 
   function transport() {
     if (typeof google === 'undefined' || !google.script || !google.script.run) return null;
@@ -169,7 +178,7 @@ const Api = (function() {
           }
           fail(error);
         })
-        .api({ action: action, args: args });
+        .api(debugTiming() ? { action: action, args: args, timing: true } : { action: action, args: args });
     } catch (e) {
       // 參數無法序列化等同步錯誤
       if (settle()) fail(toError(e, isRead));

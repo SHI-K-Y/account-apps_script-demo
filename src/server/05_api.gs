@@ -127,8 +127,36 @@ function dispatchApi_(request) {
   }
 }
 
-/** 網頁前端的進入點（google.script.run.api）。 */
+/**
+ * 網頁前端的進入點（google.script.run.api）。
+ * 偵錯計時（P11）：請求帶 timing: true 時（doGet 開了計時——網址 ?timing=1 或指令碼屬性 DEBUG_DOGET_TIMING=1——
+ * 之後前端每個呼叫都會帶），在「執行項目」印出 [api-timing]：總耗時、權限檢查、處理函式耗時，
+ * 以及這次有沒有開試算表（spreadsheet: false 表示整個命中快取）。
+ */
 function api(request) {
+  const timing = isPlainObject_(request) && request.timing === true;
+  if (!timing) {
+    assertAuthorized_();
+    return dispatchApi_(request);
+  }
+  const t0 = Date.now();
   assertAuthorized_();
-  return dispatchApi_(request);
+  const t1 = Date.now();
+  let ok = false;
+  try {
+    const out = dispatchApi_(request);
+    ok = true;
+    return out;
+  } finally {
+    const route = apiRoutes_()[request.action];
+    console.log('[api-timing] ' + JSON.stringify({
+      action: String(request.action).slice(0, 60),
+      write: Boolean(route && route.write),
+      totalMs: Date.now() - t0,
+      authMs: t1 - t0,
+      handlerMs: Date.now() - t1,
+      spreadsheet: spreadsheetOpened_(),
+      ok: ok,
+    }));
+  }
 }

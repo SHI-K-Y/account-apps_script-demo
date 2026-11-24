@@ -15,7 +15,7 @@ function getSettlementData_(targetDate) {
       currentH2Display = (grid[0] && grid[0][6]) ? String(grid[0][6]).trim() : targetNorm;
     });
   } else if (!currentNorm && !targetNorm) {
-    const tz = spreadsheetTimeZone_(ss);
+    const tz = DEFAULT_TIME_ZONE_;
     const todaySlash = Utilities.formatDate(new Date(), tz, 'yyyy/MM/dd');
     withDocumentLock_(function () {
       setH2Date_(sheet, todaySlash);
@@ -73,7 +73,7 @@ function safeCellVal_(v) {
 function normalizeDateSlash_(dateVal) {
   if (!dateVal) return '';
   if (dateVal instanceof Date) {
-    const tz = scriptTimeZone_();
+    const tz = DEFAULT_TIME_ZONE_;
     return Utilities.formatDate(dateVal, tz, 'yyyy/MM/dd');
   }
   const str = String(dateVal).trim();
@@ -154,7 +154,7 @@ function clearSettlementActual_() {
 
     sheet.getRangeList(['I5', 'K5', 'M5', 'O5', 'Q5', 'S5', 'U5']).clearContent();
 
-    var tz = spreadsheetTimeZone_(ss);
+    var tz = DEFAULT_TIME_ZONE_;
     var todayStr = Utilities.formatDate(new Date(), tz, 'yyyy/MM/dd');
     setH2Date_(sheet, todayStr);
 

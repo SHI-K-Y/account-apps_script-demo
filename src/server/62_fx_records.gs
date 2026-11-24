@@ -66,7 +66,7 @@ function isFxRowEmpty_(values) {
 function addFxRecord_(form) {
   return withDocumentLock_(function () {
     const ss = getSpreadsheet_();
-    const tz = fxTimeZone_(ss);
+    const tz = DEFAULT_TIME_ZONE_;
     const sheet = getFxLedgerSheet_(ss, form && form.ledgerId);
     const options = readFxOptions_(ss);
     const rec = normalizeFxRecordForm_(form, options, null);
@@ -101,7 +101,7 @@ function addFxRecord_(form) {
 function updateFxRecord_(form) {
   return withDocumentLock_(function () {
     const ss = getSpreadsheet_();
-    const tz = fxTimeZone_(ss);
+    const tz = DEFAULT_TIME_ZONE_;
     const sheet = getFxLedgerSheet_(ss, form && form.ledgerId);
     const row = Number(form.row);
     if (!Number.isInteger(row) || row < CONFIG.FX_MIN_DATA_ROW || row > CONFIG.FX_MAX_DATA_ROW) {
@@ -148,7 +148,7 @@ function fxTemplateFormulasR1C1_(ss, row) {
 function deleteFxRecord_(form) {
   return withDocumentLock_(function () {
     const ss = getSpreadsheet_();
-    const tz = fxTimeZone_(ss);
+    const tz = DEFAULT_TIME_ZONE_;
     const sheet = getFxLedgerSheet_(ss, form && form.ledgerId);
     const row = Number(form.row);
     if (!Number.isInteger(row) || row < CONFIG.FX_MIN_DATA_ROW || row > CONFIG.FX_MAX_DATA_ROW) {

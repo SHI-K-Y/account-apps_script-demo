@@ -53,7 +53,15 @@ const CONFIG = Object.freeze({
     SETTINGS_METADATA: 'SETTINGS_METADATA_V2',
     SUMMARY_DIRTY: 'SUMMARY_DIRTY_V1',
     FX_LEDGER_IDS: 'FX_LEDGER_IDS_V1',
+    // 舊版存在試算表 O1:Q1 的 metadata 已清掉（P11）：之後讀 metadata 不用再開試算表檢查
+    LEGACY_META_CLEANED: 'LEGACY_META_CLEANED',
+    // 目前存了哪些卡片／銀行圖片屬性（JSON 陣列，P11）：讀 metadata 時只讀需要的圖片，不用 getProperties()
+    SETTINGS_IMAGE_INDEX: 'SETTINGS_IMAGE_INDEX_V1',
   }),
+  // 預熱觸發器（P11，見 12_warm.gs）：多久跑一次，以及它寫入 doGet 設定快取時用的存活時間
+  // （比間隔多 15 分鐘，下一次預熱前不會過期；指令碼屬性改了之後最慢這麼久生效，執行 setup() 立即生效）
+  WARM_INTERVAL_HOURS: 2,
+  WARM_DOGET_CONFIG_TTL: 2 * 3600 + 15 * 60,
 });
 
 const SETTINGS_CATEGORY_COLUMNS_ = Object.freeze({
