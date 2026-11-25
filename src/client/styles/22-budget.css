@@ -299,10 +299,11 @@
 .budget-reserve-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
 }
 .budget-reserve-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
@@ -312,6 +313,32 @@
 }
 .budget-reserve-remove {
   flex: none;
+}
+.budget-reserve-row .budget-amount-wrap {
+  min-width: 0; /* 金額欄縮得下去，才不會被擠到第二行 */
+}
+.budget-reserve-row .note-field {
+  flex: 1 0 100%; /* 備註自己一行 */
+}
+/* 備註欄（預留項目、記帳提醒共用）：高度跟著內容長（不支援 field-sizing 的瀏覽器固定兩行、框內捲動） */
+.note-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.note-field-label {
+  font-size: 12.5px;
+  font-weight: 750;
+  color: var(--muted);
+}
+.note-input.note-field-input {
+  display: block;
+  min-height: 60px;
+  max-height: 180px;
+  padding: 8px 12px;
+  field-sizing: content;
+  font-size: 14px;
 }
 .budget-add-reserve {
   align-self: flex-start;

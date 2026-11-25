@@ -5,7 +5,9 @@
 //   存款支出 10000；生活費收入 3000（其他）；存款收入 52000（薪資）
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createBackend, expenseForm, incomeForm } from './helpers.mjs';
+import fs from 'node:fs';
+import path from 'node:path';
+import { createBackend, expenseForm, incomeForm, ROOT } from './helpers.mjs';
 
 const DAY = 24 * 3600 * 1000;
 const LIVING = 3755;
@@ -302,6 +304,55 @@ test('預算：存在隱藏的「_預算設定」工作表，其他工作表的�
   b.call('deleteBudgetSettings', '2027.02');
   assert.deepEqual(b.rowValues('_預算設定', 3, 'A', 6), ['', '', '', '', '', ''], '移除後多出來的列被清空');
   assert.ok(!b.call('getInitialData', false).months.includes('_預算設定'));
+});
+
+test('預算：不計入每日額度的項目可以加備註，存在設定資料、不改「_預算設定」的版面', () => {
+  const b = createBackend();
+  const notes = () => b.call('getSettingsOptions', true).metadata.budgetReserveNotes;
+  const save = (reserves, over) => b.call('saveBudgetSettings', fixed(30000, Object.assign({ reserves }, over)));
+
+  const plain = save([{ item: '房租', amount: 12000 }]);
+  assert.equal(plain.settings, undefined, '沒有備註時不動設定資料');
+  assert.equal(notes(), undefined);
+
+  const before = otherSheets(b);
+  const res = save([{ item: '房租', amount: 12000, note: ' 5 日轉帳；帳號=123\r\n\n\n\n<b>房東</b> ' }, { item: '娛樂', amount: 600, note: '  ' }]);
+  const rent = '5 日轉帳；帳號=123\n\n<b>房東</b>';
+  assert.deepEqual({ ...res.settings.metadata.budgetReserveNotes }, { 房租: rent }, '空白備註不存');
+  assert.ok(res.settings.simpleOptions.expenseItems.length, '帶回更新後的選項');
+  assert.deepEqual({ ...notes() }, { 房租: rent });
+  assert.deepEqual({ ...b.call('getInitialData', true).settingsMetadata.budgetReserveNotes }, { 房租: rent }, '打開頁面時就拿得到');
+  assert.equal(otherSheets(b), before);
+  assert.equal(b.rowValues('_預算設定', 2, 'A', 6)[5], '房租=12000；娛樂=600', '工作表格式不變');
+  assert.deepEqual(res.status.reserves.map(r => Object.keys(r).join()), ['item,amount,spent', 'item,amount,spent']);
+
+  // 沒帶 note：保留原本的；帶空字串：清掉
+  assert.equal(save([{ item: '房租', amount: 13000 }]).settings, undefined);
+  assert.deepEqual({ ...notes() }, { 房租: rent });
+  assert.ok(Array.isArray(b.call('getSettingsOptions', true).metadata.quickCombos), '不影響其他設定');
+
+  // 2027.02 拿掉房租：本月還在用，備註留著；移除 2027.02 之後也還在
+  save([], { month: '2027.02' });
+  b.call('deleteBudgetSettings', '2027.02');
+  assert.deepEqual({ ...notes() }, { 房租: rent });
+
+  assert.throws(() => save([{ item: '房租', amount: 1, note: '字'.repeat(101) }]), /房租.*備註最多 100/);
+  assert.equal(b.rowValues('_預算設定', 2, 'A', 6)[5], '房租=13000', '驗證失敗不寫入');
+
+  save([{ item: '房租', amount: 13000, note: '' }]);
+  assert.deepEqual({ ...notes() }, {});
+  save([{ item: '房租', amount: 13000, note: '再加回來' }]);
+  save([]);
+  assert.deepEqual({ ...notes() }, {}, '沒有任何設定用到的項目，備註一併清掉');
+});
+
+test('預算：備註輸入框沒有提示文字', () => {
+  ['budget.js', 'reminders.js'].forEach(name => {
+    const src = fs.readFileSync(path.join(ROOT, 'src/client/scripts/pages/settings', name), 'utf8');
+    const box = src.slice(src.indexOf('<textarea'), src.indexOf('</textarea>'));
+    assert.match(box, /note-field-input/);
+    assert.doesNotMatch(box, /placeholder/);
+  });
 });
 
 test('預算：直接在試算表上修改設定（onEdit）後，網頁讀到的是新數字', () => {

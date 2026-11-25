@@ -1,8 +1,13 @@
 /**
  * 預算設定：設定頁的讀取、儲存與移除（工作表版面見 33_budget.gs）。
  * 只能設定本月或之後的月份，過去月份的預算不會被回溯改動。
+ *
+ * 「不計入每日額度的項目」的備註不放進「_預算設定」（版面不動），存在 settings metadata 的 budgetReserveNotes：
+ *   { '房租': '每月 5 日轉帳給房東', … }
+ * 以項目為單位，各月份的設定共用；沒有任何月份的設定用到的項目，儲存時一併清掉。前端直接從 metadata 讀（隨啟動資料帶著）。
  */
 const BUDGET_MAX_LIST_ = 20;
+const BUDGET_NOTE_MAX_LENGTH_ = 100;
 const BUDGET_MAX_AMOUNT_ = 999999999;
 const BUDGET_NAME_FORBIDDEN_ = /[=；;、,，\n]/;
 
@@ -117,6 +122,39 @@ function parseBudgetForm_(form, options, today) {
   return version;
 }
 
+/** 表單裡有帶 note 的預留項目 → { 項目: 備註 }；沒帶 note 的項目不列（保留原本的備註）。 */
+function parseBudgetReserveNotes_(form, version) {
+  const notes = {};
+  version.reserves.forEach(function (r) {
+    const match = form.reserves.filter(function (x) { return x && stripEmoji_(String(x.item).trim()) === r.item; })[0];
+    if (match.note == null) return;
+    notes[r.item] = multilineNote_(match.note, BUDGET_NOTE_MAX_LENGTH_, '「' + r.item + '」');
+  });
+  return notes;
+}
+
+/**
+ * 套用備註的修改，並清掉已經沒有任何設定用到的項目。有變動才寫入，並回傳更新後的選項資料（沒變動回傳 null）。
+ * 沒有帶備註、也沒存過備註時只讀一次 metadata。
+ */
+function saveBudgetReserveNotes_(ss, versions, edits) {
+  const meta = getSettingsMetadata_(ss);
+  const merged = Object.assign({}, meta.budgetReserveNotes, edits);
+  const used = new Set();
+  versions.forEach(function (v) { v.reserves.forEach(function (r) { used.add(r.item); }); });
+  const notes = {};
+  Object.keys(merged).sort().forEach(function (item) {
+    if (merged[item] && used.has(item)) notes[item] = merged[item];
+  });
+  if (JSON.stringify(notes) === JSON.stringify(meta.budgetReserveNotes || {})) return null;
+
+  meta.budgetReserveNotes = notes;
+  if (!saveSettingsMetadata_(meta, ss)) throw new Error('預算備註儲存失敗，請稍後再試。');
+  const updated = readAllOptionsData_(ss, true);
+  updateBootSnapshotOptions_(updated);
+  return { options: updated.raw, simpleOptions: updated.simple, metadata: updated.metadata };
+}
+
 /* ------------------------------ 試算表讀寫 ------------------------------ */
 
 function getOrCreateBudgetSheet_(ss) {
@@ -166,17 +204,21 @@ function writeBudgetVersions_(ss, versions) {
   }
 }
 
-function saveBudgetVersionsAndRespond_(ss, versions, today) {
+/** @param noteEdits  選用：parseBudgetReserveNotes_ 的結果。備註有變動時回應多帶 settings（更新後的選項與 metadata）。 */
+function saveBudgetVersionsAndRespond_(ss, versions, today, noteEdits) {
+  const settings = saveBudgetReserveNotes_(ss, versions, noteEdits || {});
   writeBudgetVersions_(ss, versions);
   const config = { versions: versions.slice().sort(function (a, b) { return a.month < b.month ? -1 : 1; }) };
   saveBudgetConfigCache_(config);
-  return {
+  const res = {
     ok: true,
     todayISO: today.iso,
     currentMonth: today.month,
     versions: config.versions,
     status: currentBudgetStatus_(ss, config, today),
   };
+  if (settings) res.settings = settings;
+  return res;
 }
 
 /* -------------------------------- API -------------------------------- */
@@ -186,11 +228,12 @@ function saveBudgetSettings_(form) {
     const ss = getSpreadsheet_();
     const today = budgetToday_();
     const version = parseBudgetForm_(form, readOptions_(ss), today);
+    const noteEdits = parseBudgetReserveNotes_(form, version);
     version.updatedAt = Date.now();
     const config = readBudgetConfig_(ss, true);
     const versions = config.versions.filter(function (v) { return v.month !== version.month; });
     versions.push(version);
-    return saveBudgetVersionsAndRespond_(ss, versions, today);
+    return saveBudgetVersionsAndRespond_(ss, versions, today, noteEdits);
   });
 }
 

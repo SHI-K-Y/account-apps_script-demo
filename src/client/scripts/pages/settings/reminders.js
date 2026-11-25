@@ -185,9 +185,9 @@ const ReminderSettings = (function() {
         InfoTip.html('rmdTip-' + idx, summaryText(r), { under: true, label: label + ' 提醒說明', bubbleAttrs: 'data-rmd-summary="' + idx + '"' }) +
       '</div>' +
       scheduleExtraHtml(r, idx) +
-      '<label class="rmd-note">' +
-        '<span class="rmd-field-label">備註 (選填)</span>' +
-        '<textarea class="note-input rmd-note-input" rows="2" maxlength="' + NOTE_MAX_LENGTH + '" data-rmd-note="' + idx + '"' +
+      '<label class="note-field">' +
+        '<span class="note-field-label">備註 (選填)</span>' +
+        '<textarea class="note-input note-field-input" rows="2" maxlength="' + NOTE_MAX_LENGTH + '" data-rmd-note="' + idx + '"' +
           ' aria-label="' + escAttr(label) + ' 提醒的備註">' + escHtml(r.note) + '</textarea>' +
       '</label>' +
       '<div class="rmd-msg" data-rmd-msg="' + idx + '" data-tone="' + msgTone(iss) + '"' + (msgText(iss) ? (iss.error ? ' role="alert"' : '') : ' hidden') + '>' + escHtml(msgText(iss)) + '</div>' +

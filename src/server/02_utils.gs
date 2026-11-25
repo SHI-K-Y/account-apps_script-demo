@@ -78,6 +78,13 @@ function textOrBlank_(value, maxLength) {
   return text.slice(0, maxLength);
 }
 
+/** 多行備註（記帳提醒、預算預留項目）：統一換行、去掉頭尾空白，連續空行最多留一行。 */
+function multilineNote_(value, maxLength, label) {
+  const note = String(value == null ? '' : value).replace(/\r\n?/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  if (note.length > maxLength) throw new Error(label + '：備註最多 ' + maxLength + ' 個字。');
+  return note;
+}
+
 function validateOption_(value, allowedValues, label) {
   if (!allowedValues.includes(value)) {
     throw new Error(`${label}「${value}」不在「資料選單設定區」的選項中。`);

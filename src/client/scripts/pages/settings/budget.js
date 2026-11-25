@@ -4,6 +4,7 @@
  * 資料存在試算表的「_預算設定」工作表（後端見 src/server/55_settings_budget.gs）。
  * 每個月份可以有自己的設定；沒有單獨設定的月份沿用之前最近的那一個。
  * 只能設定本月或之後的月份，過去月份不會被回溯改動。
+ * 「不計入每日額度的項目」的備註以項目為單位存在 settings metadata 的 budgetReserveNotes，各月份共用。
  * ============================================================================= */
 const BudgetSettings = (function() {
   const SOURCES = [
@@ -13,6 +14,7 @@ const BudgetSettings = (function() {
     { value: 'off', label: '停用' },
   ];
   const MONTHS_AHEAD = 12;
+  const NOTE_MAX_LENGTH = 100; // 與後端 BUDGET_NOTE_MAX_LENGTH_ 一致
 
   const st = {
     data: null,      // getBudgetSettings 的結果（P12：先用本機快取／預取的，再背景更新）
@@ -61,6 +63,15 @@ const BudgetSettings = (function() {
   function ownVersion(month) {
     return versions().filter(v => v.month === month)[0] || null;
   }
+
+  function savedNote(item) {
+    const meta = settingsState.metadata || (state.data && state.data.settingsMetadata) || {};
+    const notes = meta.budgetReserveNotes || {};
+    return Object.prototype.hasOwnProperty.call(notes, item) ? String(notes[item] || '') : '';
+  }
+
+  /** 預留項目的備註：改過的用草稿（note），沒改過的一律看最新的設定資料。 */
+  function noteOf(r) { return r.note != null ? r.note : savedNote(r.item); }
 
   function makeDraft(month) {
     const v = versionFor(month);
@@ -253,6 +264,11 @@ const BudgetSettings = (function() {
                  '<input class="text-input budget-reserve-amount" type="text" inputmode="decimal" autocomplete="off" maxlength="12" placeholder="預留金額" data-budget-reserve-amount="' + i + '" value="' + escAttr(r.amount) + '" aria-label="' + escAttr((r.item || '') + ' 的預留金額') + '">' +
                '</div>' +
                '<button type="button" class="icon-btn budget-reserve-remove" data-budget-reserve-remove="' + i + '" title="移除" aria-label="移除 ' + escAttr(r.item || '') + '">' + iconHtml('x') + '</button>' +
+               '<label class="note-field">' +
+                 '<span class="note-field-label">備註 (選填)</span>' +
+                 '<textarea class="note-input note-field-input" rows="2" maxlength="' + NOTE_MAX_LENGTH + '" data-budget-reserve-note="' + i + '"' +
+                   ' aria-label="' + escAttr((r.item || '') + ' 的備註') + '">' + escHtml(noteOf(r)) + '</textarea>' +
+               '</label>' +
              '</div>';
     }).join('');
     const canAdd = items.some(name => used.indexOf(name) === -1);
@@ -363,12 +379,18 @@ const BudgetSettings = (function() {
       amount: d.amount,
       categories: d.categories.slice(),
       incomeItems: d.incomeItems.slice(),
-      reserves: d.reserves.map(r => ({ item: r.item, amount: r.amount })),
+      // 備註只送改過的：沒改的不帶 note，後端保留原本的（不會用這台裝置的舊資料蓋掉別台剛改的）
+      reserves: d.reserves.map(r => Object.assign({ item: r.item, amount: r.amount }, r.note != null ? { note: r.note.trim() } : null)),
       excludedItems: d.excludedItems.slice(),
     };
   }
 
   function applyResult(res, container, message) {
+    if (res.settings) {
+      settingsState.data = res.settings.options;
+      refreshBookkeepingOptions(res.settings.simpleOptions, res.settings.options, res.settings.metadata);
+      delete res.settings; // 只有備註變動時才有；預算的本機快取不用存這一份
+    }
     st.data = res;
     st.fetched = true;
     st.saving = false;
@@ -506,6 +528,9 @@ const BudgetSettings = (function() {
       else if (t.hasAttribute && t.hasAttribute('data-budget-reserve-amount')) {
         const r = st.draft.reserves[Number(t.getAttribute('data-budget-reserve-amount'))];
         if (r) r.amount = t.value;
+      } else if (t.hasAttribute && t.hasAttribute('data-budget-reserve-note')) {
+        const r = st.draft.reserves[Number(t.getAttribute('data-budget-reserve-note'))];
+        if (r) r.note = t.value;
       }
     });
 

@@ -17,15 +17,6 @@ const RECORD_REMINDER_LIMITS_ = Object.freeze({ MAX_COUNT: 20, NOTE_MAX_LENGTH: 
 const RECORD_REMINDER_REPEATS_ = Object.freeze(['daily', 'weekly', 'monthly']);
 const RECORD_REMINDER_ID_RE_ = /^[A-Za-z0-9_-]{1,40}$/;
 
-/** 備註：統一換行、去掉頭尾空白，連續空行最多留一行。 */
-function normalizeRecordReminderNote_(value, named) {
-  const note = String(value == null ? '' : value).replace(/\r\n?/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
-  if (note.length > RECORD_REMINDER_LIMITS_.NOTE_MAX_LENGTH) {
-    throw new Error(named + '：備註最多 ' + RECORD_REMINDER_LIMITS_.NOTE_MAX_LENGTH + ' 個字。');
-  }
-  return note;
-}
-
 function normalizeRecordReminders_(config, options, existing) {
   if (!config || typeof config !== 'object' || Array.isArray(config)) throw new Error('記帳提醒資料格式錯誤。');
   if (!Array.isArray(config.reminders)) throw new Error('記帳提醒資料格式錯誤。');
@@ -80,7 +71,7 @@ function normalizeRecordReminders_(config, options, existing) {
       if (!Number.isInteger(day) || day < 1 || day > 31) throw new Error(named + '：每月提醒的日期要在 1 到 31 之間。');
       out.monthDay = day;
     }
-    const note = normalizeRecordReminderNote_(raw.note, named);
+    const note = multilineNote_(raw.note, RECORD_REMINDER_LIMITS_.NOTE_MAX_LENGTH, named);
     if (note) out.note = note;
     return out;
   });
