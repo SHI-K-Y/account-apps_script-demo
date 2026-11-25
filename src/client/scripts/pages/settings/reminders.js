@@ -1,12 +1,14 @@
 /* =============================================================================
  * ReminderSettings — 設定頁的「記帳提醒」分頁
  * -----------------------------------------------------------------------------
- * 每個提醒：支出或收入的哪個項目、每天／每週幾／每月幾號、幾點後還沒記就提醒。
+ * 每個提醒：支出或收入的哪個項目、每天／每週幾／每月幾號、幾點後還沒記就提醒，
+ * 以及選填的備註（跳出提醒卡片時一起顯示）。
  * 設定存在 settings metadata 的 recordReminders（跨裝置同步，後端見 57_settings_reminders.gs），
  * 判斷規則在 core/reminders.js，跳出卡片在 app/reminder-prompt.js。
  * ============================================================================= */
 const ReminderSettings = (function() {
   const MAX_REMINDERS = 20;
+  const NOTE_MAX_LENGTH = 100; // 與後端 RECORD_REMINDER_LIMITS_.NOTE_MAX_LENGTH 一致
   const REPEAT_OPTIONS = [
     { value: 'daily', label: '每天' },
     { value: 'weekly', label: '每週' },
@@ -37,7 +39,7 @@ const ReminderSettings = (function() {
     return JSON.stringify({
       enabled: d.enabled,
       reminders: d.reminders.map(r => [r.id, r.enabled, r.type, r.item, r.repeat, r.time,
-        r.repeat === 'weekly' ? r.weekdays.slice().sort() : null, r.repeat === 'monthly' ? r.monthDay : null]),
+        r.repeat === 'weekly' ? r.weekdays.slice().sort() : null, r.repeat === 'monthly' ? r.monthDay : null, r.note.trim()]),
     });
   }
 
@@ -67,7 +69,7 @@ const ReminderSettings = (function() {
     const end = slot ? MealSlots.toMinutes(slot.end) : -1;
     return {
       id: newId(), enabled: true, type: 'expense', item: item, repeat: 'daily',
-      time: end >= 0 ? fmtMinutes(end + 1) : '21:00', weekdays: [1, 2, 3, 4, 5], monthDay: 1,
+      time: end >= 0 ? fmtMinutes(end + 1) : '21:00', weekdays: [1, 2, 3, 4, 5], monthDay: 1, note: '',
     };
   }
 
@@ -183,6 +185,11 @@ const ReminderSettings = (function() {
         InfoTip.html('rmdTip-' + idx, summaryText(r), { under: true, label: label + ' 提醒說明', bubbleAttrs: 'data-rmd-summary="' + idx + '"' }) +
       '</div>' +
       scheduleExtraHtml(r, idx) +
+      '<label class="rmd-note">' +
+        '<span class="rmd-field-label">備註 (選填)</span>' +
+        '<textarea class="note-input rmd-note-input" rows="2" maxlength="' + NOTE_MAX_LENGTH + '" data-rmd-note="' + idx + '"' +
+          ' aria-label="' + escAttr(label) + ' 提醒的備註">' + escHtml(r.note) + '</textarea>' +
+      '</label>' +
       '<div class="rmd-msg" data-rmd-msg="' + idx + '" data-tone="' + msgTone(iss) + '"' + (msgText(iss) ? (iss.error ? ' role="alert"' : '') : ' hidden') + '>' + escHtml(msgText(iss)) + '</div>' +
       '<div class="rmd-status" data-rmd-status="' + idx + '" data-tone="' + info.tone + '"' + (info.text && !iss.error && !iss.warn ? '' : ' hidden') + '>' +
         '<span class="rmd-status-dot" aria-hidden="true"></span><span data-rmd-status-text>' + escHtml(info.text) + '</span>' +
@@ -288,6 +295,7 @@ const ReminderSettings = (function() {
         const out = { id: r.id, enabled: r.enabled, type: r.type, item: r.item, repeat: r.repeat, time: r.time };
         if (r.repeat === 'weekly') out.weekdays = r.weekdays.slice();
         if (r.repeat === 'monthly') out.monthDay = r.monthDay;
+        if (r.note.trim()) out.note = r.note.trim();
         return out;
       }),
     };
@@ -383,7 +391,7 @@ const ReminderSettings = (function() {
       if (next) pickRadio(container, next);
     });
 
-    // 下拉選單：選完整個重繪；時間欄位：只更新草稿與衍生的提示，不重建輸入框。
+    // 下拉選單：選完整個重繪；時間與備註：只更新草稿與衍生的提示，不重建輸入框。
     const onEdit = e => {
       if (!isTab() || !st.draft || st.saving) return;
       const t = e.target;
@@ -399,11 +407,12 @@ const ReminderSettings = (function() {
         rerender(container, '[' + (isItem ? 'data-rmd-item' : 'data-rmd-monthday') + '="' + idx + '"]');
         return;
       }
-      if (!t.hasAttribute('data-rmd-time')) return;
-      const idx = Number(t.getAttribute('data-rmd-time'));
+      const field = t.hasAttribute('data-rmd-time') ? 'time' : t.hasAttribute('data-rmd-note') ? 'note' : '';
+      if (!field) return;
+      const idx = Number(t.getAttribute('data-rmd-' + field));
       const r = d.reminders[idx];
-      if (!r || r.time === t.value) return;
-      r.time = t.value;
+      if (!r || r[field] === t.value) return;
+      r[field] = t.value;
       patch(container, idx);
     };
     container.addEventListener('input', onEdit);

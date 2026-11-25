@@ -122,6 +122,11 @@ const ReminderPrompt = (function() {
     $('reminderModalTitle').textContent = r.item + '尚未記帳';
     $('reminderModalKicker').textContent = '記帳提醒 · ' + RecordReminders.scheduleText(r);
     $('reminderModalDesc').textContent = describe(r);
+    const note = $('reminderModalNote');
+    if (note) {
+      note.textContent = r.notes.join('\n');
+      note.hidden = !r.notes.length;
+    }
     const icon = $('reminderModalIcon');
     if (icon) icon.dataset.type = r.type;
     const more = $('reminderModalMore');

@@ -94,6 +94,23 @@ test('記帳提醒（前端）：due() 排序、同項目合併、總開關與�
   assert.equal(off.due({ now, records: NONE, items: ITEMS }).length, 0, '總開關關閉就不提醒');
 });
 
+test('記帳提醒（前端）：備註跟著提醒，同項目合併時備註都留著', () => {
+  const R = loadRules(metaOf(
+    lunch({ id: 'l1', time: '13:00', note: ' 發票記得存 ' }),
+    lunch({ id: 'l2', time: '12:00', note: '公司可報帳' }),
+    lunch({ id: 'l3', time: '11:00' }),
+    lunch({ id: 'l4', time: '13:30', note: '公司可報帳' }),
+    lunch({ id: 'l5', time: '20:00', note: '還沒到時間' }),
+    lunch({ id: 'b', item: '早餐', time: '10:00' }),
+  ));
+  assert.equal(R.config().reminders[0].note, '發票記得存');
+  assert.equal(R.config().reminders[2].note, '', '舊資料沒有備註欄位時是空字串');
+  const due = R.due({ now: at(13, 14, 0), records: NONE, items: ITEMS });
+  assert.deepEqual(Array.from(due, r => r.item), ['早餐', '午餐']);
+  assert.deepEqual(Array.from(due[0].notes), [], '沒有備註');
+  assert.deepEqual(Array.from(due[1].notes), ['公司可報帳', '發票記得存'], '依提醒時間排序、去重，還沒到時間的不算');
+});
+
 test('記帳提醒（前端）：排程文字', () => {
   const R = loadRules(null);
   const text = over => R.scheduleText(R.config(metaOf(lunch(over))).reminders[0]);
@@ -160,6 +177,32 @@ test('記帳提醒（後端）：擋下格式錯誤與不存在的項目', () =>
   assert.notEqual(ids[0], ids[1], '重複的 id 會換一個新的');
 });
 
+test('記帳提醒（後端）：備註選填、整理換行、限制長度，改名後仍保留', () => {
+  const b = createBackend();
+  const save = (...list) => b.call('saveRecordReminders', { enabled: true, reminders: list }).metadata.recordReminders.reminders;
+  const list = save(
+    reminder({ note: '  第一行\r\n\n\n\n第二行 <b>😀 ' }),
+    reminder({ id: 'rm_b', note: ' \n ' }),
+    reminder({ id: 'rm_c', note: null }),
+    reminder({ id: 'rm_d', note: '字'.repeat(100) }),
+  );
+  assert.equal(list[0].note, '第一行\n\n第二行 <b>😀', '原文保留，只整理空白');
+  assert.ok(!('note' in list[1]) && !('note' in list[2]), '沒填就不存');
+  assert.equal(list[3].note.length, 100);
+  assert.equal(b.call('getInitialData', true).settingsMetadata.recordReminders.reminders[0].note, list[0].note, '打開頁面時就拿得到備註');
+  assert.throws(() => save(reminder({ note: '字'.repeat(101) })), /午餐.*備註最多 100/);
+
+  const row = b.call('getSettingsOptions', true).expenseItems.find(o => o.value === '午餐').row;
+  b.call('saveSettingsItemWithEmoji', { category: 'expenseItems', name: '中餐', row });
+  const renamed = savedMeta(b).recordReminders.reminders[0];
+  assert.deepEqual([renamed.item, renamed.note], ['中餐', list[0].note]);
+
+  // 上限全部填滿也存得進指令碼屬性（單值 9KB，超過會分塊）
+  const full = Array.from({ length: 20 }, (_, i) => reminder({ id: 'f' + i, item: '晚餐', note: '字'.repeat(100) }));
+  assert.equal(save(...full).length, 20);
+  assert.ok(savedMeta(b).recordReminders.reminders.every(r => r.note.length === 100));
+});
+
 test('記帳提醒（後端）：項目改名會跟著改，已刪除的項目可以原樣保留', () => {
   const b = createBackend();
   b.call('saveRecordReminders', {
@@ -188,5 +231,6 @@ test('記帳提醒（畫面）：提醒卡片有「前往記帳」「關閉」�
   const close = modal.indexOf('id="reminderCloseBtn"');
   const snooze = modal.indexOf('id="reminderSnoozeBtn"');
   assert.ok(go > 0 && close > 0 && snooze > Math.max(go, close), '今日不再顯示在兩個按鈕下方');
+  assert.match(modal, /id="reminderModalNote"[^>]*\bhidden\b/, '卡片有備註區，沒有備註時不顯示');
   assert.match(html, /data-stab="reminders"/, '設定頁有「記帳提醒」分頁');
 });

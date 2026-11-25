@@ -44,6 +44,7 @@ const RecordReminders = (function() {
       time: String(r.time || ''),
       weekdays: Array.isArray(r.weekdays) ? r.weekdays.map(Number).filter(n => n >= 0 && n <= 6) : [],
       monthDay: Number(r.monthDay) || 1,
+      note: String(r.note || '').trim(),
     };
     return out;
   }
@@ -103,7 +104,8 @@ const RecordReminders = (function() {
   }
 
   /**
-   * 現在該跳出來的提醒（依開始提醒的時間排序）；同一個項目只留一個。
+   * 現在該跳出來的提醒（依開始提醒的時間排序）；同一個項目只留一個，
+   * notes 是這個項目目前該提醒的所有備註（不重複），合併成一張卡片時不會漏掉後面幾條的備註。
    * ctx.skip(key)：回傳 true 的項目略過（已關閉或今日不再顯示）。
    */
   function due(ctx) {
@@ -115,11 +117,12 @@ const RecordReminders = (function() {
       .sort((a, b) => a.st.dueAt - b.st.dueAt)
       .filter(x => {
         const key = itemKey(x.reminder);
-        if (seen[key]) return false;
-        seen[key] = true;
-        return true;
+        const first = !seen[key];
+        const notes = seen[key] || (seen[key] = []);
+        if (x.reminder.note && notes.indexOf(x.reminder.note) === -1) notes.push(x.reminder.note);
+        return first;
       })
-      .map(x => Object.assign({}, x.reminder, { key: itemKey(x.reminder), scope: x.st.scope, dueAt: x.st.dueAt }));
+      .map(x => Object.assign({}, x.reminder, { key: itemKey(x.reminder), scope: x.st.scope, dueAt: x.st.dueAt, notes: seen[itemKey(x.reminder)] }));
   }
 
   function weekdayText(days) {
