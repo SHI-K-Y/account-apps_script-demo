@@ -8,13 +8,14 @@
  *   boot        啟動資料（BOOT_JSON）：月份清單、選項（OPTIONS_ALL／OPTIONS_SIMPLE）、本月明細；並更新備援快照 BOOT_SNAPSHOT
  *   prevMonth   上個月的明細（MONTH_DATA_<上月>）
  *   overview    本月總覽（OVERVIEW_<本月>）
- *   charts      本月圖表（CHARTS_<本月>）
+ *   charts      本月圖表（CHARTS_<本月>）與月底預估用的前三個月明細（FORECAST_HISTORY_<本月>，F06）
+ *   netWorth    淨資產歷史（NET_WORTH：從 _資產快照 讀，F06）
  *   fxLedgers   國外帳簿清單（FX_LEDGERS）
  *   config      doGet 設定（DOGET_CONFIG：允許名單、圖示、網址），存活時間撐到下一次預熱
  * 每一步都在文件鎖內做，是為了不和記帳寫入交錯：寫入會就地更新明細快取，
  * 預熱若在寫入前讀了工作表、寫入後才存回快取，就會把舊資料蓋回去。
  *
- * 執行時間估算：一次約 5–15 秒（主要是讀本月／上月明細、選項、總覽區塊與各國外帳簿），
+ * 執行時間估算：一次約 5–16 秒（主要是讀本月／上月明細、選項、總覽區塊與各國外帳簿；前兩、三個月的明細快取還在時不重讀），
  * 每天 12 次 ≈ 1–3 分鐘，遠低於一般帳號時間觸發器每天 90 分鐘的配額。
  * 偵錯：每次執行都會在「執行項目」印出 [warmCaches] 各步驟耗時。
  */
@@ -86,10 +87,13 @@ function runWarmCaches_() {
     step('overview', function () { readAssetOverviewFromSheet_(ss, target, months); });
     step('charts', function () {
       // 不用 forceRefresh：那會強制重建月份彙總（寫入工作表）；明細快取剛更新過，清掉圖表快取重算即可
-      scriptCache_().remove(CONFIG.CACHE_KEYS.CHARTS_PREFIX + target);
+      // 月底預估的歷史明細（F06）一起重建，存活時間才撐得到下一次預熱
+      scriptCache_().removeAll([CONFIG.CACHE_KEYS.CHARTS_PREFIX + target, CONFIG.CACHE_KEYS.FORECAST_HISTORY_PREFIX + target]);
       getOverviewCharts_(target, false);
     });
   }
+
+  step('netWorth', function () { loadNetWorthClosed_(ss, months, today); });
 
   step('fxLedgers', function () {
     scriptCache_().remove(CONFIG.CACHE_KEYS.FX_LEDGERS);

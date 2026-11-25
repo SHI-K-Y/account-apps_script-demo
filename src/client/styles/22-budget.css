@@ -144,6 +144,55 @@
   color: var(--subtle);
 }
 
+/* ------------------------------ 支出分析：月底預估（F06） ------------------------------ */
+/* 每張卡片都是獨立的堆疊環境：提示框會超出卡片，這張要疊在後面的卡片上 */
+.oc-budget { z-index: 1; }
+.oc-forecast {
+  position: relative;   /* info-tip 的提示框以這裡為準，不會超出卡片 */
+  padding-top: 10px;
+  border-top: 1px solid var(--glass-divider);
+}
+.oc-fc-title {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 750;
+  color: var(--muted);
+}
+.oc-fc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+@media (min-width: 768px) {
+  .oc-fc-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+}
+.oc-fc-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.oc-fc-label {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.oc-fc-val {
+  font-size: 18px;
+  font-weight: 850;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.oc-fc-val.is-over { color: var(--danger); }
+.oc-fc-sub {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ------------------------------ 設定頁：預算分頁 ------------------------------ */
 /* 本月狀態是第一列：標題放大、四個數字直接排在卡片上（不另外裝框） */
 .pref-card.budget-status {

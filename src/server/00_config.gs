@@ -4,6 +4,8 @@ const CONFIG = Object.freeze({
   TEMPLATE_SHEET: '新版記帳簿空白頁',
   SUMMARY_SHEET: '_月份彙總',
   BUDGET_SHEET: '_預算設定',
+  // 淨資產快照（F06）：過完的月份一列一個月，由每日維護觸發器寫入（34_net_worth.gs）
+  NET_WORTH_SHEET: '_資產快照',
   SETTLEMENT_SHEETS: Object.freeze(['對帳系統', '結帳系統']),
   MIN_DATA_ROW: 5,
   MAX_DATA_ROW: 1004,
@@ -29,6 +31,11 @@ const CONFIG = Object.freeze({
     FX_RATES_PREFIX: 'FX_RATES_V1_',
     BUDGET_CONFIG: 'BUDGET_CONFIG_V1',
     BUDGET_OPENING_PREFIX: 'BUDGET_OPENING_V1_',
+    // 淨資產歷史（F06）：過完的月份（本月用 OVERVIEW）；與「快照從哪個月起過期」的指令碼屬性鏡像
+    NET_WORTH: 'NET_WORTH_V1',
+    NET_WORTH_DIRTY_MARK: 'NET_WORTH_DIRTY_MARK_V1',
+    // 月底預估（F06）：本月的前三個月的精簡支出明細，鍵是本月
+    FORECAST_HISTORY_PREFIX: 'FORECAST_HISTORY_V1_',
     DOGET_CONFIG: 'DOGET_CONFIG_V1',
     // 試算表 ID（P10）：指令碼屬性 SPREADSHEET_ID 的快取，寫入時和選項一起一次 getAll 讀回，不用每次讀屬性
     SPREADSHEET_ID: 'SPREADSHEET_ID_V1',
@@ -52,6 +59,8 @@ const CONFIG = Object.freeze({
     MONTHS_SNAPSHOT: 'MONTHS_SNAPSHOT_V2',
     SETTINGS_METADATA: 'SETTINGS_METADATA_V2',
     SUMMARY_DIRTY: 'SUMMARY_DIRTY_V1',
+    // 淨資產快照從哪個月起過期（最早被改到的過去月份，F06）
+    NET_WORTH_DIRTY: 'NET_WORTH_DIRTY_V1',
     FX_LEDGER_IDS: 'FX_LEDGER_IDS_V1',
     // 舊版存在試算表 O1:Q1 的 metadata 已清掉（P11）：之後讀 metadata 不用再開試算表檢查
     LEGACY_META_CLEANED: 'LEGACY_META_CLEANED',

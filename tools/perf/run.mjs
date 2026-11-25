@@ -26,6 +26,8 @@
 //          結尾印出 P08 的驗收檢查（boot-ready、最長長任務、開機後立刻互動）。
 // P12 新增：「送出記帳的主執行緒時間」＝按下送出到回應處理完、閒置寫回也做完，主執行緒任務與腳本的總時間（60 筆支出、記 5 筆取中位數）。
 //          --submit-only：只跑這一段。
+// F06 新增：「資產軌跡進場」＝合成資料加長到 24 個月，總覽頁捲到折線圖（第一次進場）與切換成 24 個月時的幀，
+//          對照組是同一頁靜止時的幀。--entrance-only：只跑這一段。
 // 注意：headless 是軟體繪圖，絕對數字比真機悲觀，只拿來比較「改之前／改之後」的相對變化。
 import fs from 'node:fs';
 import os from 'node:os';
@@ -70,6 +72,7 @@ const OPT = {
   saveBaseline: Boolean(args['save-baseline']),
   listsOnly: Boolean(args['lists-only']),
   submitOnly: Boolean(args['submit-only']),
+  entranceOnly: Boolean(args['entrance-only']),
 };
 if (args.net && args.net !== 'fast3g') fail('--net 只支援 fast3g');
 
@@ -801,6 +804,73 @@ async function measureFlip(browser) {
 }
 
 /* ---------------------------------------------------------------------------
+ * g2. 資產軌跡的進場動畫（F06）：24 個月、三條線。進場只動 transform，動畫期間主執行緒不該有重繪。
+ *     第一次進場由 IntersectionObserver 觸發（捲到圖表）；切換範圍會重建 SVG 再播一次。
+ *     掉幀＝rAF 間隔超過一個 vsync 的部分（間隔 33ms 算掉 1 幀）；對照組「靜止」是同一頁動畫播完後的同樣長度。
+ * ------------------------------------------------------------------------- */
+const ENTRANCE_MS = 1200;   // 進場 900ms ＋ 前後餘裕
+const ENTRANCE_CASES = [
+  { key: 'enter', label: '資產軌跡 第一次進場' },
+  { key: 'range', label: '資產軌跡 切換 24 個月' },
+  { key: 'still', label: '資產軌跡 靜止（對照）' },
+];
+ENTRANCE_CASES.forEach(c => {
+  metric('entrance.' + c.key + '.frames', c.label + ' ' + ENTRANCE_MS + 'ms 幀數', '幀', 'up');
+  metric('entrance.' + c.key + '.dropped', c.label + ' 掉幀', '幀', 'down');
+  metric('entrance.' + c.key + '.maxFrameMs', c.label + ' 最長幀', 'ms', 'down');
+  metric('entrance.' + c.key + '.paints', c.label + ' 主執行緒 Paint', '次', 'down');
+  metric('entrance.' + c.key + '.layouts', c.label + ' Layout', '次', 'down');
+});
+async function measureEntrance(browser) {
+  const app = await startApp({ historyMonths: 23 });
+  const { context, page, cdp } = await newPage(browser, { throttle: true });
+  const out = {};
+  try {
+    await boot(page, app.url);
+    await settle(page);
+    await goTo(page, 'overview');
+    await settle(page);
+    if (!await page.evaluate(() => Boolean(document.querySelector('.nw-chart')))) return out;   // 舊版本沒有這張圖
+    const one = async (key, act) => {
+      await sleep(600);
+      const stopTrace = await startTrace(cdp);
+      const m0 = await getMetrics(cdp);
+      const ts = await page.evaluate(({ ms, src }) => new Promise(resolve => {
+        const list = [];
+        const done = () => resolve(list);
+        requestAnimationFrame(() => {
+          (0, eval)('(' + src + ')')();
+          let t0 = null;
+          const tick = t => { if (t0 == null) t0 = t; list.push(t); if (t - t0 < ms) requestAnimationFrame(tick); else done(); };
+          requestAnimationFrame(tick);
+        });
+      }), { ms: ENTRANCE_MS, src: act.toString() });
+      const m1 = await getMetrics(cdp);
+      const trace = summarizeTrace(await stopTrace());
+      const deltas = ts.slice(1).map((t, i) => t - ts[i]);
+      out['entrance.' + key + '.frames'] = deltas.length;
+      out['entrance.' + key + '.dropped'] = deltas.reduce((n, d) => n + Math.max(0, Math.round(d / (1000 / 60)) - 1), 0);
+      out['entrance.' + key + '.maxFrameMs'] = Math.max(...deltas);
+      out['entrance.' + key + '.paints'] = trace.Paint.count;
+      out['entrance.' + key + '.layouts'] = (m1.LayoutCount || 0) - (m0.LayoutCount || 0);
+    };
+    await one('enter', () => window.scrollTo(0, document.getElementById('netWorthSection').getBoundingClientRect().top + window.scrollY - 160));
+    await one('range', () => document.querySelector('[data-nw-range="24"]').click());
+    await one('still', () => {});
+  } finally {
+    await context.close();
+    await app.close();
+  }
+  return out;
+}
+
+function printEntranceOnly(list) {
+  const rows = METRICS.filter(m => m.key.startsWith('entrance.'));
+  console.log('');
+  rows.forEach(m => console.log('  ' + padR(m.label, 44) + list.map(r => fmt(round(r[m.key], 1), m.unit)).join(' / ') + ' ' + m.unit));
+}
+
+/* ---------------------------------------------------------------------------
  * h. 送出記帳的主執行緒時間（P12）：從按下送出到伺服器回應處理完、閒置寫回本機快取也做完為止，
  *    主執行緒上所有任務（RunTask）的總時間，以及其中執行腳本的時間（腳本事件取聯集，不重複計算巢狀）。
  *    合成資料加長到 60 筆支出（接近實際一個月的量），記 SUBMIT_SAMPLES 筆取中位數。
@@ -1196,6 +1266,7 @@ async function main() {
   let flip = {};
   const listRuns = [];
   const submitRuns = [];
+  const entranceRuns = [];
   try {
     console.log('暖機…');
     await warmup(browser);
@@ -1207,6 +1278,11 @@ async function main() {
       }
       await browser.close();
       return printSubmitOnly(submitRuns);
+    }
+    if (OPT.entranceOnly) {
+      for (let i = 0; i < OPT.runs; i++) entranceRuns.push(await measureEntrance(browser));
+      await browser.close();
+      return printEntranceOnly(entranceRuns);
     }
     if (OPT.listsOnly) {
       for (let i = 1; i <= OPT.runs; i++) {
@@ -1227,6 +1303,8 @@ async function main() {
     for (let i = 0; i < OPT.runs; i++) listRuns.push(await measureLists(browser));
     console.log('送出記帳的主執行緒時間…');
     for (let i = 0; i < OPT.runs; i++) submitRuns.push(await measureSubmitCost(browser));
+    console.log('資產軌跡進場…');
+    for (let i = 0; i < OPT.runs; i++) entranceRuns.push(await measureEntrance(browser));
   } finally {
     if (browser.isConnected()) await browser.close();
   }
@@ -1236,8 +1314,8 @@ async function main() {
   for (const m of METRICS) {
     if (m.key.startsWith('static.')) continue;
     if (m.key.startsWith('flip.')) { metrics[m.key] = flip[m.key] == null ? null : flip[m.key]; continue; }
-    if (m.key.startsWith('longlist.') || m.key.startsWith('submit.')) {
-      const ys = (m.key.startsWith('submit.') ? submitRuns : listRuns).map(r => r[m.key]).filter(v => typeof v === 'number');
+    if (m.key.startsWith('longlist.') || m.key.startsWith('submit.') || m.key.startsWith('entrance.')) {
+      const ys = (m.key.startsWith('submit.') ? submitRuns : m.key.startsWith('entrance.') ? entranceRuns : listRuns).map(r => r[m.key]).filter(v => typeof v === 'number');
       metrics[m.key] = round(median(ys), 2);
       if (ys.length > 1) spread[m.key] = [round(Math.min(...ys), 2), round(Math.max(...ys), 2)];
       continue;

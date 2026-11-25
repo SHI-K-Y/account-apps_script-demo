@@ -28,7 +28,7 @@ const Api = (function() {
   const READ_ACTIONS = new Set([
     'getInitialData', 'getRecentRecords', 'getFullRecords', 'searchRecords', 'getCreditCardRecords',
     'getAssetOverview', 'getOverviewCharts', 'getSettingsOptions',
-    'getFxLedgers', 'getFxLedgerData', 'getFxRates', 'getBudgetSettings', 'getOpLog', 'batchRead'
+    'getFxLedgers', 'getFxLedgerData', 'getFxRates', 'getBudgetSettings', 'getOpLog', 'getNetWorthHistory', 'batchRead'
   ]);
   // 後端支援 opId 去重的寫入（src/server/21_records.gs）：第一個參數是表單（addRecords 是表單陣列）
   const OP_ACTIONS = new Set([

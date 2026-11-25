@@ -144,7 +144,7 @@ const LocalCache = (function() {
   hydrate();
 
   /* ------------------------------ 對外介面 ------------------------------ */
-  const STATUS_KEYS = { overview: () => 'overview', settlement: () => 'settlement', budget: () => 'budget', charts: m => 'charts:' + m };
+  const STATUS_KEYS = { overview: () => 'overview', settlement: () => 'settlement', budget: () => 'budget', netWorth: () => 'netWorth', charts: m => 'charts:' + m };
 
   return {
     /** 讀完 IndexedDB（或超過 timeoutMs）時 resolve；回傳 Promise<boolean>（是否真的讀完）。 */
@@ -211,6 +211,17 @@ const LocalCache = (function() {
     getBudgetSettings: () => value('budget'),
     saveBudgetSettings: data => { if (data) put('budget', data); },
 
+    /* 淨資產歷史（F06）：只有改到過去的月份才過期（本月的點由總覽的數字補上） */
+    getNetWorth: function() {
+      const data = value('netWorth');
+      return data && Array.isArray(data.points) ? data : null;
+    },
+    saveNetWorth: data => { if (data) put('netWorth', data); },
+    markNetWorthStale: function() {
+      const e = mem.get('netWorth');
+      if (e && !e.s) setEntry('netWorth', Object.assign({}, e, { s: true }));
+    },
+
     getCharts: month => (month ? value('charts:' + month) : null),
     saveCharts: function(month, data) {
       if (!month || !data) return;
@@ -223,7 +234,7 @@ const LocalCache = (function() {
         .forEach(remove);
     },
 
-    /** { stale, savedAt } 或 null（沒有快取）。kind：overview／settlement／budget／charts（要給 month）。 */
+    /** { stale, savedAt } 或 null（沒有快取）。kind：overview／settlement／budget／netWorth／charts（要給 month）。 */
     status: function(kind, month) {
       const key = STATUS_KEYS[kind] && STATUS_KEYS[kind](month);
       const e = key && mem.get(key);
@@ -238,6 +249,8 @@ const LocalCache = (function() {
         const e = mem.get(k);
         if (e && !e.s) setEntry(k, Object.assign({}, e, { s: true }));
       });
+      const nw = mem.get('netWorth');
+      if (nw && fromMonth && fromMonth < nw.v.currentMonth) this.markNetWorthStale();
     },
     markChartsStale: function(fromMonth) {
       keysWith('charts:').filter(k => !fromMonth || k.slice(7) >= fromMonth).forEach(k => {

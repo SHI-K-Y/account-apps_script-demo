@@ -376,6 +376,13 @@ function setup() {
   } catch (e) {
     notes.push('無法安裝每日維護觸發器：' + (e && e.message ? e.message : e));
   }
+  // 淨資產快照（F06）：第一次把過去 24 個月補齊，之後每日維護只補缺的、過期的
+  let netWorth = null;
+  try {
+    netWorth = refreshNetWorthSnapshots_();
+  } catch (e) {
+    notes.push('無法建立淨資產快照：' + (e && e.message ? e.message : e));
+  }
   let warm = null;
   try {
     warm = runWarmCaches_();
@@ -389,6 +396,7 @@ function setup() {
     months,
     warmTriggerId: warmTriggerId,
     dailyTriggerId: dailyTriggerId,
+    netWorthWritten: netWorth ? netWorth.written : null,
     warmMs: warm ? warm.totalMs : null,
     message: `設定完成，目前連結的試算表：${ss.getName()}` + (notes.length ? '\n' + notes.join('\n') : ''),
   };

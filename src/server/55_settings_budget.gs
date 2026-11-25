@@ -50,7 +50,7 @@ function currentBudgetStatus_(ss, config, today, forceRefresh, prefetched) {
   let extras = null;
   try {
     const opening = !forceRefresh && version && version.source === 'balance' ? parseBudgetOpeningCache_(prefetched && prefetched.openingJson) : undefined;
-    extras = opening !== undefined ? { openingBalance: opening } : budgetExtras_(ss, version, today.month, forceRefresh);
+    extras = opening !== undefined ? { scheduled: scheduledForMonth_(today.month), openingBalance: opening } : budgetExtras_(ss, version, today.month, forceRefresh);
   } catch (e) {}
   return computeBudgetStatus_(version, today.month, monthData, today, extras);
 }

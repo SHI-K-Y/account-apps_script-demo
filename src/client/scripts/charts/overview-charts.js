@@ -356,7 +356,7 @@ const OverviewCharts = (function() {
       html += '<div class="oc-inline-error" role="alert"><span>更新失敗：' + escHtml(st.error) + '</span>' +
         '<button type="button" class="oc-retry" data-oc-action="retry">重試</button></div>';
     }
-    html += BudgetView.progressHtml(st.data.budget, st.data.month);
+    html += BudgetView.progressHtml(st.data.budget, st.data.month, st.data.forecast);
     html += summaryHtml(ctx);
     html += '<div class="oc-grid">' + donutCardHtml(ctx) + dailyCardHtml(ctx) + '</div>';
     html += trendCardHtml(ctx);

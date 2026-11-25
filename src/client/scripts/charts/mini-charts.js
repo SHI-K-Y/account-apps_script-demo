@@ -16,17 +16,21 @@ const MiniCharts = (function() {
     return sign + Math.round(abs);
   }
 
-  function niceScale(max) {
-    if (!(max > 0)) return { max: 100, ticks: [0, 50, 100] };
-    const raw = max / 3;
+  /** 刻度一律包含 0；min 是負的時候往下延伸（累計餘額可能是負的）。 */
+  function niceScale(max, min) {
+    const low = min < 0 ? min : 0;
+    if (!(max > 0) && !low) return { min: 0, max: 100, ticks: [0, 50, 100] };
+    const raw = (Math.max(0, max) - low) / 3;
     const pow = Math.pow(10, Math.floor(Math.log10(raw)));
     const f = raw / pow;
     const nice = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
     const step = nice * pow;
-    const top = Math.ceil(max / step - 1e-9) * step;
+    const top = Math.ceil(Math.max(0, max) / step - 1e-9) * step;
+    // 負的部分很小時只往下留一點空間，不為了它多畫一整格
+    const bottom = !low ? 0 : (-low < step / 2 ? low - step * 0.06 : Math.floor(low / step + 1e-9) * step);
     const ticks = [];
-    for (let v = 0; v <= top + step / 2; v += step) ticks.push(Math.round(v * 100) / 100);
-    return { max: top, ticks: ticks };
+    for (let v = Math.ceil(bottom / step - 1e-9) * step; v <= top + step / 2; v += step) ticks.push(Math.round(v * 100) / 100 || 0);
+    return { min: bottom, max: top, ticks: ticks };
   }
 
   function r1(v) { return Math.round(v * 10) / 10; }
@@ -117,7 +121,12 @@ const MiniCharts = (function() {
 
   function xLabels(cfg, layout, highlightIndex) {
     let s = '';
-    xTickIndexes(layout.n, layout.step).forEach(i => {
+    // tickMinPx：從最後一格往前每隔幾格標一個（月份軸）；沒給時是一個月裡的日期（1、5、10…）
+    const every = cfg.tickMinPx ? Math.max(1, Math.ceil(cfg.tickMinPx / layout.step)) : 0;
+    const ticks = every
+      ? cfg.labels.map((_, i) => i).filter(i => (layout.n - 1 - i) % every === 0)
+      : xTickIndexes(layout.n, layout.step);
+    ticks.forEach(i => {
       s += '<text class="mc-axis-text mc-x-text' + (i === highlightIndex ? ' is-highlight' : '') + '"' +
         ' x="' + r1(layout.padL + layout.step * (i + 0.5)) + '" y="' + (layout.H - 6) + '" text-anchor="middle">' +
         escHtml(cfg.labels[i]) + '</text>';
@@ -125,11 +134,11 @@ const MiniCharts = (function() {
     return s;
   }
 
-  function computeLayout(el, cfg, maxValue, padTop) {
+  function computeLayout(el, cfg, maxValue, padTop, minValue) {
     const W = measure(el);
     const H = cfg.height || 190;
     const n = cfg.labels.length;
-    const scale = niceScale(maxValue);
+    const scale = niceScale(maxValue, minValue);
     const yLabelW = Math.max.apply(null, scale.ticks.map(t => fmtCompact(t).length)) * 6.2 + 4;
     const padL = Math.round(yLabelW + 8);
     const padR = 6;
@@ -139,7 +148,7 @@ const MiniCharts = (function() {
     const plotH = H - padT - padB;
     const step = plotW / Math.max(1, n);
     const baseY = padT + plotH;
-    const y = v => baseY - (Math.max(0, v) / scale.max) * plotH;
+    const y = v => baseY - ((Math.max(scale.min, v) - scale.min) / (scale.max - scale.min)) * plotH;
     return { W, H, n, scale, padL, padR, padT, padB, plotW, plotH, step, baseY, y };
   }
 
@@ -291,16 +300,27 @@ const MiniCharts = (function() {
     draw(Boolean(cfg.animate) && !reducedMotion());
   }
 
+  /* 折線圖。選項（預設值維持原本的樣子）：
+   *   negative  允許負值：y 軸往下延伸，0 的那條線仍是基準線
+   *   endDots   每條線最後一點畫一個圓點
+   *   reveal    線條另外放在 .mc-reveal 裁切窗裡，進場時由左往右揭開——裁切窗與內容往相反方向 translate，
+   *             線條看起來不動、只有可見範圍變大，全程只動 transform（合成器執行，不重繪 SVG）。
+   *             沒有 reveal 時是原本的 stroke-dashoffset 描線。 */
   function lines(el, cfg) {
     const draw = animate => {
       const series = cfg.series || [];
       let max = 0;
-      series.forEach(ser => ser.values.forEach(v => { if (v != null && v > max) max = v; }));
-      const L = computeLayout(el, cfg, max, 14);
+      let min = 0;
+      series.forEach(ser => ser.values.forEach(v => {
+        if (v == null) return;
+        if (v > max) max = v;
+        if (cfg.negative && v < min) min = v;
+      }));
+      const L = computeLayout(el, cfg, max, 14, min);
       const px = i => L.padL + L.step * (i + 0.5);
+      const zeroY = r1(L.y(0));
 
-      let s = svgOpen(L.W, L.H, cfg, animate, 'mc-scrub');
-      s += gridAndYAxis(L.scale, L.padL, L.W - L.padR, L.y);
+      let marks = '';
       series.slice().reverse().forEach((ser, revIdx) => {
         const isPrimary = revIdx === series.length - 1;
         let d = '';
@@ -314,18 +334,31 @@ const MiniCharts = (function() {
         });
         if (!d) return;
         if (ser.area && first >= 0) {
-          s += '<path class="mc-area ' + (ser.className || '') + '" d="' + d + 'L' + r1(px(last)) + ',' + L.baseY + 'L' + r1(px(first)) + ',' + L.baseY + 'Z"/>';
+          marks += '<path class="mc-area ' + (ser.className || '') + '" d="' + d + 'L' + r1(px(last)) + ',' + zeroY + 'L' + r1(px(first)) + ',' + zeroY + 'Z"/>';
         }
-        s += '<path class="mc-line ' + (ser.className || '') + '" d="' + d + '"' + (isPrimary ? ' pathLength="1"' : '') + '/>';
+        marks += '<path class="mc-line ' + (ser.className || '') + '" d="' + d + '"' + (isPrimary && !cfg.reveal ? ' pathLength="1"' : '') + '/>';
+        if (cfg.endDots) {
+          marks += '<circle class="mc-dot ' + (ser.className || '') + '" cx="' + r1(px(last)) + '" cy="' + r1(L.y(ser.values[last])) + '" r="4"/>';
+        }
       });
-      s += '<g class="mc-cursor"></g>';
+
+      let s = svgOpen(L.W, L.H, cfg, animate && !cfg.reveal, 'mc-scrub');
+      s += gridAndYAxis(L.scale, L.padL, L.W - L.padR, L.y);
+      const cursorLayer = '<g class="mc-cursor"></g>';
+      if (!cfg.reveal) s += marks + cursorLayer;
       s += xLabels(cfg, L, cfg.highlightIndex == null ? -1 : cfg.highlightIndex);
-      s += '</svg><div class="mc-tooltip" aria-live="polite" hidden></div>';
+      s += '</svg>';
+      if (cfg.reveal) {
+        const layer = inner => '<svg class="mc-svg" viewBox="0 0 ' + L.W + ' ' + L.H + '" aria-hidden="true">' + inner + '</svg>';
+        s += '<div class="mc-reveal' + (animate ? ' is-playing' : '') + '"><div class="mc-reveal-in">' + layer(marks) + '</div></div>' +
+          '<div class="mc-overlay">' + layer(cursorLayer) + '</div>';
+      }
+      s += '<div class="mc-tooltip" aria-live="polite" hidden></div>';
       el.innerHTML = s;
 
       const svg = el.querySelector('svg');
       const tip = el.querySelector('.mc-tooltip');
-      const cursor = svg.querySelector('.mc-cursor');
+      const cursor = el.querySelector('.mc-cursor');
       el.__mcSelected = -1;
       const clear = () => {
         el.__mcSelected = -1;

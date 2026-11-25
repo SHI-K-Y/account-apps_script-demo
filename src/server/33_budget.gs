@@ -187,10 +187,12 @@ function budgetOpeningCacheKeysAfter_(month) {
   return keys;
 }
 
-/** computeBudgetStatus_ 需要的工作表數字（目前只有生活費餘額要用）。 */
+/** computeBudgetStatus_ 需要的額外資料：尚未入帳的週期收支（F01），生活費餘額型另外要月初餘額。 */
 function budgetExtras_(ss, version, month, forceRefresh) {
-  if (!version || version.source !== 'balance') return null;
-  return { openingBalance: budgetOpeningBalance_(ss, month, forceRefresh) };
+  if (!version) return null;
+  const extras = { scheduled: scheduledForMonth_(month) };
+  if (version.source === 'balance') extras.openingBalance = budgetOpeningBalance_(ss, month, forceRefresh);
+  return extras;
 }
 
 /* ---------------------------------- 計算 ---------------------------------- */
@@ -205,7 +207,7 @@ function budgetRound_(num) {
  * @param month      'yyyy.MM'
  * @param monthData  { expenses, incomes }（getMonthData_ 的結果；可為 null，視為沒有紀錄）
  * @param today      budgetToday_() 的結果
- * @param extras     budgetExtras_ 的結果：{ openingBalance }（生活費餘額才需要；null 表示讀不到）
+ * @param extras     budgetExtras_ 的結果：{ scheduled, openingBalance }（月初餘額只有生活費餘額型需要；null 表示讀不到）
  */
 function computeBudgetStatus_(version, month, monthData, today, extras) {
   const year = Number(month.slice(0, 4));
@@ -304,8 +306,12 @@ function computeBudgetStatus_(version, month, monthData, today, extras) {
     return { item: r.item, amount: r.amount, spent: budgetRound_(b.before + b.today) };
   });
 
+  // 尚未入帳的週期支出（F01）先扣下來，每日額度與總覽的「每天安全可花」是同一個數字（35_forecast.gs）
+  const scheduledPending = scheduledExpenseTotal_(extras && extras.scheduled, version.categories, version.excludedItems,
+    version.reserves.map(function (r) { return r.item; }));
+
   const remainingDays = daysInMonth - todayDay + 1;
-  const base = amount - (regularBefore + reservedBefore) - reservedPending;
+  const base = amount - (regularBefore + reservedBefore) - reservedPending - scheduledPending;
   const daily = base > 0 ? Math.floor(base / remainingDays) : 0;
   const todaySpent = regularToday + overflowToday;
   // 應花到的位置：排除項目付了才算，其餘照天數平均分攤（算到今天結束）。
@@ -375,12 +381,12 @@ function budgetStatusFromCache_(month, monthData, configJson, openingJson, openi
     const config = JSON.parse(configJson);
     if (!config || !Array.isArray(config.versions)) return null;
     const version = resolveBudgetVersion_(config, month);
-    let extras = null;
+    let extras = version ? { scheduled: scheduledForMonth_(month) } : null;
     if (version && version.source === 'balance') {
       if (month !== openingMonth || !openingJson) return null;
       const opening = JSON.parse(openingJson);
       if (!opening || !(opening.value === null || typeof opening.value === 'number')) return null;
-      extras = { openingBalance: opening.value };
+      extras.openingBalance = opening.value;
     }
     return { status: computeBudgetStatus_(version, month, monthData, budgetToday_(), extras) };
   } catch (e) {

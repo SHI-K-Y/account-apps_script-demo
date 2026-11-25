@@ -45,7 +45,10 @@ function loadOverview(forceRefresh, opts) {
   var fresh = Boolean(cachedOv) && !forceRefresh && Prefetch.isFresh('overview') && Prefetch.isFresh('charts', month);
   if (fresh) {
     overviewLoaded = true;
-    runLater(function() { OverviewCharts.loadForOverview(month, false, { noFetch: true }); });
+    runLater(function() {
+      OverviewCharts.loadForOverview(month, false, { noFetch: true });
+      NetWorthChart.load(false);
+    });
     return;
   }
   if (cachedOv && !forceRefresh && Api.pendingWrites() > 0) {
@@ -65,6 +68,8 @@ function loadOverview(forceRefresh, opts) {
   var chartsResult = batch.then(function(r) { return r[1]; });
   // 圖表：先畫快取，批次的結果回來再更新（同一個月份才用；總覽換了月份時 onOverview 會另外讀）
   runLater(function() { OverviewCharts.loadForOverview(month, forceRefresh, { result: chartsResult }); });
+  // 資產軌跡（F06）：自己一個請求（過完的月份很少變，多半直接用本機快取），不拖慢上面的批次
+  batch.then(function() { if (seq === overviewSyncSeq) NetWorthChart.load(forceRefresh); });
 
   batch.then(function(results) {
     done();
@@ -198,6 +203,7 @@ function renderOverview(d, opts) {
 
   html += '</div>';
 
+  html += '<div id="netWorthSection"></div>';
   html += '<div id="overviewChartsSection"></div>';
 
   html += '<h3 class="ov-section-title"><span class="ov-icon-box is-pay" aria-hidden="true">' + iconHtml('credit-card') + '</span>支付方式分析</h3>';
@@ -215,6 +221,7 @@ function renderOverview(d, opts) {
 
   container.innerHTML = html;
   if (!(opts && opts.prerender)) animateOverviewNumbers(container, { total: totalNum, inc: incNum, exp: expNum, bal: balNum });
+  NetWorthChart.attach(container.querySelector('#netWorthSection'), d);
   OverviewCharts.attach(container.querySelector('#overviewChartsSection'), d);
 }
 

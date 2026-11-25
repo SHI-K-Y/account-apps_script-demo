@@ -44,8 +44,10 @@ export function monthSheet(name, expenses, incomes, opts) {
   const sum = (rows, idx, pred) => rows.filter(pred).reduce((a, r) => a + (Number(r[idx]) || 0), 0);
   const exp = expenses || [];
   const inc = incomes || [];
+  // 累計餘額可以指定（淨資產歷史的測試與量測用）；沒指定時是固定的假數字
+  const bal = Object.assign({ total: 12345, living: 5000, savings: 7000, agency: 345 }, opts && opts.balances);
   const overview = [
-    [3, 'S', '資產總覽', 4, 12345],
+    [3, 'S', '資產總覽', 4, bal.total],
     [8, 'S', '當月生活費總收入', 9, sum(inc, 3, r => r[2] === '生活費')],
     [8, 'U', '當月存款總收入', 9, sum(inc, 3, r => r[2] === '存款')],
     [8, 'W', '當月代收代付總收入', 9, sum(inc, 3, r => r[2] === '代收代付')],
@@ -54,9 +56,9 @@ export function monthSheet(name, expenses, incomes, opts) {
     [12, 'U', '當月存款總之出', 13, sum(exp, 5, r => r[2] === '存款')],
     [12, 'W', '當月代收代付總之出', 13, sum(exp, 5, r => r[2] === '代收代付')],
     [12, 'X', '當月總之出', 13, sum(exp, 5, () => true)],
-    [16, 'S', '累計生活費總收支', 17, 5000],
-    [16, 'U', '累計存款總收支', 17, 7000],
-    [16, 'W', '累計代收代付總收支', 17, 345],
+    [16, 'S', '累計生活費總收支', 17, bal.living],
+    [16, 'U', '累計存款總收支', 17, bal.savings],
+    [16, 'W', '累計代收代付總收支', 17, bal.agency],
     [16, 'X', '當月總收支', 17, sum(inc, 3, () => true) - sum(exp, 5, () => true)],
     [19, 'S', '本月現金總支出', 20, sum(exp, 5, r => r[3] === '現金')],
     [19, 'U', '本月 Line Pay 總支出', 20, sum(exp, 5, r => /Line Pay/.test(r[3]))],
@@ -143,9 +145,29 @@ export function syntheticExpenses(count) {
   return out.sort((a, b) => a[0] - b[0]);
 }
 
+/** 合成的歷史月份（F06）：2026.10 往前 count 個月，累計餘額依固定規則變化，內容全是編出來的。 */
+export function syntheticHistoryMonths(count) {
+  const out = [];
+  for (let i = count; i >= 1; i--) {
+    const index = 2026 * 12 + 9 - i;
+    const y = Math.floor(index / 12);
+    const m = index % 12 + 1;
+    const name = y + '.' + (m < 10 ? '0' + m : m);
+    const savings = 7000 - i * 180 + (i % 4) * 420;
+    const living = 4200 + ((i * 5) % 7) * 310 - (i % 5 === 0 ? 5600 : 0);
+    out.push(monthSheet(name, [
+      [2, '早餐', '生活費', '現金', '', 60 + i, ''],
+      [10, '晚餐', '生活費', '現金', '', 210 + i * 3, ''],
+      [18, '午餐', '生活費', '現金', '', 130, ''],
+    ], [[5, '薪資', '存款', 30000, '']], { hidden: true, balances: { total: savings + living + 345, living, savings, agency: 345 } }));
+  }
+  return out;
+}
+
 /**
  * 建立一本測試用的活頁簿（結構同 readXlsx() 的回傳值）。
  * opts.extraExpenses：2026.11 額外加幾筆合成支出（預設 0，維持原本的 8 筆）。
+ * opts.historyMonths：2026.10 之前再加幾個月的合成月份（預設 0；淨資產歷史用）。
  */
 export function createFixtureWorkbook(opts) {
   const extra = syntheticExpenses(Math.max(0, Number(opts && opts.extraExpenses) || 0));
@@ -176,7 +198,7 @@ export function createFixtureWorkbook(opts) {
 
   return {
     sheets: [
-      legacy.data, oct, nov,
+      legacy.data, ...syntheticHistoryMonths(Math.max(0, Number(opts && opts.historyMonths) || 0)), oct, nov,
       fxSheet('國外交易記帳簿-韓國', { period: '2025/03/10~2025/03/16', country: '韓國' }, [
         [[2025, 3, 10], '交通費', '信用卡-測試一卡', 'NTD', 12600, 1, '機票'],
         [[2025, 3, 11], '餐飲', '現金', 'KRW', 12000, 0.024, '烤肉'],

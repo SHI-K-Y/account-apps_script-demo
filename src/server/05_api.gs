@@ -51,6 +51,7 @@ function apiRoutes_() {
     // 總覽與圖表
     getAssetOverview:       { handler: getAssetOverview_ },
     getOverviewCharts:      { handler: getOverviewCharts_ },
+    getNetWorthHistory:     { handler: getNetWorthHistory_ },
     batchRead:              { handler: batchRead_ },
 
     // 對帳與信用卡對帳
@@ -131,7 +132,7 @@ function resolveApiRequest_(request) {
 const BATCH_READ_ACTIONS_ = Object.freeze([
   'getInitialData', 'getRecentRecords', 'getFullRecords', 'searchRecords', 'getCreditCardRecords',
   'getAssetOverview', 'getOverviewCharts', 'getSettingsOptions',
-  'getFxLedgers', 'getFxLedgerData', 'getFxRates', 'getBudgetSettings', 'getOpLog',
+  'getFxLedgers', 'getFxLedgerData', 'getFxRates', 'getBudgetSettings', 'getOpLog', 'getNetWorthHistory',
 ]);
 const BATCH_READ_MAX_ = 8;
 
@@ -177,6 +178,12 @@ function primeBatchReadCache_(requests) {
       add(K.BUDGET_CONFIG);
       add(K.BUDGET_OPENING_PREFIX + args[0]);
       addMonthData(args[0]);
+      if (args[0] === currentMonth()) {
+        // 月底預估（F06）：本月總覽（餘額）與前三個月的精簡明細
+        add(K.OVERVIEW_PREFIX + args[0]);
+        add(K.FORECAST_HISTORY_PREFIX + args[0]);
+        add(largeCacheChunkKey_(K.FORECAST_HISTORY_PREFIX + args[0], 0));
+      }
     } else if (req.action === 'getBudgetSettings' && !args[0]) {
       add(K.BUDGET_CONFIG);
       add(K.BUDGET_OPENING_PREFIX + currentMonth());

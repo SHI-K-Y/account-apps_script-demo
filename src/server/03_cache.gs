@@ -137,7 +137,8 @@ function invalidateOptionsCache_() {
 }
 
 /**
- * 記帳（新增／修改／刪除／標記已繳）之後：清掉這個月份的總覽、圖表與之後月份的月初餘額。
+ * 記帳（新增／修改／刪除／標記已繳）之後：清掉這個月份的總覽、圖表與之後月份的月初餘額、月底預估用的歷史明細；
+ * 改的是過去的月份時，淨資產快照從那個月起標成過期（F06）。
  * 啟動快取（BOOT_JSON）不在這裡清：讀出來時會用最新的月份明細快取蓋過裡面的清單（P10），
  * 清掉的話下次開頁只能拿 PropertiesService 裡的舊快照，前端還得再背景同步一次（P09 修正）。
  */
@@ -147,8 +148,10 @@ function invalidateOverviewAndSettlementCache_(month) {
     const keys = [CONFIG.CACHE_KEYS.OVERVIEW_PREFIX + month];
     Array.prototype.push.apply(keys, chartsCacheKeysFrom_(month));
     Array.prototype.push.apply(keys, budgetOpeningCacheKeysAfter_(month));
+    Array.prototype.push.apply(keys, forecastHistoryCacheKeysAfter_(month));
     scriptCache_().removeAll(keys);
   } catch (e) {}
+  markNetWorthDirty_(month);
 }
 
 /** 清掉單一月份的所有快取（明細、總覽、圖表、版面判斷）與啟動快取。 */
@@ -162,8 +165,10 @@ function invalidateMonthCaches_(month) {
     ];
     Array.prototype.push.apply(keys, chartsCacheKeysFrom_(month));
     Array.prototype.push.apply(keys, budgetOpeningCacheKeysAfter_(month));
+    Array.prototype.push.apply(keys, forecastHistoryCacheKeysAfter_(month));
     scriptCache_().removeAll(keys);
   } catch (e) {}
+  markNetWorthDirty_(month);
 }
 
 function invalidateAllCaches_() {
@@ -175,6 +180,8 @@ function invalidateAllCaches_() {
       CONFIG.CACHE_KEYS.OPTIONS_ALL,
       CONFIG.CACHE_KEYS.OPTIONS_SIMPLE,
       CONFIG.CACHE_KEYS.BUDGET_CONFIG,
+      CONFIG.CACHE_KEYS.NET_WORTH,
+      CONFIG.CACHE_KEYS.FORECAST_HISTORY_PREFIX + budgetToday_().month,
     ];
     const props = scriptProps_();
     const monthsStr = props.getProperty(CONFIG.PROP_KEYS.MONTHS_SNAPSHOT);

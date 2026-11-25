@@ -79,9 +79,9 @@
   transition: opacity 0.2s ease;
   /* P12：總覽連圖表一起預先畫好（有本機快取就不放骨架），切到總覽時圖表多半在畫面下方：
      畫面外先不排版（auto 會記住上次的實際高度），轉場的 update callback 從約 34ms 降到約 20ms（CPU 4 倍降速）。
-     捲進畫面時照常排版、繪製，看到的內容不變。1460px＝合成資料下的實際高度。 */
+     捲進畫面時照常排版、繪製，看到的內容不變。1750px＝合成資料下的實際高度（F06 加了月底預估）。 */
   content-visibility: auto;
-  contain-intrinsic-size: auto 1460px;
+  contain-intrinsic-size: auto 1750px;
 }
 
 .oc-section.is-refreshing .oc-body {
@@ -529,6 +529,33 @@
 .mc-dot { fill: var(--chart-expense); stroke: var(--bg-base); stroke-width: 2; }
 .mc-dot.is-prev { fill: var(--chart-prev); }
 
+/* 折線的裁切窗（MiniCharts.lines 的 reveal）：疊在座標軸上面，指標事件交給底下的 SVG */
+.mc-reveal,
+.mc-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.mc-overlay { overflow: visible; }
+.mc-reveal-in { height: 100%; }
+/* 還沒捲進畫面：線條先藏著，等 NetWorthChart 播放進場 */
+.mc-chart.is-waiting .mc-reveal { visibility: hidden; }
+/* 裁切窗往右推開、裡面往左抵銷：同一條緩動曲線，線條看起來不動。
+   fill-mode 只用 backwards，播完就沒有 transform，不留圖層 */
+.mc-reveal.is-playing { animation: mcRevealWindow 900ms var(--ease-out) backwards; }
+.mc-reveal.is-playing > .mc-reveal-in { animation: mcRevealContent 900ms var(--ease-out) backwards; }
+
+@keyframes mcRevealWindow {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes mcRevealContent {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
 .mc-tooltip {
   position: absolute;
   left: 0;
@@ -627,6 +654,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .mc-reveal.is-playing,
+  .mc-reveal.is-playing > .mc-reveal-in,
   .mc-anim .mc-bar,
   .mc-anim .mc-slice,
   .mc-anim .mc-line,
@@ -643,7 +672,76 @@
   }
 }
 
+/* ------------------------------ 資產軌跡（F06，net-worth-chart.js） ------------------------------
+   三條線的顏色：淨資產用主題色；生活費、存款另外挑（紅／綠留給支出／收入），淺色、深色各自驗證過
+   色盲辨識度與對比。線的粗細不同、圖例與表格都有數字，不只靠顏色分辨。 */
+.nw-section {
+  --nw-total: var(--accent);
+  --nw-living: #c27a12;
+  --nw-savings: #c2417c;
+}
+:root[data-theme="dark"] .nw-section,
+:root:not([data-theme="light"]) .nw-section {
+  --nw-living: #b5821f;
+  --nw-savings: #e0609e;
+}
+.nw-section .is-nw-total { --nw-c: var(--nw-total); }
+.nw-section .is-nw-living { --nw-c: var(--nw-living); }
+.nw-section .is-nw-savings { --nw-c: var(--nw-savings); }
+.nw-section .mc-line { stroke: var(--nw-c); stroke-width: 2; }
+.nw-section .mc-line.is-nw-total { stroke-width: 2.8; }
+.nw-section .mc-area { fill: var(--nw-c); }
+.nw-section .mc-dot { fill: var(--nw-c); }
+
+.nw-body {
+  margin: 0 14px 18px;
+  min-width: 0;
+  /* 同 .oc-body：多半在畫面下方，畫面外先不排版（372px＝圖表卡片的實際高度） */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 372px;
+}
+.nw-card .oc-card-title { font-variant-numeric: tabular-nums; }
+.nw-legend { gap: 6px; }
+.nw-key {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--glass-border-subtle);
+  border-radius: var(--lg-radius-capsule);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.nw-key b {
+  color: var(--ink);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.nw-key[aria-pressed="false"] { opacity: 0.45; }
+.nw-key[aria-pressed="false"] b { text-decoration: line-through; }
+.nw-key:focus-visible,
+.nw-range button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.nw-key-line {
+  display: inline-block;
+  width: 14px;
+  height: 0;
+  border-top: 2.5px solid var(--nw-c);
+}
+.nw-section .mc-tip-sub { opacity: 1; }
+.nw-section .mc-tip-sub .nw-key-line { margin-right: 6px; vertical-align: middle; }
+
 @media (max-width: 599px) {
+  .nw-body { margin: 0 10px 16px; }
   .oc-head { margin: 0 14px 10px; }
   .oc-chips { margin: 0 10px 12px; }
   .oc-body { margin: 0 10px 16px; }
@@ -661,6 +759,7 @@
   .oc-head { margin: 0 20px 12px; }
   .oc-chips { margin: 0 20px 14px; }
   .oc-body { margin: 0 20px 24px; gap: 16px; }
+  .nw-body { margin: 0 20px 24px; }
   .oc-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

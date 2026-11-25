@@ -15,16 +15,25 @@ function getOverviewCharts_(month, forceRefresh) {
   const cacheKey = K.CHARTS_PREFIX + month;
   const monthKey = K.MONTH_DATA_PREFIX + month;
   const openingKey = K.BUDGET_OPENING_PREFIX + month;
+  // 月底預估（F06，只有本月）：本月總覽（餘額）與前三個月的精簡明細也在同一次 getAll
+  const isCurrentMonth = month === budgetToday_().month;
+  const forecastKey = K.FORECAST_HISTORY_PREFIX + month;
+  const overviewKey = K.OVERVIEW_PREFIX + month;
 
   // 預算要用的快取字串；undefined 表示沒有先讀（強制重建），由 budgetStatusForMonth_ 自己讀
   let prefetched = { monthData: null, simpleJson: undefined, configJson: undefined, openingJson: undefined };
   if (!isForce) {
-    const got = cacheGetAllMixed_([monthKey], [cacheKey, K.OPTIONS_SIMPLE, K.BUDGET_CONFIG, openingKey]);
+    const got = cacheGetAllMixed_(
+      isCurrentMonth ? [monthKey, forecastKey] : [monthKey],
+      [cacheKey, K.OPTIONS_SIMPLE, K.BUDGET_CONFIG, openingKey].concat(isCurrentMonth ? [overviewKey] : [])
+    );
     prefetched = {
       monthData: got.large[monthKey],
       simpleJson: got.plain[K.OPTIONS_SIMPLE],
       configJson: got.plain[K.BUDGET_CONFIG],
       openingJson: got.plain[openingKey],
+      forecastHistory: isCurrentMonth ? got.large[forecastKey] : null,
+      overview: isCurrentMonth ? parseOverviewCache_(got.plain[overviewKey]) : null,
     };
     const cached = got.plain[cacheKey];
     if (cached) {
@@ -34,6 +43,7 @@ function getOverviewCharts_(month, forceRefresh) {
         const simple = parseSimpleOptionsCache_(prefetched.simpleJson);
         if (simple) parsed.categories = chartCategoriesFrom_(simple);
         parsed.budget = chartsBudgetStatus_(month, prefetched);
+        parsed.forecast = monthForecast_(month, prefetched, parsed.budget);
         return parsed;
       } catch (e) {}
     }
@@ -115,8 +125,9 @@ function getOverviewCharts_(month, forceRefresh) {
     }
   } catch (e) {}
 
-  // 預算狀態不放進圖表快取：每次當場算，改預算或跨日都不必清圖表快取。
+  // 預算狀態與月底預估不放進圖表快取：每次當場算，改預算或跨日都不必清圖表快取。
   result.budget = chartsBudgetStatus_(month, prefetched);
+  result.forecast = monthForecast_(month, prefetched, result.budget);
   return result;
 }
 

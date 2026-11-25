@@ -105,6 +105,19 @@ test('LocalCache：寫入合併到閒置時間，同一個鍵在一次閒置內�
   assert.equal(h.db.get('overview').v.assetTotal, 2);
 });
 
+test('LocalCache：淨資產歷史只有改到過去的月份才過期（本月的帳、設定變更不會）', async () => {
+  const h = loadLocalCache();
+  await h.LC.whenReady();
+  assert.equal(h.LC.getNetWorth(), null);
+  h.LC.saveNetWorth({ currentMonth: '2026.11', points: [{ month: '2026.10', total: 1 }] });
+  h.LC.markStale('2026.11');
+  h.LC.markStale();
+  assert.equal(h.LC.status('netWorth').stale, false);
+  h.LC.markStale('2026.10');
+  assert.equal(h.LC.status('netWorth').stale, true);
+  assert.equal(h.LC.getNetWorth().points.length, 1, '過期的照樣讀得到（先顯示）');
+});
+
 test('LocalCache：記帳後總覽、對帳、預算、之後月份的圖表標成過期（不刪除），拿到新資料時清掉；圖表最多 3 個月', async () => {
   const h = loadLocalCache();
   await h.LC.whenReady();

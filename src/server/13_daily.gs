@@ -6,9 +6,11 @@
  * 執行期間操作紀錄的來源記成 trigger（withOpLogSource_）。
  *
  * 目前的工作：
- *   opLogTrim  操作紀錄只保留最近 OPLOG_KEEP_（2,000）筆，刪掉較舊的列（24_oplog.gs 的 trimOpLog_）
+ *   opLogTrim         操作紀錄只保留最近 OPLOG_KEEP_（2,000）筆，刪掉較舊的列（24_oplog.gs 的 trimOpLog_）
+ *   netWorthSnapshot  淨資產快照（F06，34_net_worth.gs）：每月 1 日寫入上個月；平常只檢查有沒有缺的、過期的
  *
- * 執行時間估算：讀一次最後一列、必要時一次 deleteRows，約 1–3 秒／天；
+ * 執行時間估算：opLogTrim 約 1–3 秒／天；netWorthSnapshot 平常約 1 秒（讀月份清單與快照），
+ * 每月 1 日多讀一張月份工作表，改過以前的月份時多讀那個月起的工作表（一張約 0.3 秒，最多 24 張約 10 秒）；
  * 加上快取預熱（每 2 小時一次、每天約 1–3 分鐘），全部觸發器每天合計遠低於 90 分鐘的配額。
  * 偵錯：每次執行都會在「執行項目」印出 [dailyMaintenance] 各項耗時。
  */
@@ -16,6 +18,7 @@ const DAILY_HANDLER_ = 'dailyMaintenance';
 const DAILY_AT_HOUR_ = 4;
 const DAILY_JOBS_ = Object.freeze([
   Object.freeze({ name: 'opLogTrim', run: function () { return trimOpLog_(); } }),
+  Object.freeze({ name: 'netWorthSnapshot', run: function () { return refreshNetWorthSnapshots_(); } }),
 ]);
 
 /**

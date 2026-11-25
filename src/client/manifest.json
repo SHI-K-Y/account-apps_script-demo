@@ -112,6 +112,7 @@
   "deferredScripts": [
     "charts/mini-charts.js",
     "charts/overview-charts.js",
+    "charts/net-worth-chart.js",
     "pages/overview.js",
     "pages/settlement.js",
     "pages/credit-card.js",

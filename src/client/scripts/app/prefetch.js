@@ -9,6 +9,8 @@
  *   Prefetch.afterMutation(month) 記帳、對帳、設定變更成功後呼叫：總覽、對帳、圖表、預算標成過期（不刪除），
  *                                 等所有寫入都回來（Api.pendingWrites() 為 0）之後：
  *                                 總覽頁正開著 → 直接重新讀取（畫面上是舊數字＋「更新中」）；沒開著 → 閒置時預取
+ * 預取完另外確認資產軌跡（NetWorthChart.load：6 小時內拿過、沒有改到過去的月份就不送）。
+ *
  *   Prefetch.isFresh(kind, month) 快取沒有過期、而且是 FRESH_MS 內拿到的：切頁時不用再問伺服器
  *
  * 預取途中又有寫入（state.mutationVersion 變了）時，拿到的結果可能是寫入前的：照樣存（比更舊的好），
@@ -66,6 +68,8 @@ const Prefetch = (function() {
       if (version !== state.mutationVersion) schedule();
       // 總覽頁還沒打開：用新資料重新預先畫好（打開時只播放數字動畫）
       else if (typeof prerenderOverview === 'function') BootPhase.onIdle(() => prerenderOverview());
+      // 資產軌跡（F06）：本機快取夠新就不送；不合進上面的批次（第一次要掃很多張工作表，不能拖慢總覽）
+      if (typeof NetWorthChart === 'object') NetWorthChart.load(false);
       return results;
     }, () => { running = null; return null; });
     return running;

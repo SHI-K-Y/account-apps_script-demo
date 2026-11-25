@@ -87,6 +87,7 @@ function createNewMonthSheet_(targetMonth) {
     };
     saveMonthDataCache_(rawMonth, emptyMonthData);
     markSummaryDirty_(rawMonth);
+    markNetWorthDirty_(rawMonth); // 補建過去的月份：之後每個月的累計餘額都會變（F06）
 
     try {
       const props = scriptProps_();

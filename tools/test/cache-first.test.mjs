@@ -382,7 +382,7 @@ test('warmCaches：重建所有開頁與總覽用的快取，每一步都成功�
   const uid = b.runtime.triggers[0].getUniqueId();
   const summary = freshFns(b).warmCaches({ triggerUid: uid });
   assert.deepEqual(summary.steps.filter(s => s.error), [], '沒有失敗的步驟');
-  assert.deepEqual(summary.steps.map(s => s.step), ['budget', 'boot', 'month:2026.10', 'overview', 'charts', 'fxLedgers', 'config']);
+  assert.deepEqual(summary.steps.map(s => s.step), ['budget', 'boot', 'month:2026.10', 'overview', 'charts', 'netWorth', 'fxLedgers', 'config']);
   WARM_KEYS.forEach(k => assert.ok(b.runtime.cache.has(k), '預熱了 ' + k));
   assert.ok(b.runtime.properties.has('BOOT_SNAPSHOT_V2'), '更新了備援快照');
   assert.ok(b.logs.some(l => l.includes('[warmCaches]') && l.includes('totalMs')));
