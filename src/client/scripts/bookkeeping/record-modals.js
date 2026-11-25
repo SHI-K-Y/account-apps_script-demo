@@ -1,10 +1,43 @@
-function openEditModal(record, type, monthArg) {
+/**
+ * 修改／刪除視窗由記帳頁、搜尋頁、信用卡對帳頁共用；source 決定寫入後要同步哪一頁：
+ *   ''（記帳頁）｜'search'（有給 monthArg 時的預設）｜'creditcard'（pages/credit-card.js 的 CreditCardRecords）
+ */
+function recordModalSource(monthArg, source) {
+  return source || (monthArg ? 'search' : '');
+}
+
+/** 信用卡對帳頁的月份清單可能是本機快取：帶上畫面上的內容，後端核對這一列還是同一筆才寫入。 */
+function recordExpectation(record, source) {
+  if (source !== 'creditcard') return null;
+  return {
+    day: record.day,
+    item: record.item || '',
+    category: record.category || '',
+    payment: record.payment || '',
+    paid: record.paid || '',
+    amount: record.amount,
+    note: record.note || '',
+  };
+}
+
+function isRecordConflict(err) {
+  return /^衝突：/.test(String((err && err.message) || err || ''));
+}
+
+/** 復原修改／刪除；信用卡對帳頁在復原期間鎖住那個月份，完成後重畫（失敗則重新讀取）。 */
+function undoRecordModalOp(source, month, opId) {
+  const run = () => undoLedgerOps([{ opId: opId, month: month }]);
+  return source === 'creditcard' ? CreditCardRecords.track(month, run) : run();
+}
+
+function openEditModal(record, type, monthArg, source) {
   if (!state.data || !state.data.options) return;
   const o = state.data.options;
   const month = monthArg || getMonth();
 
   editState.active = true;
-  editState.source = monthArg ? 'search' : '';
+  editState.source = recordModalSource(monthArg, source);
+  editState.expect = recordExpectation(record, editState.source);
   editState.type = type;
   editState.month = month;
   editState.row = record.row;
@@ -111,8 +144,10 @@ function submitEditRecord() {
   const editMonth = editState.month;
   const editType = editState.type;
   const editRow = editState.row;
+  const fromCreditCard = editSource === 'creditcard';
 
   state.mutationVersion++;
+  if (fromCreditCard) CreditCardRecords.begin(editMonth);
   const submitBtn = document.getElementById('editModalSubmitBtn');
   submitBtn.disabled = true;
   submitBtn.textContent = '儲存中…';
@@ -123,17 +158,28 @@ function submitEditRecord() {
     submitBtn.textContent = '儲存修改';
     closeEditModal();
     handleMutationRecentUpdate(res, editMonth);
+    if (fromCreditCard) CreditCardRecords.end(editMonth);
     const syncSearch = (r) => {
       if (editSource === 'search' && r) {
         DeferredApp.ensure() && SearchPage.onRecordUpdated({ month: editMonth, type: editType, row: r.row, record: r.record });
       }
     };
     syncSearch({ row: editRow, record: (res && res.record) || form });
-    showUndoToast('交易紀錄已修改', () => undoLedgerOps([{ opId: (res && res.opId) || form.opId, month: editMonth }])
+    showUndoToast('交易紀錄已修改', () => undoRecordModalOp(editSource, editMonth, (res && res.opId) || form.opId)
       .then(results => {
         syncSearch(results[0]);
         return '已復原修改';
       }));
+  };
+
+  const onEditFailed = err => {
+    submitBtn.disabled = false;
+    submitBtn.textContent = '儲存修改';
+    showServerError(err);
+    if (fromCreditCard) {
+      if (isRecordConflict(err)) closeEditModal();
+      CreditCardRecords.fail(editMonth, err);
+    }
   };
 
   if (isExpense) {
@@ -149,14 +195,11 @@ function submitEditRecord() {
       note: noteVal,
       opId: Api.newOpId(),
     };
+    if (editState.expect) form.expect = editState.expect;
 
     Api.server
       .withSuccessHandler(res => onEditSaved(res, form))
-      .withFailureHandler(err => {
-        submitBtn.disabled = false;
-        submitBtn.textContent = '儲存修改';
-        showServerError(err);
-      })
+      .withFailureHandler(onEditFailed)
       .updateExpense(form);
   } else {
     const form = {
@@ -172,19 +215,16 @@ function submitEditRecord() {
 
     Api.server
       .withSuccessHandler(res => onEditSaved(res, form))
-      .withFailureHandler(err => {
-        submitBtn.disabled = false;
-        submitBtn.textContent = '儲存修改';
-        showServerError(err);
-      })
+      .withFailureHandler(onEditFailed)
       .updateIncome(form);
   }
 }
 
-function openDeleteModal(record, type, monthArg) {
+function openDeleteModal(record, type, monthArg, source) {
   const month = monthArg || getMonth();
   deleteState.active = true;
-  deleteState.source = monthArg ? 'search' : '';
+  deleteState.source = recordModalSource(monthArg, source);
+  deleteState.expect = recordExpectation(record, deleteState.source);
   deleteState.type = type;
   deleteState.month = month;
   deleteState.row = record.row;
@@ -240,6 +280,7 @@ function confirmDeleteRecord() {
   if (!deleteState.active) return;
   const isExpense = (deleteState.type === 'expense');
   const deleteSource = deleteState.source;
+  const fromCreditCard = deleteSource === 'creditcard';
 
   state.mutationVersion++;
   const confirmBtn = document.getElementById('deleteModalConfirmBtn');
@@ -251,23 +292,27 @@ function confirmDeleteRecord() {
     row: deleteState.row,
     opId: Api.newOpId(),
   };
+  if (deleteState.expect) form.expect = deleteState.expect;
+  if (fromCreditCard) CreditCardRecords.begin(form.month);
 
   const successHandler = (res) => {
     const recentContainerId = isExpense ? 'recentExpenses' : 'recentIncomes';
     const leavingRow = deleteSource === 'search' ? null
-      : captureRecentRow(recentContainerId, '.recent-item[data-row="' + form.row + '"]');
+      : fromCreditCard ? CreditCardRecords.captureRow(form.month, form.row)
+        : captureRecentRow(recentContainerId, '.recent-item[data-row="' + form.row + '"]');
     confirmBtn.disabled = false;
     confirmBtn.innerHTML = '' + iconHtml('trash', 'regular', 'ic-18') + '確認刪除';
     const targetMonth = deleteState.month;
     const targetType = deleteState.type;
     closeDeleteModal();
     handleMutationRecentUpdate(res, targetMonth);
+    if (fromCreditCard) CreditCardRecords.end(form.month);
     playRecentRowExit(leavingRow);
     if (deleteSource === 'search') {
       DeferredApp.ensure() && SearchPage.onRecordDeleted({ month: targetMonth, type: targetType, row: form.row });
     }
     // F05：5 秒內按「復原」，後端把這筆插回原本的列（下方的紀錄往下移回原位）
-    showUndoToast('已刪除該筆交易紀錄', () => undoLedgerOps([{ opId: (res && res.opId) || form.opId, month: targetMonth }])
+    showUndoToast('已刪除該筆交易紀錄', () => undoRecordModalOp(deleteSource, targetMonth, (res && res.opId) || form.opId)
       .then(() => {
         if (deleteSource === 'search') DeferredApp.ensure() && SearchPage.onRecordRestored({ month: targetMonth, type: targetType });
         return '已復原刪除的紀錄';
@@ -278,6 +323,10 @@ function confirmDeleteRecord() {
     confirmBtn.disabled = false;
     confirmBtn.innerHTML = '' + iconHtml('trash', 'regular', 'ic-18') + '確認刪除';
     showServerError(err);
+    if (fromCreditCard) {
+      if (isRecordConflict(err)) closeDeleteModal();
+      CreditCardRecords.fail(form.month, err);
+    }
   };
 
   if (isExpense) {

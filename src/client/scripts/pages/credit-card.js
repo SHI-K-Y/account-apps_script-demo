@@ -441,13 +441,14 @@ function loadCreditCardAll(forceRefresh, onlyMonths) {
   var container = document.getElementById('creditCardContent');
   if (!container) return;
   if (!ccState.skippedMonths) ccState.skippedMonths = {};
+  if (!ccState.staleMonths) ccState.staleMonths = {};
 
   var months = Array.isArray(onlyMonths) ? onlyMonths.slice() : getCcAllMonths();
   if (forceRefresh && !onlyMonths) ccState.skippedMonths = {};
 
   var pending = [];
   months.forEach(function(m) {
-    if (forceRefresh) { pending.push(m); return; }
+    if (forceRefresh || ccState.staleMonths[m]) { pending.push(m); return; }
     if (Array.isArray(ccState.recordsByMonth[m]) || ccState.skippedMonths[m]) return;
     var cachedRecent = LocalCache.getRecent(m);
     if (cachedRecent && Array.isArray(cachedRecent.fullExpenses)) {
@@ -499,6 +500,7 @@ function loadCreditCardAll(forceRefresh, onlyMonths) {
         var byMonth = (res && res.recordsByMonth) || {};
         Object.keys(byMonth).forEach(function(m) {
           ccState.recordsByMonth[m] = byMonth[m] || [];
+          delete ccState.staleMonths[m];
         });
         ((res && res.skippedMonths) || []).concat((res && res.missingMonths) || []).forEach(function(m) {
           ccState.skippedMonths[m] = true;
@@ -677,10 +679,34 @@ function renderCreditCardPage() {
   }
   ListRender.reconcile(list, filteredRecords, {
     key: function(rec) { return rec.month + '|' + rec.row; },
+    // 刪除後下方的列號會往上遞補：用內容認回同一個節點，不必整段重建（列號只在 place 更新，不在 HTML 裡）
+    ident: function(rec) { return recentItemIdent(rec, 'expense', rec.month); },
+    identEq: function(el, rec) { return el._lrItem.month === rec.month && recentSameContent(el._lrItem, rec); },
     sig: ccTxRowHtml,
     html: ccTxRowHtml,
+    place: placeCcTxRow,
     chunk: { listId: [ccState.selectedCard, selectedMonth, ccState.statusFilter].join('|') }
   });
+}
+
+function placeCcTxRow(el, rec) {
+  el._ccRecord = rec;
+  if (el.dataset.month !== rec.month) el.dataset.month = rec.month;
+  var row = String(rec.row);
+  if (el.dataset.row !== row) el.dataset.row = row;
+}
+
+// 修改／刪除鈕每一列都相同（和記帳頁明細同一組樣式），只組一次
+var ccRowActionsHtml = '';
+function getCcRowActionsHtml() {
+  if (!ccRowActionsHtml) {
+    ccRowActionsHtml =
+      '<div class="recent-actions cc-tx-actions">' +
+        '<button type="button" class="recent-act-btn edit-btn" title="修改此筆交易紀錄" aria-label="修改此筆交易紀錄">' + iconHtml('note-pencil', 'regular', 'ic-14') + '</button>' +
+        '<button type="button" class="recent-act-btn delete-btn" title="刪除此筆交易紀錄" aria-label="刪除此筆交易紀錄">' + iconHtml('trash', 'regular', 'ic-14') + '</button>' +
+      '</div>';
+  }
+  return ccRowActionsHtml;
 }
 
 function ccTxRowHtml(rec) {
@@ -700,7 +726,7 @@ function ccTxRowHtml(rec) {
     subText = rec.ccInfo.channelLabel;
   }
 
-  return '<div class="cc-tx-item' + (isPaid ? ' is-paid' : '') + '" data-month="' + escAttr(rec.month) + '" data-row="' + rec.row + '">' +
+  return '<div class="cc-tx-item' + (isPaid ? ' is-paid' : '') + '">' +
             '<div class="cc-tx-day">' + escHtml(dayText) + '</div>' +
             '<div class="cc-tx-main">' +
               '<div class="cc-tx-title-row">' +
@@ -711,7 +737,8 @@ function ccTxRowHtml(rec) {
             '</div>' +
             '<div class="cc-tx-right">' +
               '<div class="cc-tx-amount">$' + ovFmt(Math.abs(rec.numericAmount)) + '</div>' +
-              '<button type="button" class="cc-paid-btn' + (isPaid ? ' already-paid' : '') + '" data-month="' + escAttr(rec.month) + '" data-row="' + rec.row + '" data-paid="' + (isPaid ? 'O' : 'X') + '"' + (isRowBusy ? ' disabled' : '') + ' title="' + (isPaid ? '點擊取消已繳費狀態' : '點擊標記為已繳費') + '" aria-label="' + (isPaid ? '已繳費，點擊取消' : '未繳費，點擊標記已繳') + '">' +
+              '<div class="cc-tx-ops">' +
+              '<button type="button" class="cc-paid-btn' + (isPaid ? ' already-paid' : '') + '" data-paid="' + (isPaid ? 'O' : 'X') + '"' + (isRowBusy ? ' disabled' : '') + ' title="' + (isPaid ? '點擊取消已繳費狀態' : '點擊標記為已繳費') + '" aria-label="' + (isPaid ? '已繳費，點擊取消' : '未繳費，點擊標記已繳') + '">' +
                 '<span class="uv-btn-sign" aria-hidden="true">' +
                   (isRowBusy
                     ? '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-dasharray="28" stroke-dashoffset="10" stroke-linecap="round"/></svg>'
@@ -719,6 +746,8 @@ function ccTxRowHtml(rec) {
                 '</span>' +
                 '<span class="uv-btn-text">已繳費</span>' +
               '</button>' +
+              getCcRowActionsHtml() +
+              '</div>' +
             '</div>' +
           '</div>';
 }
@@ -783,10 +812,22 @@ function bindCreditCardEvents(container) {
     if (paidBtn && container.contains(paidBtn)) {
       e.stopPropagation();
       if (paidBtn.disabled) return;
-      var rowNum = Number(paidBtn.dataset.row);
+      var paidItem = paidBtn.closest('.cc-tx-item');
+      if (!paidItem || paidItem.classList.contains('is-leaving')) return;
       var currentPaid = paidBtn.dataset.paid;
       var nextPaid = (currentPaid === 'O') ? 'X' : 'O';
-      toggleSingleCreditCardPaid(paidBtn.dataset.month, rowNum, nextPaid);
+      toggleSingleCreditCardPaid(paidItem.dataset.month, Number(paidItem.dataset.row), nextPaid);
+      return;
+    }
+    var actBtn = t.closest('.cc-tx-actions .recent-act-btn');
+    if (actBtn && container.contains(actBtn)) {
+      e.stopPropagation();
+      var actItem = actBtn.closest('.cc-tx-item');
+      var rec = actItem && actItem._ccRecord;
+      if (!rec || actItem.classList.contains('is-leaving')) return;
+      if (!CreditCardRecords.guard(rec.month)) return;
+      if (actBtn.classList.contains('edit-btn')) openEditModal(rec, 'expense', rec.month, 'creditcard');
+      else openDeleteModal(rec, 'expense', rec.month, 'creditcard');
       return;
     }
     var batchBtn = t.closest('#ccBatchMarkPaidBtn');
@@ -794,6 +835,10 @@ function bindCreditCardEvents(container) {
       if (batchBtn.disabled) return;
       if (ccState.loadingProgress) {
         showToast('還在讀取其他月份的明細，請稍候再操作', 'error');
+        return;
+      }
+      if (Object.keys(ccState.lockedMonths).length) {
+        showToast(CC_MONTH_BUSY_TEXT, 'error');
         return;
       }
       var view = ccState.view || {};
@@ -811,6 +856,73 @@ function bindCreditCardEvents(container) {
     }
   });
 }
+
+var CC_MONTH_BUSY_TEXT = '這個月份正在更新，請稍候再操作';
+
+/**
+ * 明細的修改與刪除：視窗、寫入與復原沿用 bookkeeping/record-modals.js（source: 'creditcard'），
+ * 明細資料由 handleMutationRecentUpdate 更新，這裡負責鎖住月份、重畫與失敗後重新讀取。
+ * 鎖：刪除與復原會讓同月份的列號位移，寫入回來之前不接受同月份的其他操作（標記已繳、修改、刪除）。
+ */
+var CreditCardRecords = (function() {
+  function begin(month) {
+    ccState.lockedMonths[month] = (ccState.lockedMonths[month] || 0) + 1;
+  }
+
+  function unlock(month) {
+    var left = (ccState.lockedMonths[month] || 0) - 1;
+    if (left > 0) ccState.lockedMonths[month] = left;
+    else delete ccState.lockedMonths[month];
+  }
+
+  /** 寫入成功：沒有要重讀的月份時就只是重畫（loadCreditCardAll 會處理 staleMonths）。 */
+  function end(month) {
+    unlock(month);
+    if (ccState.staleMonths[month]) loadCreditCardAll(false, [month]);
+    else renderCreditCardPage();
+  }
+
+  /** 寫入失敗：內容對不上（衝突）時重新讀取這個月份，畫面才會和試算表一致。 */
+  function fail(month, err) {
+    unlock(month);
+    if (isRecordConflict(err)) loadCreditCardAll(true, [month]);
+  }
+
+  /** 鎖住月份執行 run()（復原用）：成功重畫，失敗一律重新讀取這個月份。 */
+  function track(month, run) {
+    begin(month);
+    return run().then(function(res) {
+      end(month);
+      return res;
+    }, function(err) {
+      unlock(month);
+      loadCreditCardAll(true, [month]);
+      throw err;
+    });
+  }
+
+  function guard(month) {
+    if (ccState.loadingProgress) {
+      showToast('還在讀取其他月份的明細，請稍候再操作', 'error');
+      return false;
+    }
+    var prefix = ccBusyKey(month, '');
+    var rowBusy = Object.keys(ccState.busyRows).some(function(k) { return k.indexOf(prefix) === 0; });
+    if (ccState.batchBusy || ccState.lockedMonths[month] || rowBusy) {
+      showToast(CC_MONTH_BUSY_TEXT, 'error');
+      return false;
+    }
+    return true;
+  }
+
+  /** 刪除動畫用：重畫之前先抓住那一列。 */
+  function captureRow(month, row) {
+    var list = document.querySelector('#creditCardContent .cc-tx-list');
+    return captureRecentRow(list, '.cc-tx-item[data-month="' + month + '"][data-row="' + row + '"]:not(.is-leaving)');
+  }
+
+  return { begin: begin, end: end, fail: fail, track: track, guard: guard, captureRow: captureRow };
+})();
 
 // 組出「11/15的午餐共120元」這種描述，讓 toast 指出是哪一筆消費
 function describeCreditCardRecord(month, rec) {
@@ -871,6 +983,10 @@ function undoCreditCardPaid(ops) {
 function toggleSingleCreditCardPaid(month, rowNum, targetPaid) {
   var busyKey = ccBusyKey(month, rowNum);
   if (!month || !rowNum || ccState.busyRows[busyKey]) return;
+  if (ccState.lockedMonths[month]) {
+    showToast(CC_MONTH_BUSY_TEXT, 'error');
+    return;
+  }
 
   state.mutationVersion++;
   ccState.busyRows[busyKey] = true;

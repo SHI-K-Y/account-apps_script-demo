@@ -204,13 +204,26 @@ function findWritableLedgerRows_(sheet, block, count) {
 }
 
 /**
+ * 表單帶 expect（前端畫面上這一列的內容）時，寫入前先確認試算表的這一列還是同一筆：紀錄沒有固定 ID，
+ * 別的裝置刪過上方的紀錄後，舊畫面的列號會指到別筆。沒帶 expect（記帳頁、HTTP API）時不檢查。
+ * current 是剛在鎖內讀到的內容，不會多一次試算表讀取。
+ */
+function assertLedgerRowExpected_(block, current, expected) {
+  if (!isPlainObject_(expected)) return;
+  if (ledgerRecordsMatch_(block, current, expected)) return;
+  throw new Error(OPLOG_CONFLICT_PREFIX_ + '這筆紀錄已經被修改或移動（可能來自另一台裝置），這次沒有寫入，請確認最新內容後再試一次。');
+}
+
+/**
  * 刪除一列並把下方的紀錄往上遞補。
  * 回傳 { lastDataRow: 刪除前最後一筆資料所在的列（沒有資料時為 0）, values: 刪除前這個區塊的內容（從 MIN_DATA_ROW 起） }。
+ * @param expected  選用：前端畫面上這一列的內容，對不上就不刪（見 assertLedgerRowExpected_）
  */
-function removeLedgerRow_(sheet, block, row) {
+function removeLedgerRow_(sheet, block, row, expected) {
   const maxRows = Math.min(CONFIG.MAX_DATA_ROW, sheet.getMaxRows());
   const rowCount = maxRows - CONFIG.MIN_DATA_ROW + 1;
   const values = sheet.getRange(CONFIG.MIN_DATA_ROW, block.startCol, rowCount, block.width).getValues();
+  assertLedgerRowExpected_(block, filledRecordAt_(block, values, row), expected);
   return shiftLedgerRowsUp_(sheet, block, row, values);
 }
 
@@ -492,6 +505,7 @@ function updateRecord_(kind, form) {
     // 修改前的內容（操作紀錄與復原用）：直接讀這一列，不靠快取
     const range = ledgerRowRange_(sheet, block, row);
     const prev = ledgerValuesToRecord_(block, range.getValues()[0], row);
+    assertLedgerRowExpected_(block, prev.filled ? prev.record : null, form.expect);
     range.setValues([recordToRowValues_(block, record)]);
     const updatedRecord = buildStoredRecord_(block, row, record);
 
@@ -527,7 +541,7 @@ function deleteRecord_(kind, form) {
     const replay = replayedLedgerOp_(state, opId, form.month);
     if (replay) return replay;
 
-    const removal = removeLedgerRow_(sheet, block, row);
+    const removal = removeLedgerRow_(sheet, block, row, form.expect);
 
     let monthData = state.monthData[form.month];
     if (!monthData || !applyDeleteToMonthData_(block, monthData, row, removal)) {

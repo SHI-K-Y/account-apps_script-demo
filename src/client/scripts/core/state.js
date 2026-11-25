@@ -18,7 +18,8 @@ const AppState = {
   },
   editModal: {
     active: false,
-    source: '',
+    source: '',             // ''（記帳頁）｜'search'｜'creditcard'
+    expect: null,           // 開啟時畫面上的內容，寫入前由後端核對（只有信用卡對帳頁帶）
     type: 'expense',
     month: '',
     row: null,
@@ -33,6 +34,7 @@ const AppState = {
   deleteModal: {
     active: false,
     source: '',
+    expect: null,
     type: 'expense',
     month: '',
     row: null,
@@ -66,6 +68,8 @@ const AppState = {
     statusFilter: 'all',
     recordsByMonth: {},
     skippedMonths: {},
+    staleMonths: {},        // 寫入後合併不了、下次要重新讀取的月份（不能用本機快取）
+    lockedMonths: {},       // 有修改／刪除／復原正在寫入的月份（值是件數）：列號可能位移，先不接受其他操作
     loadingProgress: null,
     loading: false,
     busyRows: {},

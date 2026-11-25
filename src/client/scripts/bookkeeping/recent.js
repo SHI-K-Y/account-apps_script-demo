@@ -724,22 +724,23 @@ function animatePendingRecentRow(containerId, tempId) {
   if (row) Motion.expandIn(row);
 }
 
-function captureRecentRow(containerId, selector) {
-  const container = document.getElementById(containerId);
+/** container：清單元素或它的 id。 */
+function captureRecentRow(container, selector) {
+  if (typeof container === 'string') container = document.getElementById(container);
   if (!container) return null;
   const el = container.querySelector(selector);
   if (!el) return null;
   // 這個節點接下來要播刪除動畫：重繪時不能拿它去顯示別筆紀錄（列號會往上遞補）
   ListRender.markLeaving(el);
-  return { el: el, containerId: containerId, index: Array.prototype.indexOf.call(container.children, el) };
+  return { el: el, container: container, index: Array.prototype.indexOf.call(container.children, el) };
 }
 
 function playRecentRowExit(snapshot) {
   if (!snapshot || !snapshot.el) return;
   const el = snapshot.el;
   if (!el.isConnected) {
-    const container = document.getElementById(snapshot.containerId);
-    if (!container || Motion.level() === 'off') return;
+    const container = snapshot.container;
+    if (!container.isConnected || Motion.level() === 'off') return;
     el.getAnimations && el.getAnimations().forEach(a => a.cancel());
     el.classList.add('is-leaving');
     el.setAttribute('aria-hidden', 'true');

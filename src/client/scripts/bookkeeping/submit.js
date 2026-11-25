@@ -76,10 +76,31 @@ function resolveMutationRecent(result, month) {
   return { recent: recent, stale: stale };
 }
 
+/**
+ * 信用卡對帳頁的明細（ccState.recordsByMonth）也要跟著這次寫入更新：刪除、復原會讓列號位移，
+ * 沒更新的話對帳頁之後會對到別筆。以對帳頁自己的清單合併；筆數對不上才改用合併好的最近紀錄，
+ * 都不行就回傳 null（這個月份要重新讀取）。對帳頁沒有這個月份的清單時回傳 undefined（不用處理）。
+ * 要在 renderRecent 之前呼叫（它會把目前月份的清單換成寫入後的，再合併就會重複）。
+ */
+function mergeCreditCardRecords(result, month, resolved) {
+  const list = ccState.recordsByMonth[month];
+  if (!Array.isArray(list) || !result) return undefined;
+  if (result.recent) return result.recent.fullExpenses || null;
+  if (!result.op) return undefined;
+  if (result.type !== 'income') {
+    const merged = applyMutationDelta({ fullExpenses: list, fullIncomes: [] }, Object.assign({ month: month }, result));
+    if (merged && (!result.counts || merged.fullExpenses.length === result.counts.expenses)) return merged.fullExpenses;
+  } else if (!result.counts || list.length === result.counts.expenses) {
+    return list;
+  }
+  return resolved.recent && !resolved.stale ? resolved.recent.fullExpenses : null;
+}
+
 function handleMutationRecentUpdate(result, fallbackMonth) {
   const targetMonth = (result && result.month) || fallbackMonth || getMonth();
   const resolved = resolveMutationRecent(result, targetMonth);
   const recent = resolved.recent;
+  const ccRecords = mergeCreditCardRecords(result, targetMonth, resolved);
   if (recent) {
     LocalCache.saveRecent(targetMonth, recent);
     if (targetMonth === getMonth() && (!recent.month || recent.month === targetMonth)) {
@@ -90,6 +111,12 @@ function handleMutationRecentUpdate(result, fallbackMonth) {
     if (targetMonth === getMonth()) {
       loadRecent(targetMonth, true);
     }
+  }
+  if (ccRecords) {
+    ccState.recordsByMonth[targetMonth] = ccRecords;
+  } else if (ccRecords === null) {
+    delete ccState.recordsByMonth[targetMonth];
+    ccState.staleMonths[targetMonth] = true;
   }
   // 總覽、對帳、圖表、預算標成過期（不刪除，下次照樣先顯示），寫入都回來後閒置時預取（P12）
   Prefetch.afterMutation(targetMonth);

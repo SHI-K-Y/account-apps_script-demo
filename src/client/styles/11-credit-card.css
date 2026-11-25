@@ -389,6 +389,14 @@
   flex-shrink: 0;
 }
 
+/* 已繳鈕在左、修改／刪除在右：已繳鈕展開時往左長，不會蓋到修改／刪除 */
+.cc-tx-ops {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 .cc-tx-amount {
   font-size: 16.5px;
   font-weight: 900;
@@ -714,8 +722,20 @@
     padding: 10px 2px;
   }
 
+  /* 手機：金額在上、按鈕在下，右欄寬度和原本「金額＋已繳鈕」差不多，不擠壓項目名稱 */
   .cc-tx-right {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .cc-tx-ops {
     gap: 8px;
+  }
+
+  .cc-tx-actions .recent-act-btn {
+    width: 32px;
+    height: 32px;
   }
 
   .cc-tx-amount {
