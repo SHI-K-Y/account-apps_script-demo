@@ -28,6 +28,7 @@ html:not(.boot-ready) :is(.uv-btn-ring, .uv-ring) > span,
 html:not(.boot-ready) .head .tabs > .tabs-indicator > :is(.uv-tab-stars, .uv-tab-glow),
 html:not(.boot-ready) .submit-btn::before,
 html:not(.boot-ready) .submit-btn::after,
+html:not(.boot-ready) .quick-combo-chip :is(.uv-combo-ch, .quick-combo-chip-warn),
 html:not(.boot-ready) .uv-glow-bg::before {
   animation-play-state: paused;
 }

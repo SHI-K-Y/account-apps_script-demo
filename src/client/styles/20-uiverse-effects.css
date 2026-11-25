@@ -1185,3 +1185,248 @@
     display: none;
   }
 }
+
+
+/* ==========================================================================
+   Uiverse「虹彩玻璃按鈕」（GreyD097）→ 記帳頁的常用組合 .quick-combo-chip
+   只改外觀：class、id、點擊行為不變；空白的「＋ 建立常用組合」（.is-empty）維持原樣。
+
+   Uiverse 元件  →  本專案對應（全部加 uv-combo- 前綴，不和現有 class 撞名）
+     .tt-container（perspective）→ .quick-combo-chip 本身
+     .touch × 8（label）        → .uv-combo-touch × 8：只判斷滑鼠／手指在哪一段，點擊照常冒泡到按鈕
+     .tt-button                 → .uv-combo-plate（傾斜的玻璃板；外圈漸層在 .uv-combo-rim，background-size 改成 scale）
+     .inside                    → .uv-combo-inside（內層漸層；::before 是隨感應區滑動的光澤）
+     .glass.g1／.g2             → .uv-combo-plate 的 ::before／::after（寬高變化改成 scale；毛玻璃守門規則不准 backdrop-filter，改用半透明高光）
+     .word .text                → .quick-combo-chip-title 裡的 .uv-combo-ch（逐字呼吸；文字用實色，小字用描邊會看不清楚）
+     :checked 的「VOID SIGNAL」 → .is-invalid（組合裡有已不存在的選項）：玻璃板變灰變暗，警示圖示在滑鼠移上去時閃爍
+     hue-rotate                 → 保留，但縮成左右各約 56 度（原本轉將近一整圈），傾斜也從 ±14 度縮成 ±10.5 度，和旁邊的按鈕才協調
+   顏色：使用者指定保留彩色、同時要融入主題。Uiverse 的彩虹原色收成 --combo-iris-*（01-tokens-base.css），
+   和主題底色（--combo-iris-base：淺色＝頁面暖白、深色＝炭灰）混成柔和的虹彩；黑、深藍大色塊、金屬雙框與厚陰影不用，
+   圓角、高光、文字、焦點框、光暈沿用其他選項按鈕的變數（--lg-radius-control、--lg-group-lens、--lg-group-ink、--lg-focus、--accent*）。
+   感應區只設 --uv-combo-k（0–7），傾斜角度照原元件的數列換算。
+   ========================================================================== */
+.quick-combo-chip:not(.is-empty) {
+  --uv-lift: 0px;
+  --uv-lift-press: 0px;
+  --uv-combo-mix: var(--combo-iris-mix);
+  --uv-combo-move: 500ms var(--ease-out);
+
+  min-height: 44px;
+  padding: 6px 15px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--lg-group-ink);
+  perspective: 600px;
+}
+.quick-combo-chip:not(.is-empty) :is(.quick-combo-chip-title, .quick-combo-chip-emoji) {
+  color: inherit;
+}
+.quick-combo-chip:not(.is-empty) .quick-combo-chip-amount {
+  color: color-mix(in srgb, var(--lg-group-ink) 86%, transparent);
+}
+
+/* 8 個感應區：平均切開按鈕寬度 */
+.uv-combo-touch {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  width: 12.5%;
+}
+.uv-combo-touch:nth-child(1) { left: 0; }
+.uv-combo-touch:nth-child(2) { left: 12.5%; }
+.uv-combo-touch:nth-child(3) { left: 25%; }
+.uv-combo-touch:nth-child(4) { left: 37.5%; }
+.uv-combo-touch:nth-child(5) { left: 50%; }
+.uv-combo-touch:nth-child(6) { left: 62.5%; }
+.uv-combo-touch:nth-child(7) { left: 75%; }
+.uv-combo-touch:nth-child(8) { left: 87.5%; }
+
+/* 玻璃板 */
+.uv-combo-plate {
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  overflow: hidden;
+  border-radius: inherit;
+  background: var(--combo-iris-base);
+  box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--shadow-tint) var(--combo-iris-drop), transparent);
+  pointer-events: none;
+  filter: hue-rotate(var(--uv-combo-hue, 0deg));
+  transform: rotateY(var(--uv-combo-tilt, 0deg));
+  transition: transform var(--uv-combo-move), filter 700ms ease;
+}
+.uv-combo-rim,
+.uv-combo-inside,
+.uv-combo-inside::before,
+.uv-combo-plate::before,
+.uv-combo-plate::after {
+  position: absolute;
+  inset: 0;
+}
+.uv-combo-rim {
+  background: linear-gradient(-140deg,
+    var(--combo-iris-lilac) 0%, var(--combo-iris-rose) 22%, var(--combo-iris-gold) 42%,
+    var(--combo-iris-green) 62%, var(--combo-iris-cyan) 80%, var(--combo-iris-lilac) 100%);
+  transform: scale(var(--uv-combo-rim-scale, 1));
+  transition: transform var(--uv-combo-move);
+}
+.uv-combo-inside {
+  inset: 1.5px;
+  overflow: hidden;
+  border-radius: calc(var(--lg-radius-control) - 1.5px);
+  background: linear-gradient(115deg,
+    color-mix(in srgb, var(--combo-iris-lilac) var(--uv-combo-mix), var(--combo-iris-base)) 0%,
+    color-mix(in srgb, var(--combo-iris-rose) var(--uv-combo-mix), var(--combo-iris-base)) 24%,
+    color-mix(in srgb, var(--combo-iris-gold) var(--uv-combo-mix), var(--combo-iris-base)) 46%,
+    color-mix(in srgb, var(--combo-iris-green) var(--uv-combo-mix), var(--combo-iris-base)) 68%,
+    color-mix(in srgb, var(--combo-iris-cyan) var(--uv-combo-mix), var(--combo-iris-base)) 100%);
+  box-shadow: var(--lg-group-lens);
+}
+.uv-combo-inside::before {
+  content: "";
+  inset: 0 -30%;
+  background: linear-gradient(112deg,
+    transparent 34%, color-mix(in srgb, var(--hl) calc(var(--combo-iris-glass) * 1.4), transparent) 50%, transparent 66%);
+  opacity: 0;
+  transform: translateX(var(--uv-combo-sheen, 0%));
+  transition: transform var(--uv-combo-move), opacity var(--dur-base) var(--ease-out);
+}
+.uv-combo-plate::before,
+.uv-combo-plate::after {
+  content: "";
+  background: color-mix(in srgb, var(--hl) var(--combo-iris-glass), transparent);
+  transition: transform 250ms var(--ease-out);
+}
+.uv-combo-plate::before {
+  clip-path: polygon(81% 100%, 0% 0%, 100% 17%, 100% 40.33%);
+  transform: scaleY(var(--uv-combo-g1, 1));
+  transform-origin: right top;
+}
+.uv-combo-plate::after {
+  clip-path: polygon(0% 74.67%, 9.67% 86.67%, 52.33% 0%, 0% 0%);
+  transform: scaleX(var(--uv-combo-g2, 1));
+  transform-origin: left top;
+}
+.quick-combo-chip:not(.is-empty) > :is(.quick-combo-chip-title, .quick-combo-chip-amount) {
+  transform: rotateY(var(--uv-combo-word, 0deg));
+  transition: transform 300ms var(--ease-out);
+}
+
+/* 選取：虹彩加濃＋主題色光圈 */
+.quick-combo-chip.selected {
+  --uv-combo-mix: var(--combo-iris-mix-selected);
+  box-shadow: 0 0 0 2px var(--accent), 0 4px 12px -2px var(--accent-glow);
+  font-weight: 800;
+}
+.quick-combo-chip.selected:focus-visible {
+  outline-offset: 4px;
+}
+
+/* 組合裡有已不存在的選項（對應原元件的 VOID SIGNAL） */
+.quick-combo-chip.is-invalid > .uv-combo-plate {
+  border: 2px dashed var(--exp);
+  filter: none;
+}
+.quick-combo-chip.is-invalid :is(.uv-combo-rim, .uv-combo-inside) {
+  filter: grayscale(1) brightness(0.94);
+}
+.quick-combo-chip.is-invalid .quick-combo-chip-warn {
+  color: var(--warn-text);
+}
+
+/* 感應：只設 k，真正的傾斜在下面啟用（滑鼠用 :hover，觸控用 :active，手指放開後不會卡在傾斜狀態） */
+.uv-combo-touch:nth-child(1):is(:hover, :active) ~ * { --uv-combo-k: 0; }
+.uv-combo-touch:nth-child(2):is(:hover, :active) ~ * { --uv-combo-k: 1; }
+.uv-combo-touch:nth-child(3):is(:hover, :active) ~ * { --uv-combo-k: 2; }
+.uv-combo-touch:nth-child(4):is(:hover, :active) ~ * { --uv-combo-k: 3; }
+.uv-combo-touch:nth-child(5):is(:hover, :active) ~ * { --uv-combo-k: 4; }
+.uv-combo-touch:nth-child(6):is(:hover, :active) ~ * { --uv-combo-k: 5; }
+.uv-combo-touch:nth-child(7):is(:hover, :active) ~ * { --uv-combo-k: 6; }
+.uv-combo-touch:nth-child(8):is(:hover, :active) ~ * { --uv-combo-k: 7; }
+
+.uv-combo-touch:active ~ * {
+  --uv-combo-tilt: calc((var(--uv-combo-k) - 3.5) * 3deg);
+  --uv-combo-hue: calc((var(--uv-combo-k) - 3.5) * 16deg);
+  --uv-combo-word: calc((4 - var(--uv-combo-k)) * 3.5deg);
+  --uv-combo-rim-scale: calc(1.2 + max(var(--uv-combo-k) - 4, 4 - var(--uv-combo-k)) * 0.2);
+  --uv-combo-g1: calc(0.9 + var(--uv-combo-k) * 0.024);
+  --uv-combo-g2: calc(0.87 + var(--uv-combo-k) * 0.028);
+  --uv-combo-sheen: calc((var(--uv-combo-k) - 3.5) * 9%);
+}
+.uv-combo-touch:active ~ .uv-combo-plate > .uv-combo-inside::before,
+.quick-combo-chip:focus-visible .uv-combo-inside::before {
+  opacity: 1;
+}
+@media (hover: hover) {
+  .uv-combo-touch:hover ~ * {
+    --uv-combo-tilt: calc((var(--uv-combo-k) - 3.5) * 3deg);
+    --uv-combo-hue: calc((var(--uv-combo-k) - 3.5) * 16deg);
+    --uv-combo-word: calc((4 - var(--uv-combo-k)) * 3.5deg);
+    --uv-combo-rim-scale: calc(1.2 + max(var(--uv-combo-k) - 4, 4 - var(--uv-combo-k)) * 0.2);
+    --uv-combo-g1: calc(0.9 + var(--uv-combo-k) * 0.024);
+    --uv-combo-g2: calc(0.87 + var(--uv-combo-k) * 0.028);
+    --uv-combo-sheen: calc((var(--uv-combo-k) - 3.5) * 9%);
+  }
+  .uv-combo-touch:hover ~ .uv-combo-plate > .uv-combo-inside::before {
+    opacity: 1;
+  }
+  .quick-combo-chip:not(.is-empty):hover .uv-combo-ch {
+    animation: ambient-combo-breath 1s calc(var(--n) * 0.1s) infinite alternate-reverse;
+  }
+  .quick-combo-chip.is-invalid:hover .quick-combo-chip-warn {
+    animation: ambient-combo-void 1s 0.3s steps(1) infinite;
+  }
+}
+@keyframes ambient-combo-breath {
+  from { opacity: 0.55; }
+  to { opacity: 1; }
+}
+@keyframes ambient-combo-void {
+  0% { opacity: 0.25; }
+  50%, 100% { opacity: 1; }
+}
+
+/* 減少動態（系統設定）與「動畫效果：精簡／關閉」：不變色、不傾斜、不滑動、不呼吸，只留靜態外觀 */
+@media (prefers-reduced-motion: reduce) {
+  .uv-combo-plate,
+  .uv-combo-plate::before,
+  .uv-combo-plate::after,
+  .uv-combo-rim,
+  .uv-combo-inside::before,
+  .quick-combo-chip:not(.is-empty) > :is(.quick-combo-chip-title, .quick-combo-chip-amount) {
+    transform: none;
+    transition: none;
+  }
+  .uv-combo-plate {
+    filter: none;
+  }
+  .quick-combo-chip:not(.is-empty):hover :is(.uv-combo-ch, .quick-combo-chip-warn) {
+    animation: none;
+  }
+}
+:root:is([data-motion="lite"], [data-motion="off"]) :is(.uv-combo-plate, .uv-combo-rim),
+:root:is([data-motion="lite"], [data-motion="off"]) :is(.uv-combo-plate, .uv-combo-inside)::before,
+:root:is([data-motion="lite"], [data-motion="off"]) .uv-combo-plate::after,
+:root:is([data-motion="lite"], [data-motion="off"]) .quick-combo-chip:not(.is-empty) > :is(.quick-combo-chip-title, .quick-combo-chip-amount) {
+  transform: none;
+}
+:root:is([data-motion="lite"], [data-motion="off"]) .uv-combo-plate {
+  filter: none;
+}
+:root:is([data-motion="lite"], [data-motion="off"]) .quick-combo-chip:not(.is-empty):hover :is(.uv-combo-ch, .quick-combo-chip-warn) {
+  animation: none;
+}
+
+@media (forced-colors: active) {
+  .quick-combo-chip:not(.is-empty) {
+    border-color: ButtonText;
+  }
+  .quick-combo-chip.selected {
+    border: 3px solid Highlight;
+  }
+  .uv-combo-plate {
+    display: none;
+  }
+}

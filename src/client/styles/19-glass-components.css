@@ -795,28 +795,6 @@
   animation: lgVtFadeIn 220ms ease-out 40ms both;
 }
 
-:root:root:root:root .quick-combo-chip:not(.is-empty):not(.selected) {
-  background: var(--combo-chip-bg) !important;
-  color: var(--combo-chip-ink) !important;
-  border-color: color-mix(in srgb, var(--hl) 45%, transparent) !important;
-  text-shadow: none;
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--hl) 55%, transparent), 0 2px 6px -2px color-mix(in srgb, var(--shadow-tint) 28%, transparent) !important;
-}
-:root:root:root:root .quick-combo-chip:not(.is-empty):not(.selected):hover {
-  filter: brightness(1.05);
-}
-:root:root:root:root .quick-combo-chip:not(.is-empty):not(.selected).is-invalid {
-  border-style: dashed;
-  border-color: var(--exp) !important;
-}
-:root:root:root:root .quick-combo-chip:not(.is-empty):not(.selected) .quick-combo-chip-title,
-:root:root:root:root .quick-combo-chip:not(.is-empty):not(.selected) .quick-combo-chip-emoji {
-  color: var(--combo-chip-ink) !important;
-}
-:root:root:root:root .quick-combo-chip:not(.is-empty):not(.selected) .quick-combo-chip-amount {
-  color: color-mix(in srgb, var(--combo-chip-ink) 72%, transparent) !important;
-}
-
 i.ph,
 i.ph-fill {
   display: inline-flex;
