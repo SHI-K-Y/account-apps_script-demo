@@ -1562,7 +1562,7 @@ const ForeignPage = (function () {
     nameHint.classList.toggle('is-error', Boolean(nameErr) && (m.nameTouched || name !== ''));
     if (nameErr && (m.nameTouched || name)) nameHint.textContent = nameErr;
     else if (name) nameHint.innerHTML = (m.mode === 'edit' ? '工作表名稱：' : '將建立工作表：') + '<b>' + escHtml(PREFIX + name) + '</b>';
-    else nameHint.textContent = '預設為國家名稱，可改成「中國深圳」「韓國 2026 春」';
+    else nameHint.textContent = '預設為國家名稱，可改成「法國巴黎」「法國 2027 夏」';
 
     const s = $('fxStartInput').value;
     const e = $('fxEndInput').value;
