@@ -1439,9 +1439,11 @@
      - 不畫虹彩底色、不 hue-rotate：按鈕自己的底色、邊框、文字色、選取色全部照舊；
      - 傾斜的是整顆按鈕（常用組合只傾斜背後的玻璃板），底色才會跟著一起傾斜；
        用獨立的 rotate 屬性，不和既有的 transform（按壓縮放、Motion.pop）互相覆蓋；
-     - 外框光澤用按鈕自己的文字色（currentColor）和高光混出來，沒有顏色的按鈕（鍵盤、一般選項）只用高光。
-   相同的部分：8 個感應區（.uv-combo-touch，上面的規則直接給兄弟元素 --uv-combo-k 與各個變數）、
-   斜向玻璃高光（::before／::after 的多邊形）、隨感應區滑動的光澤、文字反向傾斜、逐字呼吸、不浮起（--uv-lift: 0）。
+     - 外框光澤用按鈕自己的文字色（currentColor）和高光混出來，沒有顏色的按鈕（鍵盤、一般選項）只用高光；
+     - 首屏有五十多顆，為了開機速度不放 8 個感應區：core/uv-fx.js 用一個共用的 pointer 監聽算出在哪一段，
+       寫進按鈕的 --uv-glass-k 並加上 .is-tilting（滑鼠移動時跟著換段；觸控只在手指按著時）。
+   相同的部分：8 段傾斜（角度數列同常用組合）、斜向玻璃高光（::before／::after 的多邊形）、隨段落滑動的光澤、
+   文字反向傾斜、逐字呼吸（滑鼠第一次移上去時才拆字）、不浮起（--uv-lift: 0）。
    ========================================================================== */
 .uv-glass-plate { display: none; }
 
@@ -1490,6 +1492,15 @@
     --uv-glass-rim-alpha: 0.4;
   }
 
+  /* 傾斜中：角度數列同常用組合（.uv-combo-touch:hover ~ * 那組） */
+  #pageBookkeeping .uv-glass-chip.is-tilting {
+    --uv-glass-tilt: calc((var(--uv-glass-k) - 3.5) * var(--uv-glass-step));
+    --uv-combo-word: calc((4 - var(--uv-glass-k)) * 3.5deg);
+    --uv-combo-g1: calc(0.9 + var(--uv-glass-k) * 0.024);
+    --uv-combo-g2: calc(0.87 + var(--uv-glass-k) * 0.028);
+    --uv-combo-sheen: calc((var(--uv-glass-k) - 3.5) * 9%);
+  }
+
   /* 常用組合沒有滑鼠移上去／選取時的上移 1px；按壓縮放（:active、實體鍵盤的 .is-kbd-active）照舊 */
   #pageBookkeeping .uv-glass-chip:is(:hover, .selected):not(:active, .is-kbd-active) {
     transform: none;
@@ -1515,7 +1526,6 @@
   #pageBookkeeping .uv-glass-plate::before,
   #pageBookkeeping .uv-glass-plate::after,
   #pageBookkeeping .uv-glass-rim,
-  #pageBookkeeping .uv-glass-rim > span,
   #pageBookkeeping .uv-glass-sheen {
     position: absolute;
     inset: 0;
@@ -1537,18 +1547,12 @@
     transform: scaleX(var(--uv-combo-g2, 1));
     transform-origin: left top;
   }
-  /* 外框光澤：1.5px 環形遮罩（靜態），裡面的漸層層用 scale 跟著感應區放大（同常用組合 .uv-combo-rim） */
+  /* 外框光澤：1.5px 環形遮罩（同常用組合 .uv-combo-rim 的漸層外圈，顏色改用按鈕自己的色調） */
   #pageBookkeeping .uv-glass-rim {
     box-sizing: border-box;
     padding: 1.5px;
     border-radius: inherit;
     opacity: var(--uv-glass-rim-alpha);
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    mask-composite: exclude;
-  }
-  #pageBookkeeping .uv-glass-rim > span {
     background: linear-gradient(-140deg,
       color-mix(in srgb, var(--uv-glass-tone) 50%, var(--hl)) 0%,
       color-mix(in srgb, var(--hl) 90%, transparent) 22%,
@@ -1556,10 +1560,12 @@
       color-mix(in srgb, var(--hl) 75%, transparent) 62%,
       color-mix(in srgb, var(--uv-glass-tone) 55%, var(--hl)) 80%,
       color-mix(in srgb, var(--uv-glass-tone) 50%, var(--hl)) 100%);
-    transform: scale(var(--uv-combo-rim-scale, 1));
-    transition: transform var(--uv-combo-move);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
   }
-  /* 隨感應區滑動的光澤（同常用組合 .uv-combo-inside::before） */
+  /* 隨段落滑動的光澤（同常用組合 .uv-combo-inside::before） */
   #pageBookkeeping .uv-glass-sheen {
     inset: 0 -30%;
     background: linear-gradient(112deg,
@@ -1568,31 +1574,10 @@
     transform: translateX(var(--uv-combo-sheen, 0%));
     transition: transform var(--uv-combo-move), opacity var(--dur-base) var(--ease-out);
   }
-
-  /* 感應：上面 .uv-combo-touch 的規則已經把 k 與各變數給了兄弟元素（玻璃板、文字）；按鈕本身的傾斜用 :has 取 k */
-  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:nth-child(1):is(:hover, :active)) { --uv-glass-k: 0; }
-  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:nth-child(2):is(:hover, :active)) { --uv-glass-k: 1; }
-  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:nth-child(3):is(:hover, :active)) { --uv-glass-k: 2; }
-  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:nth-child(4):is(:hover, :active)) { --uv-glass-k: 3; }
-  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:nth-child(5):is(:hover, :active)) { --uv-glass-k: 4; }
-  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:nth-child(6):is(:hover, :active)) { --uv-glass-k: 5; }
-  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:nth-child(7):is(:hover, :active)) { --uv-glass-k: 6; }
-  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:nth-child(8):is(:hover, :active)) { --uv-glass-k: 7; }
-
-  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:active) {
-    --uv-glass-tilt: calc((var(--uv-glass-k) - 3.5) * var(--uv-glass-step));
-  }
-  #pageBookkeeping .uv-combo-touch:active ~ .uv-glass-plate > .uv-glass-sheen,
-  #pageBookkeeping .uv-glass-chip:focus-visible .uv-glass-sheen {
+  #pageBookkeeping .uv-glass-chip:is(.is-tilting, :focus-visible) .uv-glass-sheen {
     opacity: 1;
   }
   @media (hover: hover) {
-    #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:hover) {
-      --uv-glass-tilt: calc((var(--uv-glass-k) - 3.5) * var(--uv-glass-step));
-    }
-    #pageBookkeeping .uv-combo-touch:hover ~ .uv-glass-plate > .uv-glass-sheen {
-      opacity: 1;
-    }
     #pageBookkeeping .uv-glass-chip:hover .uv-combo-ch {
       animation: ambient-combo-breath 1s calc(var(--n) * 0.1s) infinite alternate-reverse;
     }
@@ -1606,7 +1591,6 @@
     }
     #pageBookkeeping .uv-glass-plate::before,
     #pageBookkeeping .uv-glass-plate::after,
-    #pageBookkeeping .uv-glass-rim > span,
     #pageBookkeeping .uv-glass-sheen {
       transform: none;
       transition: none;
@@ -1621,7 +1605,7 @@
   }
   :root:is([data-motion="lite"], [data-motion="off"]) #pageBookkeeping .uv-glass-plate::before,
   :root:is([data-motion="lite"], [data-motion="off"]) #pageBookkeeping .uv-glass-plate::after,
-  :root:is([data-motion="lite"], [data-motion="off"]) #pageBookkeeping :is(.uv-glass-rim > span, .uv-glass-sheen) {
+  :root:is([data-motion="lite"], [data-motion="off"]) #pageBookkeeping .uv-glass-sheen {
     transform: none;
   }
   :root:is([data-motion="lite"], [data-motion="off"]) #pageBookkeeping .uv-glass-chip:hover .uv-combo-ch {

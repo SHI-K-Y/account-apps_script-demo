@@ -90,7 +90,7 @@ test('UvFx：helper 重複呼叫不會插入第二個圖層', () => {
 let chromium = null;
 try { ({ chromium } = await import('playwright')); } catch (e) { chromium = null; }
 
-test('UvFx：記帳頁的選項按鈕與金額鍵盤帶著 8 個感應區＋玻璃板，文字不變；彈窗裡的選項不套', { skip: chromium ? false : '沒有安裝 playwright' }, async () => {
+test('UvFx：記帳頁的選項按鈕與金額鍵盤帶著玻璃板，文字不變；滑鼠移動時依位置傾斜；彈窗裡的選項不套', { skip: chromium ? false : '沒有安裝 playwright' }, async () => {
   const { createDevApp } = await import('../dev-server.mjs');
   const app = createDevApp({ fixture: true, quiet: true });
   await new Promise(r => app.server.listen(0, '127.0.0.1', r));
@@ -113,9 +113,9 @@ test('UvFx：記帳頁的選項按鈕與金額鍵盤帶著 8 個感應區＋玻�
         const buttons = document.querySelectorAll('#' + id + ' :is(.choice, .key)');
         counts[id] = buttons.length;
         buttons.forEach(b => {
-          const kids = Array.from(b.children);
-          const touch = kids.slice(0, 8).every(k => k.classList.contains('uv-combo-touch'));
-          if (!b.classList.contains('uv-glass-chip') || !touch || !kids[8] || !kids[8].classList.contains('uv-glass-plate')) bad.push(id + ':' + b.textContent);
+          const first = b.firstElementChild;
+          if (!b.classList.contains('uv-glass-chip') || !first || !first.classList.contains('uv-glass-plate')) bad.push(id + ':' + b.textContent);
+          if (b.querySelector('.uv-combo-touch, .uv-combo-ch')) bad.push(id + ' 首屏不該有感應區或逐字 span：' + b.textContent);
           if (b.querySelectorAll('.uv-glass-plate').length !== 1) bad.push(id + ' 重複：' + b.textContent);
         });
       });
@@ -130,6 +130,24 @@ test('UvFx：記帳頁的選項按鈕與金額鍵盤帶著 8 個感應區＋玻�
     assert.deepEqual(report.keys.slice(0, 3), ['1=1', '2=2', '3=3']);
     assert.ok(report.keys.includes('null=清除金額'));
     assert.equal(report.modal, 0);
+
+    // 滑鼠在按鈕左端 → 第 0 段（往左傾）、右端 → 第 7 段；第一次移上去才拆字；移開後放平
+    const key = page.locator('#expenseKeypad .key[aria-label="5"]');
+    await key.scrollIntoViewIfNeeded();
+    const box = await key.boundingBox();
+    // 開機畫面淡出之後滑鼠才碰得到按鈕
+    await page.waitForFunction(([x, y]) => {
+      const el = document.elementFromPoint(x, y);
+      return Boolean(el && el.closest('#expenseKeypad'));
+    }, [box.x + 4, box.y + box.height / 2], { timeout: 60000 });
+    const probe = () => key.evaluate(b => [b.classList.contains('is-tilting'), b.style.getPropertyValue('--uv-glass-k'), b.querySelectorAll('.uv-combo-ch').length, b.textContent].join('|'));
+    await page.mouse.move(box.x + 2, box.y + box.height / 2);
+    await page.mouse.move(box.x + 4, box.y + box.height / 2);
+    assert.equal(await probe(), 'true|0|1|5');
+    await page.mouse.move(box.x + box.width - 3, box.y + box.height / 2);
+    assert.equal(await probe(), 'true|7|1|5');
+    await page.mouse.move(2, 2);
+    assert.match(await probe(), /^false\|/);
   } finally {
     await browser.close();
     await new Promise(r => app.server.close(r));
