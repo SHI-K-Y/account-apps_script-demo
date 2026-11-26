@@ -234,3 +234,128 @@ test('記帳提醒（畫面）：提醒卡片有「前往記帳」「關閉」�
   assert.match(modal, /id="reminderModalNote"[^>]*\bhidden\b/, '卡片有備註區，沒有備註時不顯示');
   assert.match(html, /data-stab="reminders"/, '設定頁有「記帳提醒」分頁');
 });
+
+/* ---------------------------------------------------------------------------
+ * 開機時機（真的 Chromium＋本機預覽伺服器）：不等背景同步，首屏畫好就跳出；
+ * 同步帶回其他裝置已經記好的項目時，卡片自動收起。
+ * ------------------------------------------------------------------------- */
+let chromium = null;
+try { ({ chromium } = await import('playwright')); } catch (e) { chromium = null; }
+const NO_BROWSER = chromium ? false : '沒有安裝 playwright';
+const FIXED_NOW = Date.UTC(2026, 10, 13, 4, 0, 0);   // 2026-11-13 12:00 台北
+const SYNC_LATENCY = 2500;                            // 模擬伺服器回應很慢（真實環境開試算表要好幾秒）
+
+function shiftedDate(startMs) {
+  const offset = startMs - Date.now();
+  return class TestDate extends Date {
+    constructor(...a) { if (a.length) super(...a); else super(Date.now() + offset); }
+    static now() { return Date.now() + offset; }
+  };
+}
+
+/** 頁面端：固定時鐘；記下載入畫面移除、提醒卡片打開／收起、背景同步回來的時間。 */
+function reminderPageInit(now) {
+  const RealDate = Date;
+  const offset = now - RealDate.now();
+  class FixedDate extends RealDate {
+    constructor(...a) { if (a.length) super(...a); else super(RealDate.now() + offset); }
+    static now() { return RealDate.now() + offset; }
+  }
+  window.Date = new Proxy(FixedDate, { apply: () => new FixedDate().toString() });
+  const t0 = performance.now();
+  const log = window.__rlog = { bootReady: 0, shown: 0, hidden: 0, synced: 0, title: '' };
+  new MutationObserver(() => {
+    const t = performance.now() - t0;
+    if (!log.bootReady && document.documentElement.classList.contains('boot-ready')) log.bootReady = t;
+    const el = document.getElementById('reminderModal');
+    const open = Boolean(el && el.classList.contains('show'));
+    if (open && !log.shown) { log.shown = t; log.title = document.getElementById('reminderModalTitle').textContent; }
+    if (!open && log.shown && !log.hidden) log.hidden = t;
+  }).observe(document, { subtree: true, attributes: true, attributeFilter: ['class'] });
+  const timer = setInterval(() => {
+    if (typeof ReminderPrompt !== 'object') return;
+    clearInterval(timer);
+    const done = ReminderPrompt.syncFinished;
+    ReminderPrompt.syncFinished = function () { if (!log.synced) log.synced = performance.now() - t0; return done.apply(this, arguments); };
+  }, 0);
+}
+
+async function reminderServer() {
+  const { createDevApp } = await import('../dev-server.mjs');
+  const app = createDevApp({ fixture: true, quiet: true, latency: SYNC_LATENCY, DateCtor: shiftedDate(FIXED_NOW) });
+  await new Promise(r => app.server.listen(0, '127.0.0.1', r));
+  const api = (action, ...args) => app.getApi().api({ action, args });
+  api('saveRecordReminders', { enabled: true, reminders: [reminder({ item: '娛樂', time: '09:00' })] });
+  return {
+    url: 'http://127.0.0.1:' + app.server.address().port + '/',
+    api,
+    cache: () => app.getRuntime().cache,
+    close: () => new Promise(r => app.server.close(r)),
+  };
+}
+
+async function reminderPage(browser) {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'zh-TW', timezoneId: 'Asia/Taipei',
+  });
+  await context.addInitScript(reminderPageInit, FIXED_NOW);
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  return { context, page, errors };
+}
+
+test('記帳提醒（開機）：要背景同步時也不等同步，首屏畫好就跳出', { skip: NO_BROWSER }, async () => {
+  const server = await reminderServer();
+  const browser = await chromium.launch();
+  try {
+    const { page, errors } = await reminderPage(browser);
+    await page.goto(server.url);
+    await page.waitForFunction(() => window.__rlog.shown, null, { timeout: 20000 });   // 第一次開啟：建好本機快取（閒置時寫回）
+    await page.waitForTimeout(1500);
+
+    // 預算快取沒命中（budgetPending）：紀錄是最新的，但開機一定會送背景同步
+    for (const k of Array.from(server.cache().keys())) if (/^BUDGET_/.test(k)) server.cache().delete(k);
+    await page.goto(server.url);
+    await page.waitForFunction(() => window.__rlog.shown, null, { timeout: 20000 });
+    const log = await page.evaluate(() => window.__rlog);
+    assert.equal(await page.evaluate(() => window.__INITIAL_DATA__.budgetPending), true, '這次開機有背景同步');
+    assert.equal(log.title, '娛樂尚未記帳');
+    assert.equal(log.synced, 0, '卡片在背景同步回來之前就跳出');
+    assert.ok(log.shown - log.bootReady < 500, '載入畫面移除後馬上跳出（' + Math.round(log.shown - log.bootReady) + 'ms）');
+
+    await page.waitForFunction(() => window.__rlog.synced, null, { timeout: 20000 });
+    await page.waitForTimeout(800);
+    assert.equal(await page.evaluate(() => document.getElementById('reminderModal').classList.contains('show')), true, '同步後仍沒記：卡片留著');
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+    await server.close();
+  }
+});
+
+test('記帳提醒（開機）：先用舊資料跳出，同步帶回其他裝置記好的項目時自動收起', { skip: NO_BROWSER }, async () => {
+  const server = await reminderServer();
+  const browser = await chromium.launch();
+  try {
+    const { page, errors } = await reminderPage(browser);
+    await page.goto(server.url);
+    await page.waitForFunction(() => window.__rlog.shown, null, { timeout: 20000 });
+    await page.waitForTimeout(1500);
+
+    // 其他裝置記了「娛樂」；伺服器快取剛好全過期 → 頁面內嵌的是舊的備援快照，本機快取也還沒有這筆
+    server.api('addExpense', { month: '2026.11', day: 13, item: '娛樂', category: '生活費', payment: '現金', paid: '', amount: '300', note: '其他裝置' });
+    server.cache().clear();
+    await page.goto(server.url);
+    await page.waitForFunction(() => window.__rlog.shown, null, { timeout: 20000 });
+    assert.equal(await page.evaluate(() => window.__rlog.synced), 0, '同步回來之前先用手上的資料跳出');
+
+    await page.waitForFunction(() => window.__rlog.hidden, null, { timeout: 20000 });
+    const log = await page.evaluate(() => window.__rlog);
+    assert.ok(log.synced > 0 && log.hidden >= log.synced, '同步回來後才收起');
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+    await server.close();
+  }
+});

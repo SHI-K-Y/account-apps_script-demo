@@ -2,8 +2,10 @@
  * ReminderPrompt — 打開記帳簿時跳出「午餐尚未記帳」提醒卡片
  * -----------------------------------------------------------------------------
  * 什麼時候該提醒由 core/reminders.js 的 RecordReminders 判斷，這裡負責：
- *   - 時機：啟動資料同步完成後檢查一次（避免用舊的快取誤判）；頁面從背景回到前景時再檢查一次。
- *     頁面一直開著時不會中途跳出來。
+ *   - 時機：開機一畫好首屏就用手上的資料（頁面內嵌的啟動資料或本機快取）檢查，不等背景同步（真實環境要好幾秒）；
+ *     背景同步回來後用最新資料再檢查一次：卡片開著時拿掉其他裝置已經記好的項目（全記好了就自動收起），
+ *     開機時還無法判斷或當時沒有該提醒的，這時補跳出來。頁面從背景回到前景時再檢查一次（會等那時的同步結束，
+ *     因為放在記憶體裡的資料可能已經過了很久）。頁面一直開著時不會中途跳出來。
  *   - 前往記帳：切到記帳頁的支出／收入、日期設為今天、選好提醒的項目。
  *   - 關閉：這次開啟期間不再出現；重新整理或重新開啟後仍會提醒。
  *   - 今日不再顯示：記在這台裝置，今天之內都不再出現，隔天自動恢復。
@@ -18,6 +20,7 @@ const ReminderPrompt = (function() {
     bound: false,
     syncing: 0,
     wantCheck: false,   // 有一次檢查在等條件（資料、載入畫面、其他視窗）
+    eager: false,       // 開機的這次檢查：不等背景同步，先用手上的資料判斷
     waitTimer: 0,
     closed: new Set(),  // 這次開啟期間按過「關閉」或「前往記帳」：key@日期
     current: null,
@@ -88,22 +91,28 @@ const ReminderPrompt = (function() {
     return Boolean(document.querySelector('.modal-backdrop.show'));
   }
 
-  function requestCheck() {
+  /** delay：等多久再檢查（預設 300ms，合併短時間內連續的資料更新；開機那次是 0）。 */
+  function requestCheck(delay) {
     if (!st.started) return;
     st.wantCheck = true;
-    if (st.syncing > 0) return; // 同步結束時會再呼叫
+    if (st.syncing > 0 && !st.eager) return; // 同步結束時會再呼叫
     clearTimeout(st.waitTimer);
-    st.waitTimer = setTimeout(attempt, 300);
+    st.waitTimer = setTimeout(attempt, delay === undefined ? 300 : delay);
   }
 
   function attempt() {
-    if (!st.wantCheck || st.syncing > 0) return;
+    if (!st.wantCheck || (st.syncing > 0 && !st.eager)) return;
     if (document.visibilityState === 'hidden') return; // 回到前景時會再檢查
     if (isOpen()) { st.wantCheck = false; refresh(); return; }
     if (blocked()) { st.waitTimer = setTimeout(attempt, RETRY_MS); return; }
     const list = dueNow();
-    if (list === null) return; // 當月資料還沒到：資料更新時再試
+    if (list === null) return; // 當月資料還沒到：資料更新或同步結束時再試
     st.wantCheck = false;
+    if (st.eager) {
+      st.eager = false;
+      // 用的是同步前的資料：同步回來後再用最新資料檢查一次（開著就更新卡片，沒開就看要不要補跳）
+      if (st.syncing > 0) st.wantCheck = true;
+    }
     if (list.length) open(list);
   }
 
@@ -278,17 +287,20 @@ const ReminderPrompt = (function() {
   }
 
   return {
-    /** 啟動流程跑完時呼叫一次（app/bootstrap.js）。 */
+    /** 開機第二段呼叫一次（app/bootstrap.js）：不等背景同步，馬上用手上的資料檢查。 */
     start: function() {
       st.started = true;
+      st.eager = true;
       bind();
-      requestCheck();
+      requestCheck(0);
     },
-    /** 背景同步開始／結束（app/bootstrap.js）：同步中先不判斷，結束後用最新資料檢查。 */
+    /** 背景同步開始／結束（app/bootstrap.js）：開機那次以外，同步中先不判斷，結束後用最新資料檢查。 */
     syncStarted: function() { st.syncing += 1; },
     syncFinished: function() {
       st.syncing = Math.max(0, st.syncing - 1);
-      if (st.syncing === 0 && st.wantCheck) requestCheck();
+      if (st.syncing > 0) return;
+      st.eager = false;   // 同步回來了：之後都用最新資料
+      if (st.wantCheck) requestCheck(0);
     },
     /** 記帳列表的資料換新時（bookkeeping/recent.js）。 */
     onRecordsChanged: function() {

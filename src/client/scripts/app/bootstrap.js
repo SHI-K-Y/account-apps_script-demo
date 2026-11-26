@@ -153,7 +153,7 @@ const AppBoot = (function() {
     // 等首屏那一幀畫完再做第二段：首屏的樣式、排版在那一幀計算，不被第二段強制提早算、擠成一個長任務
     await BootPhase.nextFrame();
     try { stageSecond(); } catch (e) { BootPhase.report(e); }
-    ReminderPrompt.start();   // 有背景同步時會等同步結束，用最新資料判斷
+    ReminderPrompt.start();   // 不等背景同步，先用手上的資料判斷；同步回來後再用最新資料檢查一次
     await BootPhase.flushLater();
 
     BootPhase.idle(saveLocalCaches);
