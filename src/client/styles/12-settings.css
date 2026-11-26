@@ -1242,6 +1242,84 @@
   line-height: 1.4;
 }
 
+/* 項目按鈕顏色：色板就是記帳頁項目按鈕用的 --cat-<key>-* 變數（JS 帶入 --sw-ink／--sw-bg），淺色／深色模式各自跟著主題 */
+.item-color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.item-color-swatch {
+  --sw-ink: var(--ink-secondary);
+  --sw-bg: var(--glass-chip);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--sw-ink) 45%, transparent);
+  background: var(--sw-bg);
+  cursor: pointer;
+  box-shadow: var(--glass-shine);
+  transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+.item-color-swatch:hover {
+  transform: translateY(-1px) scale(1.06);
+}
+.item-color-swatch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.item-color-swatch-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--sw-ink);
+  color: var(--sw-bg);
+}
+.item-color-swatch-check {
+  font-size: 12px;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
+}
+.item-color-swatch[aria-checked="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft), 0 4px 12px -2px var(--accent-glow), var(--glass-shine);
+}
+.item-color-swatch[aria-checked="true"] .item-color-swatch-check {
+  opacity: 1;
+  transform: scale(1);
+}
+.item-color-swatch-auto {
+  width: auto;
+  gap: 5px;
+  padding: 0 12px;
+  border-style: dashed;
+  color: var(--sw-ink);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.item-color-swatch-auto[aria-checked="true"] {
+  border-style: solid;
+}
+.item-color-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.choice.item-color-preview {
+  pointer-events: none;
+  min-height: 40px;
+  padding: 8px 14px;
+}
+
 
 :root[data-theme="light"] .pay-group-badge[data-payment="linepay"],
 :root[data-theme="light"] .pay-group-badge.pay-badge-linepay {

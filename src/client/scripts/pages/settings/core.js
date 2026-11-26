@@ -569,6 +569,7 @@ function renderEmojiPopoverContent() {
       if (emojiPickerTarget === 'itemModal') {
         setIcon(document.getElementById('itemEditEmojiChar'), name);
         setIcon(document.getElementById('itemEditModalCurrentEmoji'), name);
+        updateItemEditColorPreview();
       } else {
         setAddBarEmoji(name);
       }

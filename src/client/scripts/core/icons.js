@@ -169,7 +169,43 @@ function itemIconLabelHtml(name, iconClass) {
     escHtml(itemDisplayName(name));
 }
 
+/* 項目按鈕的自訂顏色：只能從現有的類別色板挑（同一組 --cat-<key>-* 變數，淺色／深色模式各有一套），
+ * 存在 settings metadata 的 itemColors（項目名稱 → 色板 key）；沒設定就照名稱自動判斷。
+ * 色相重複的類別（travel≈transport、home≈food、medical≈bigexpense、study≈daily、pet≈finance、sport≈transport）不另列。 */
+const ITEM_COLOR_PALETTE = [
+  { key: 'food', label: '杏橙' },
+  { key: 'bigexpense', label: '玫瑰' },
+  { key: 'entertainment', label: '薰衣草' },
+  { key: 'reimburse', label: '葡萄紫' },
+  { key: 'living', label: '靛藍' },
+  { key: 'transport', label: '天空藍' },
+  { key: 'laundry', label: '湖水青' },
+  { key: 'salary', label: '薄荷綠' },
+  { key: 'daily', label: '青草綠' },
+  { key: 'finance', label: '金黃' },
+  { key: 'other', label: '石墨灰' },
+];
+const ITEM_COLOR_KEYS = ITEM_COLOR_PALETTE.map(function(c) { return c.key; });
+
+function isItemColorKey(key) {
+  return ITEM_COLOR_KEYS.indexOf(key) >= 0;
+}
+
+function getCustomItemColor(name) {
+  if (!name || typeof settingsState === 'undefined' || !settingsState.metadata) return '';
+  const map = settingsState.metadata.itemColors;
+  const key = map && map[name];
+  return isItemColorKey(key) ? key : '';
+}
+
 function getItemCategory(name) {
+  if (!name) return 'default';
+  const str = String(name).trim();
+  return getCustomItemColor(str) || getCustomItemColor(splitLeadingEmoji(str).rest) || getAutoItemCategory(str);
+}
+
+// 依名稱自動判斷的類別色（不看自訂顏色）
+function getAutoItemCategory(name) {
   if (!name) return 'default';
   const str = String(name).trim();
 

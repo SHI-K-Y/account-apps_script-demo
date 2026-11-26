@@ -7,7 +7,7 @@
         </div>
         <div class="modal-header-text">
           <h2 id="itemEditModalTitle" class="modal-title">修改項目</h2>
-          <div class="modal-subtitle">設定專屬圖示與項目名稱</div>
+          <div class="modal-subtitle">設定專屬圖示、按鈕顏色與項目名稱</div>
         </div>
       </div>
 
@@ -20,6 +20,15 @@
               <span class="emoji-pick-caret">更換圖示<i class="ph ph-caret-down" aria-hidden="true" data-icon="caret-down"></i></span>
             </button>
             <span class="item-emoji-hint">選擇適合的圖示，讓記帳按鈕更直覺好找</span>
+          </div>
+        </div>
+
+        <div class="card-form-group">
+          <span class="card-form-label" id="itemEditColorLabel">按鈕顏色</span>
+          <div id="itemEditColorSwatches" class="item-color-swatches" role="radiogroup" aria-labelledby="itemEditColorLabel"></div>
+          <div class="item-color-preview-row">
+            <span class="item-emoji-hint">記帳頁預覽</span>
+            <span id="itemEditColorPreview" class="choice has-emoji item-color-preview" aria-hidden="true"></span>
           </div>
         </div>
 

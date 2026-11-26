@@ -2,6 +2,7 @@ function getDefaultSettingsMetadata_() {
   return {
     emojis: {},
     itemEmojis: {},
+    itemColors: {},
     channelColors: {
       'Line Pay': '#06c755',
       '信用卡': '#2563eb',
@@ -250,6 +251,7 @@ function getSettingsMetadata_(ssOrForce) {
 
   meta.emojis = (meta.emojis && typeof meta.emojis === 'object') ? meta.emojis : (meta.itemEmojis || {});
   meta.itemEmojis = meta.emojis;
+  meta.itemColors = (meta.itemColors && typeof meta.itemColors === 'object' && !Array.isArray(meta.itemColors)) ? meta.itemColors : {};
   meta.channelColors = Object.assign({}, def.channelColors, meta.channelColors || {});
   meta.channels = Array.isArray(meta.channels) && meta.channels.length ? meta.channels : def.channels;
   meta.cards = Array.isArray(meta.cards) ? meta.cards : def.cards;

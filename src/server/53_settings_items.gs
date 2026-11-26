@@ -12,6 +12,16 @@ function buildAndCacheSettingsResult_(sheet, ss) {
   };
 }
 
+// 項目按鈕可選的顏色（對應前端 core/icons.js 的 ITEM_COLOR_PALETTE，也就是 --cat-<key>-* 色板）
+const ITEM_COLOR_KEYS_ = ['food', 'bigexpense', 'entertainment', 'reimburse', 'living', 'transport', 'laundry', 'salary', 'daily', 'finance', 'other'];
+
+function normalizeItemColorKey_(value) {
+  const key = String(value == null ? '' : value).trim();
+  if (!key || key === 'auto') return '';
+  if (ITEM_COLOR_KEYS_.indexOf(key) < 0) throw new Error('不支援的項目顏色：' + key);
+  return key;
+}
+
 function saveSettingsItemWithEmoji_(categoryOrPayload, valueArg, emojiArg, rowNumberArg, positionArg) {
   return withDocumentLock_(function () {
     let category = categoryOrPayload;
@@ -19,6 +29,7 @@ function saveSettingsItemWithEmoji_(categoryOrPayload, valueArg, emojiArg, rowNu
     let emoji = emojiArg;
     let rowNumber = rowNumberArg;
     let position = positionArg || 'bottom';
+    let color;
 
     if (categoryOrPayload && typeof categoryOrPayload === 'object') {
       category = categoryOrPayload.category;
@@ -26,6 +37,7 @@ function saveSettingsItemWithEmoji_(categoryOrPayload, valueArg, emojiArg, rowNu
       emoji = categoryOrPayload.emoji;
       rowNumber = categoryOrPayload.row !== undefined ? categoryOrPayload.row : categoryOrPayload.rowNumber;
       position = categoryOrPayload.position || positionArg || 'bottom';
+      color = categoryOrPayload.color;
     }
 
     const col = settingsColumnNumber_(category);
@@ -34,6 +46,8 @@ function saveSettingsItemWithEmoji_(categoryOrPayload, valueArg, emojiArg, rowNu
     const cleanText = stripEmoji_(value);
     if (!cleanText) throw new Error('請輸入有效的選項名稱（純文字）');
     if (cleanText.length > 50) throw new Error('選項名稱不可超過 50 個字');
+    // color 沒帶（undefined）＝不動；空字串／'auto'＝改回自動配色；其他值必須是前端色板的 key（先驗證，再寫試算表）
+    const colorKey = (color === undefined || color === null) ? null : normalizeItemColorKey_(color);
 
     const ss = getSpreadsheet_();
     const sheet = ss.getSheetByName(CONFIG.SETTINGS_SHEET);
@@ -76,8 +90,11 @@ function saveSettingsItemWithEmoji_(categoryOrPayload, valueArg, emojiArg, rowNu
 
     const meta = getSettingsMetadata_(ss);
     if (!meta.emojis) meta.emojis = {};
+    if (!meta.itemColors || typeof meta.itemColors !== 'object') meta.itemColors = {};
     if (oldText && oldText !== cleanText) {
       delete meta.emojis[oldText];
+      if (meta.itemColors[oldText] && !meta.itemColors[cleanText]) meta.itemColors[cleanText] = meta.itemColors[oldText];
+      delete meta.itemColors[oldText];
       renameQuickComboOption_(meta, category, oldText, cleanText);
       renameMealSlotOption_(meta, category, oldText, cleanText);
       renameRecordReminderOption_(meta, category, oldText, cleanText);
@@ -87,6 +104,10 @@ function saveSettingsItemWithEmoji_(categoryOrPayload, valueArg, emojiArg, rowNu
       meta.emojis[cleanText] = cleanEmoji;
     }
     meta.itemEmojis = meta.emojis;
+    if (colorKey !== null) {
+      if (colorKey) meta.itemColors[cleanText] = colorKey;
+      else delete meta.itemColors[cleanText];
+    }
     saveSettingsMetadata_(meta, ss);
 
     flushSpreadsheet_();
@@ -96,6 +117,7 @@ function saveSettingsItemWithEmoji_(categoryOrPayload, valueArg, emojiArg, rowNu
       category: category,
       value: cleanText,
       emoji: cleanEmoji,
+      color: meta.itemColors[cleanText] || '',
       options: updated.rawOptions,
       simpleOptions: updated.simpleOptions,
       metadata: meta,
@@ -160,11 +182,14 @@ function deleteSettingsItemWithEmoji_(categoryOrPayload, rowNumberArg) {
   const res = deleteSettingsOption_(category, rowNumber);
   if (deletedText) {
     const meta = getSettingsMetadata_(ss);
-    if (meta.emojis && meta.emojis[deletedText]) {
+    const hasEmoji = Boolean(meta.emojis && meta.emojis[deletedText]);
+    const hasColor = Boolean(meta.itemColors && meta.itemColors[deletedText]);
+    if (hasEmoji) {
       delete meta.emojis[deletedText];
       meta.itemEmojis = meta.emojis;
-      saveSettingsMetadata_(meta, ss);
     }
+    if (hasColor) delete meta.itemColors[deletedText];
+    if (hasEmoji || hasColor) saveSettingsMetadata_(meta, ss);
     res.metadata = meta;
   }
   return res;

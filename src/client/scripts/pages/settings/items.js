@@ -91,6 +91,9 @@ function openItemEmojiEditModal(category, row, currentName) {
   setIcon(modalEmojiEl, curIcon);
   if (nameInput) nameInput.value = cleanName;
 
+  settingsState.editingItemColor = getCustomItemColor(String(currentName || '').trim()) || getCustomItemColor(cleanName);
+  renderItemEditColorSwatches();
+
   var modal = document.getElementById('itemEditModal');
   if (modal) openModal(modal);
   setTimeout(function() {
@@ -101,12 +104,116 @@ function openItemEmojiEditModal(category, row, currentName) {
   }, 60);
 }
 
+/* 按鈕顏色：第一格「自動」＝照名稱判斷（格子本身顯示自動判斷出來的顏色），其餘是 ITEM_COLOR_PALETTE 的色板 */
+function renderItemEditColorSwatches() {
+  var wrap = document.getElementById('itemEditColorSwatches');
+  if (!wrap) return;
+  if (!wrap._bound) {
+    wrap._bound = true;
+    wrap.addEventListener('click', function(e) {
+      var btn = e.target.closest('.item-color-swatch');
+      if (!btn || !wrap.contains(btn)) return;
+      selectItemEditColor(btn.dataset.color || '', false);
+    });
+    wrap.addEventListener('keydown', function(e) {
+      var keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+      if (!keys[e.key]) return;
+      e.preventDefault();
+      var btns = Array.prototype.slice.call(wrap.querySelectorAll('.item-color-swatch'));
+      var idx = btns.indexOf(document.activeElement);
+      if (idx < 0) idx = 0;
+      var next = btns[(idx + keys[e.key] + btns.length) % btns.length];
+      selectItemEditColor(next.dataset.color || '', true);
+    });
+    var nameInput = document.getElementById('itemEditNameInput');
+    if (nameInput) nameInput.addEventListener('input', updateItemEditColorPreview);
+  }
+
+  if (!wrap.childElementCount) {
+    var autoBtn = document.createElement('button');
+    autoBtn.type = 'button';
+    autoBtn.className = 'item-color-swatch item-color-swatch-auto';
+    autoBtn.dataset.color = '';
+    autoBtn.setAttribute('role', 'radio');
+    autoBtn.setAttribute('aria-label', '自動（依項目名稱）');
+    autoBtn.title = '自動（依項目名稱）';
+    autoBtn.innerHTML = iconHtml('magic-wand', 'regular', 'ic-14') + '<span>自動</span>';
+    wrap.appendChild(autoBtn);
+    ITEM_COLOR_PALETTE.forEach(function(c) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'item-color-swatch';
+      btn.dataset.color = c.key;
+      btn.setAttribute('role', 'radio');
+      btn.setAttribute('aria-label', c.label);
+      btn.title = c.label;
+      btn.style.setProperty('--sw-ink', 'var(--cat-' + c.key + '-ink)');
+      btn.style.setProperty('--sw-bg', 'var(--cat-' + c.key + '-bg-selected)');
+      btn.innerHTML = '<span class="item-color-swatch-dot" aria-hidden="true">' + iconHtml('check', 'regular', 'item-color-swatch-check') + '</span>';
+      wrap.appendChild(btn);
+    });
+  }
+  syncItemEditColorSwatches();
+}
+
+function selectItemEditColor(key, focus) {
+  settingsState.editingItemColor = isItemColorKey(key) ? key : '';
+  syncItemEditColorSwatches();
+  if (focus) {
+    var wrap = document.getElementById('itemEditColorSwatches');
+    var active = wrap && wrap.querySelector('.item-color-swatch[aria-checked="true"]');
+    if (active) active.focus();
+  }
+}
+
+function itemEditPreviewName() {
+  var nameInput = document.getElementById('itemEditNameInput');
+  return stripEmojiClient(nameInput ? nameInput.value : '');
+}
+
+function syncItemEditColorSwatches() {
+  var wrap = document.getElementById('itemEditColorSwatches');
+  if (!wrap) return;
+  var current = settingsState.editingItemColor || '';
+  wrap.querySelectorAll('.item-color-swatch').forEach(function(btn) {
+    var on = (btn.dataset.color || '') === current;
+    btn.setAttribute('aria-checked', on ? 'true' : 'false');
+    btn.tabIndex = on ? 0 : -1;
+  });
+  updateItemEditColorPreview();
+}
+
+function updateItemEditColorPreview() {
+  var preview = document.getElementById('itemEditColorPreview');
+  var autoBtn = document.querySelector('#itemEditColorSwatches .item-color-swatch-auto');
+  var name = itemEditPreviewName();
+  var autoCat = getAutoItemCategory(name || '');
+  var autoKey = autoCat && autoCat !== 'default' ? autoCat : '';
+  if (autoBtn) {
+    if (autoKey) {
+      autoBtn.style.setProperty('--sw-ink', 'var(--cat-' + autoKey + '-ink)');
+      autoBtn.style.setProperty('--sw-bg', 'var(--cat-' + autoKey + '-bg-selected)');
+    } else {
+      autoBtn.style.removeProperty('--sw-ink');
+      autoBtn.style.removeProperty('--sw-bg');
+    }
+  }
+  if (!preview) return;
+  var cat = settingsState.editingItemColor || autoKey;
+  if (cat) preview.dataset.cat = cat;
+  else delete preview.dataset.cat;
+  var icon = readIconName(document.getElementById('itemEditEmojiChar')) || 'tag';
+  preview.innerHTML = '<span class="choice-emoji" aria-hidden="true">' + iconHtml(icon) + '</span>' +
+    '<span class="choice-text">' + escHtml(name || '項目名稱') + '</span>';
+}
+
 function closeItemEmojiEditModal() {
   closeEmojiPopover();
   var modal = document.getElementById('itemEditModal');
   if (modal) closeModal(modal);
   settingsState.editingItemRow = null;
   settingsState.editingItemCategory = null;
+  settingsState.editingItemColor = '';
 }
 
 ModalManager.register('itemEditModal', {
@@ -146,9 +253,13 @@ if (itemEditSubmitBtn) {
     itemEditSubmitBtn.textContent = '儲存中…';
     setLoading(true);
 
+    var chosenColor = settingsState.editingItemColor || '';
     var m = ensureMetadataInitialized();
     m.itemEmojis[cleanName] = chosenEmoji;
     m.emojis[cleanName] = chosenEmoji;
+    if (!m.itemColors) m.itemColors = {};
+    if (chosenColor) m.itemColors[cleanName] = chosenColor;
+    else delete m.itemColors[cleanName];
     LocalCache.saveSettingsMetadata(m);
 
     Api.server
@@ -178,7 +289,8 @@ if (itemEditSubmitBtn) {
         category: category,
         row: row,
         name: cleanName,
-        emoji: chosenEmoji
+        emoji: chosenEmoji,
+        color: chosenColor
       });
   });
 }
