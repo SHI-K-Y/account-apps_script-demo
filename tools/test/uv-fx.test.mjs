@@ -4,7 +4,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './helpers.mjs';
+import { ROOT, browserTests } from './helpers.mjs';
+
+// 沒有 Chromium 時略過（原因會提示安裝方式）；REQUIRE_BROWSER=1 時改為失敗。瀏覽器由 browserTests() 在檔案結束時關閉。
+const web = await browserTests();
 
 const CLIENT = path.join(ROOT, 'src', 'client');
 const read = rel => fs.readFileSync(path.join(CLIENT, rel), 'utf8');
@@ -87,16 +90,16 @@ test('UvFx：helper 重複呼叫不會插入第二個圖層', () => {
 
 // 記帳頁的項目、總類、支付方式（含轉帳）、是否已繳、金額鍵盤：套上常用組合同款的玻璃板（UvFx.glassChip），
 // 顏色不變；彈窗與其他頁面的選項不套。
-let chromium = null;
-try { ({ chromium } = await import('playwright')); } catch (e) { chromium = null; }
 
-test('UvFx：記帳頁的選項按鈕與金額鍵盤帶著玻璃板，文字不變；滑鼠移動時依位置傾斜；彈窗裡的選項不套', { skip: chromium ? false : '沒有安裝 playwright' }, async () => {
+test('UvFx：記帳頁的選項按鈕與金額鍵盤帶著玻璃板，文字不變；滑鼠移動時依位置傾斜；彈窗裡的選項不套', { skip: web.skip }, async () => {
   const { createDevApp } = await import('../dev-server.mjs');
+  // 先拿到瀏覽器再開伺服器：啟動失敗時沒有東西要收；之後任何一步失敗都在 finally 關掉頁面與伺服器。
+  const browser = await web.browser();
   const app = createDevApp({ fixture: true, quiet: true });
-  await new Promise(r => app.server.listen(0, '127.0.0.1', r));
-  const browser = await chromium.launch();
+  let page = null;
   try {
-    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await new Promise((resolve, reject) => { app.server.once('error', reject); app.server.listen(0, '127.0.0.1', resolve); });
+    page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     await page.goto('http://127.0.0.1:' + app.server.address().port + '/');
     await page.waitForSelector('#expenseItemChoices .choice');
     // 選一張信用卡，「是否已繳」才會出現
@@ -149,7 +152,7 @@ test('UvFx：記帳頁的選項按鈕與金額鍵盤帶著玻璃板，文字不�
     await page.mouse.move(2, 2);
     assert.match(await probe(), /^false\|/);
   } finally {
-    await browser.close();
-    await new Promise(r => app.server.close(r));
+    if (page) await page.close().catch(() => {});
+    if (app.server.listening) await new Promise(r => app.server.close(() => r()));
   }
 });

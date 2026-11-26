@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-import { ROOT, DIST, createBackend } from './helpers.mjs';
+import { ROOT, DIST, createBackend, browserTests } from './helpers.mjs';
 import { createDevApp } from '../dev-server.mjs';
 
 const CLIENT = path.join(ROOT, 'src', 'client');
@@ -19,9 +19,9 @@ const plain = v => (v === undefined ? v : JSON.parse(JSON.stringify(v)));
 const read = rel => fs.readFileSync(path.join(CLIENT, rel), 'utf8');
 const FIXED_NOW = Date.UTC(2026, 10, 13, 4, 0, 0);   // 2026-11-13 12:00 台北
 
-let chromium = null;
-try { ({ chromium } = await import('playwright')); } catch (e) { chromium = null; }
-const NO_BROWSER = chromium ? false : '沒有安裝 playwright';
+// 沒有 Chromium 時瀏覽器測試略過（原因會提示安裝方式）；REQUIRE_BROWSER=1 時改為失敗。
+const web = await browserTests();
+const NO_BROWSER = web.skip;
 
 /* ---------------------------------------------------------------------------
  * 1. LocalCache（在 vm 裡執行，KvStore 換成記憶體替身）
@@ -445,7 +445,8 @@ function pageInit(cfg) {
   };
 }
 
-async function openApp(browser, opts) {
+async function openApp(opts) {
+  const browser = await web.browser();
   const o = opts || {};
   const app = createDevApp({ fixture: true, quiet: true, DateCtor: shiftedDate(FIXED_NOW), latency: o.latency || 0 });
   await new Promise(r => app.server.listen(0, '127.0.0.1', r));
@@ -462,12 +463,8 @@ async function openApp(browser, opts) {
   return { page, context, errors, boot, close: async () => { await context.close(); await new Promise(r => app.server.close(r)); } };
 }
 
-let browser = null;
-test.before(async () => { if (chromium) browser = await chromium.launch(); });
-test.after(async () => { if (browser) await browser.close(); });
-
 test('開機後閒置預取：一次 batchRead 讀總覽＋本月圖表＋預算，存進 IndexedDB；切到總覽時已是最新，不再問伺服器', { skip: NO_BROWSER }, async () => {
-  const s = await openApp(browser);
+  const s = await openApp();
   try {
     await s.boot();
     await s.page.waitForFunction(() => window.__rpcLog.some(r => r.action === 'batchRead') && LocalCache.getOverview() && Api.pending() === 0, null, { timeout: 15000 });
@@ -503,7 +500,7 @@ test('開機後閒置預取：一次 batchRead 讀總覽＋本月圖表＋預算
 });
 
 test('記一筆後立刻切到總覽：立即顯示舊數字（沒有骨架、沒有忙碌條、有「更新中」），寫入回來後只發一個 batchRead，數字更新', { skip: NO_BROWSER }, async () => {
-  const s = await openApp(browser, { latency: 600 });
+  const s = await openApp({ latency: 600 });
   try {
     await s.boot();
     await s.page.waitForFunction(() => LocalCache.getOverview() && Api.pending() === 0 && DeferredApp.loaded(), null, { timeout: 20000 });
@@ -590,7 +587,7 @@ test('記一筆後立刻切到總覽：立即顯示舊數字（沒有骨架、�
 
 test('舊版 localStorage 快取：第一次開啟就用得到，搬進 IndexedDB 後刪除；介面偏好留著', { skip: NO_BROWSER }, async () => {
   const overview = { month: '2026.11', assetTotal: '123456', totalIncome: '0', totalExpense: '0', monthBalance: '0' };
-  const s = await openApp(browser, { legacy: { FAST_BOOKKEEPING_OVERVIEW_V2: JSON.stringify(overview), FAST_BOOKKEEPING_PREFS_V1: '{"motion":"full"}' } });
+  const s = await openApp({ legacy: { FAST_BOOKKEEPING_OVERVIEW_V2: JSON.stringify(overview), FAST_BOOKKEEPING_PREFS_V1: '{"motion":"full"}' } });
   try {
     await s.boot();
     const r = await s.page.evaluate(async () => {

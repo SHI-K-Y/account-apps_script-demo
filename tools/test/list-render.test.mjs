@@ -8,16 +8,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './helpers.mjs';
+import { ROOT, browserTests } from './helpers.mjs';
 import { createDevApp } from '../dev-server.mjs';
 
 const CLIENT = path.join(ROOT, 'src', 'client');
 const read = rel => fs.readFileSync(path.join(CLIENT, rel), 'utf8');
 const FIXED_NOW = Date.UTC(2026, 10, 13, 4, 0, 0);   // 2026-11-13 12:00 台北
 
-let chromium = null;
-try { ({ chromium } = await import('playwright')); } catch (e) { chromium = null; }
-const NO_BROWSER = chromium ? false : '沒有安裝 playwright';
+// 沒有 Chromium 時瀏覽器測試略過（原因會提示安裝方式）；REQUIRE_BROWSER=1 時改為失敗。
+const web = await browserTests();
+const NO_BROWSER = web.skip;
 
 function shiftedDate(startMs) {
   const offset = startMs - Date.now();
@@ -50,7 +50,8 @@ function pageInit(fixedNow) {
   };
 }
 
-async function openApp(browser, fixtureOptions) {
+async function openApp(fixtureOptions) {
+  const browser = await web.browser();
   const app = createDevApp({ fixture: true, quiet: true, DateCtor: shiftedDate(FIXED_NOW), fixtureOptions });
   await new Promise(r => app.server.listen(0, '127.0.0.1', r));
   const context = await browser.newContext({
@@ -75,15 +76,11 @@ async function idle(page, extra = 400) {
   await page.waitForTimeout(extra);
 }
 
-let browser = null;
-test.before(async () => { if (chromium) browser = await chromium.launch(); });
-test.after(async () => { if (browser) await browser.close(); });
-
 /* ---------------------------------------------------------------------------
  * 1. ListRender 本身
  * ------------------------------------------------------------------------- */
 test('ListRender：開頭插入一筆只建立一個節點，其餘沿用；內容沒變的節點不更新', { skip: NO_BROWSER }, async () => {
-  const s = await openApp(browser);
+  const s = await openApp();
   try {
     const r = await s.page.evaluate(() => {
       const box = document.createElement('div');
@@ -120,7 +117,7 @@ test('ListRender：開頭插入一筆只建立一個節點，其餘沿用；內�
 });
 
 test('ListRender：刪除後列號往上遞補，用 ident 認回節點；刪除動畫抓走的節點不會被拿去顯示別筆', { skip: NO_BROWSER }, async () => {
-  const s = await openApp(browser);
+  const s = await openApp();
   try {
     const r = await s.page.evaluate(() => {
       const box = document.createElement('div');
@@ -154,7 +151,7 @@ test('ListRender：刪除後列號往上遞補，用 ident 認回節點；刪除
 });
 
 test('ListRender：超過 300 筆先畫 50 筆，捲到底再補', { skip: NO_BROWSER }, async () => {
-  const s = await openApp(browser);
+  const s = await openApp();
   try {
     const r = await s.page.evaluate(async () => {
       const box = document.createElement('div');
@@ -197,7 +194,7 @@ async function pickAndSubmitExpense(page) {
 }
 
 test('記帳頁：記一筆支出時其他列沿用原本的節點，同步中標記會出現再消失', { skip: NO_BROWSER }, async () => {
-  const s = await openApp(browser, { extraExpenses: 22 });
+  const s = await openApp({ extraExpenses: 22 });
   try {
     const { page } = s;
     await page.evaluate(() => toggleFullRecords('expense'));
@@ -250,7 +247,7 @@ test('記帳頁：記一筆支出時其他列沿用原本的節點，同步中�
 });
 
 test('記帳頁：修改／刪除鈕用事件委派，刪除後下方的列沿用節點並更新列號，刪除動畫播在被刪的那一列', { skip: NO_BROWSER }, async () => {
-  const s = await openApp(browser, { extraExpenses: 6 });
+  const s = await openApp({ extraExpenses: 6 });
   try {
     const { page } = s;
     await page.evaluate(() => toggleFullRecords('expense'));
@@ -302,7 +299,7 @@ test('記帳頁：修改／刪除鈕用事件委派，刪除後下方的列沿�
 });
 
 test('記帳頁：日期篩選照常運作，切回全部時沿用節點', { skip: NO_BROWSER }, async () => {
-  const s = await openApp(browser, { extraExpenses: 22 });
+  const s = await openApp({ extraExpenses: 22 });
   try {
     const { page } = s;
     await page.evaluate(() => toggleFullRecords('expense'));
@@ -332,7 +329,7 @@ test('記帳頁：日期篩選照常運作，切回全部時沿用節點', { ski
  * 3. 選項晶片、搜尋頁
  * ------------------------------------------------------------------------- */
 test('選項晶片：選取變化只切換 selected／aria-pressed；選項沒變時重繪不重建節點', { skip: NO_BROWSER }, async () => {
-  const s = await openApp(browser);
+  const s = await openApp();
   try {
     const { page } = s;
     const r = await page.evaluate(() => {
@@ -374,7 +371,7 @@ test('選項晶片：選取變化只切換 selected／aria-pressed；選項沒�
 });
 
 test('搜尋頁：關鍵字高亮、修改／刪除委派照常；重新渲染不重建沒變的列', { skip: NO_BROWSER }, async () => {
-  const s = await openApp(browser, { extraExpenses: 22 });
+  const s = await openApp({ extraExpenses: 22 });
   try {
     const { page } = s;
     await page.evaluate(() => switchPage('search'));

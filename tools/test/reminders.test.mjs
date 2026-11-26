@@ -5,7 +5,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-import { createBackend, ROOT, DIST } from './helpers.mjs';
+import { createBackend, ROOT, DIST, browserTests } from './helpers.mjs';
+
+// 沒有 Chromium 時略過（原因會提示安裝方式）；REQUIRE_BROWSER=1 時改為失敗。瀏覽器共用一個，檔案結束時關閉。
+const web = await browserTests();
+const NO_BROWSER = web.skip;
 
 /** 在沙盒裡執行 reminders.js，取出 RecordReminders；metadata 模擬 settingsState.metadata。 */
 function loadRules(metadata) {
@@ -239,9 +243,6 @@ test('記帳提醒（畫面）：提醒卡片有「前往記帳」「關閉」�
  * 開機時機（真的 Chromium＋本機預覽伺服器）：不等背景同步，首屏畫好就跳出；
  * 同步帶回其他裝置已經記好的項目時，卡片自動收起。
  * ------------------------------------------------------------------------- */
-let chromium = null;
-try { ({ chromium } = await import('playwright')); } catch (e) { chromium = null; }
-const NO_BROWSER = chromium ? false : '沒有安裝 playwright';
 const FIXED_NOW = Date.UTC(2026, 10, 13, 4, 0, 0);   // 2026-11-13 12:00 台北
 const SYNC_LATENCY = 2500;                            // 模擬伺服器回應很慢（真實環境開試算表要好幾秒）
 
@@ -283,14 +284,17 @@ function reminderPageInit(now) {
 async function reminderServer() {
   const { createDevApp } = await import('../dev-server.mjs');
   const app = createDevApp({ fixture: true, quiet: true, latency: SYNC_LATENCY, DateCtor: shiftedDate(FIXED_NOW) });
-  await new Promise(r => app.server.listen(0, '127.0.0.1', r));
   const api = (action, ...args) => app.getApi().api({ action, args });
-  api('saveRecordReminders', { enabled: true, reminders: [reminder({ item: '娛樂', time: '09:00' })] });
+  const close = () => new Promise(r => app.server.listening ? app.server.close(() => r()) : r());
+  try {
+    await new Promise(r => app.server.listen(0, '127.0.0.1', r));
+    api('saveRecordReminders', { enabled: true, reminders: [reminder({ item: '娛樂', time: '09:00' })] });
+  } catch (e) { await close(); throw e; }
   return {
     url: 'http://127.0.0.1:' + app.server.address().port + '/',
     api,
     cache: () => app.getRuntime().cache,
-    close: () => new Promise(r => app.server.close(r)),
+    close,
   };
 }
 
@@ -306,10 +310,14 @@ async function reminderPage(browser) {
 }
 
 test('記帳提醒（開機）：要背景同步時也不等同步，首屏畫好就跳出', { skip: NO_BROWSER }, async () => {
+  // 先拿到瀏覽器再開伺服器：啟動失敗時沒有東西要收；之後任何一步失敗都在 finally 關掉頁面與伺服器。
+  const browser = await web.browser();
   const server = await reminderServer();
-  const browser = await chromium.launch();
+  let context = null;
   try {
-    const { page, errors } = await reminderPage(browser);
+    const opened = await reminderPage(browser);
+    context = opened.context;
+    const { page, errors } = opened;
     await page.goto(server.url);
     await page.waitForFunction(() => window.__rlog.shown, null, { timeout: 20000 });   // 第一次開啟：建好本機快取（閒置時寫回）
     await page.waitForTimeout(1500);
@@ -329,16 +337,20 @@ test('記帳提醒（開機）：要背景同步時也不等同步，首屏畫�
     assert.equal(await page.evaluate(() => document.getElementById('reminderModal').classList.contains('show')), true, '同步後仍沒記：卡片留著');
     assert.deepEqual(errors, []);
   } finally {
-    await browser.close();
+    if (context) await context.close().catch(() => {});
     await server.close();
   }
 });
 
 test('記帳提醒（開機）：先用舊資料跳出，同步帶回其他裝置記好的項目時自動收起', { skip: NO_BROWSER }, async () => {
+  // 先拿到瀏覽器再開伺服器：啟動失敗時沒有東西要收；之後任何一步失敗都在 finally 關掉頁面與伺服器。
+  const browser = await web.browser();
   const server = await reminderServer();
-  const browser = await chromium.launch();
+  let context = null;
   try {
-    const { page, errors } = await reminderPage(browser);
+    const opened = await reminderPage(browser);
+    context = opened.context;
+    const { page, errors } = opened;
     await page.goto(server.url);
     await page.waitForFunction(() => window.__rlog.shown, null, { timeout: 20000 });
     await page.waitForTimeout(1500);
@@ -355,7 +367,7 @@ test('記帳提醒（開機）：先用舊資料跳出，同步帶回其他裝�
     assert.ok(log.synced > 0 && log.hidden >= log.synced, '同步回來後才收起');
     assert.deepEqual(errors, []);
   } finally {
-    await browser.close();
+    if (context) await context.close().catch(() => {});
     await server.close();
   }
 });

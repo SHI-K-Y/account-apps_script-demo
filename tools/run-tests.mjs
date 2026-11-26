@@ -12,10 +12,17 @@
 //
 // 參數規則：開頭的非旗標參數是測試資料夾（相對於專案根目錄）；
 // 從第一個以 - 開頭的參數起，其餘全部轉給 node --test（npm test -- … 的參數會接在最後面）。
+//
+// 不會卡住：每一項測試最多 120 秒（--test-timeout，可用 npm test -- --test-timeout=… 覆寫），
+// 測試跑完就結束各檔案的程序（--test-force-exit），就算某個失敗的測試留下沒關的伺服器或瀏覽器也一樣。
+//
+// 瀏覽器測試需要 Playwright 的 Chromium（npx playwright install chromium）；沒有時那些測試顯示 skipped。
+// REQUIRE_BROWSER=1：沒有 Chromium 就在開始前直接失敗（npm run sync:demo 會帶上）。
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { chromiumStatus, browserRequired } from './test/helpers.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TEST_FILE = /\.test\.mjs$/;
@@ -43,6 +50,12 @@ dirs.forEach(dir => {
   files.push(...found);
 });
 
-const result = spawnSync(process.execPath, ['--test', ...forwarded, ...files], { cwd: ROOT, stdio: 'inherit' });
+if (browserRequired()) {
+  const { reason } = await chromiumStatus();
+  if (reason) fail('REQUIRE_BROWSER=1，但瀏覽器測試無法執行：' + reason);
+}
+
+const DEFAULTS = ['--test-timeout=120000', '--test-force-exit'];
+const result = spawnSync(process.execPath, ['--test', ...DEFAULTS, ...forwarded, ...files], { cwd: ROOT, stdio: 'inherit' });
 if (result.error) fail('無法啟動 node --test：' + result.error.message);
 process.exit(result.status === null ? 1 : result.status);

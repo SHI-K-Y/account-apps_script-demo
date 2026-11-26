@@ -8,14 +8,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-import { ROOT, DIST } from './helpers.mjs';
+import { ROOT, DIST, browserTests } from './helpers.mjs';
 import { createDevApp } from '../dev-server.mjs';
 
 const FIXED_NOW = Date.UTC(2026, 10, 13, 4, 0, 0);   // 2026-11-13 12:00 台北
 
-let chromium = null;
-try { ({ chromium } = await import('playwright')); } catch (e) { chromium = null; }
-const NO_BROWSER = chromium ? false : '沒有安裝 playwright';
+// 沒有 Chromium 時瀏覽器測試略過（原因會提示安裝方式）；REQUIRE_BROWSER=1 時改為失敗。
+const web = await browserTests();
+const NO_BROWSER = web.skip;
 
 function shiftedDate(startMs) {
   const offset = startMs - Date.now();
@@ -43,7 +43,8 @@ function pageInit(cfg) {
   Object.entries(cfg.storage || {}).forEach(([k, v]) => { try { localStorage.setItem(k, v); } catch (e) {} });
 }
 
-async function openApp(browser, opts) {
+async function openApp(opts) {
+  const browser = await web.browser();
   const o = opts || {};
   const app = createDevApp({ fixture: true, quiet: true, DateCtor: shiftedDate(FIXED_NOW) });
   await new Promise(r => app.server.listen(0, '127.0.0.1', r));
@@ -64,10 +65,6 @@ async function openApp(browser, opts) {
     close: async () => { await context.close(); await new Promise(r => app.server.close(r)); },
   };
 }
-
-let browser = null;
-test.before(async () => { if (chromium) browser = await chromium.launch(); });
-test.after(async () => { if (browser) await browser.close(); });
 
 const read = name => fs.readFileSync(path.join(DIST, name), 'utf8');
 
@@ -103,7 +100,7 @@ test('manifest：deferredScripts 只放首頁用不到的模組，開機必要�
 });
 
 test('延後程式：開機完成後在閒置時自動執行，執行後各頁面模組都在、沒有錯誤', { skip: NO_BROWSER }, async () => {
-  const s = await openApp(browser);
+  const s = await openApp();
   try {
     await s.page.waitForFunction(() => DeferredApp.loaded(), null, { timeout: 5000 });
     const r = await s.page.evaluate(() => ({
@@ -119,7 +116,7 @@ test('延後程式：開機完成後在閒置時自動執行，執行後各頁�
 });
 
 test('延後程式：還沒執行時切頁，會先同步執行再切過去（總覽、設定、國外帳簿都正常）', { skip: NO_BROWSER }, async () => {
-  const s = await openApp(browser, { holdIdle: true });
+  const s = await openApp({ holdIdle: true });
   try {
     await s.page.waitForTimeout(800);
     assert.equal(await s.page.evaluate(() => DeferredApp.loaded()), false, '擋住閒置排程時還沒執行');
@@ -137,7 +134,7 @@ test('延後程式：還沒執行時切頁，會先同步執行再切過去（�
 });
 
 test('延後程式：還沒執行時就點記帳頁的搜尋鈕，第一次點擊就會打開搜尋頁', { skip: NO_BROWSER }, async () => {
-  const s = await openApp(browser, { holdIdle: true });
+  const s = await openApp({ holdIdle: true });
   try {
     await s.page.waitForTimeout(800);
     assert.equal(await s.page.evaluate(() => DeferredApp.loaded()), false);
@@ -149,7 +146,7 @@ test('延後程式：還沒執行時就點記帳頁的搜尋鈕，第一次點�
 
 test('延後程式：快取裡有進行中的旅行帳簿時，一開機就顯示旅行提示（不用等閒置）', { skip: NO_BROWSER }, async () => {
   const ledger = { id: 'trip1', name: '東京', country: '日本', currency: 'JPY', startDate: '2026-11-10', endDate: '2026-11-18', archived: false };
-  const s = await openApp(browser, {
+  const s = await openApp({
     holdIdle: true,
     storage: { FAST_BOOKKEEPING_FX_LIST_V1: JSON.stringify({ ledgers: [ledger], savedAt: FIXED_NOW }) },
   });
@@ -163,7 +160,7 @@ test('延後程式：快取裡有進行中的旅行帳簿時，一開機就顯�
 });
 
 test('圖示字型內嵌在頁面裡：封鎖 unpkg.com 之後圖示照常顯示，也不會連到 unpkg', { skip: NO_BROWSER }, async () => {
-  const s = await openApp(browser, { blockUnpkg: true });
+  const s = await openApp({ blockUnpkg: true });
   try {
     await s.page.waitForTimeout(500);
     const r = await s.page.evaluate(async () => {
@@ -199,7 +196,7 @@ test('圖示字型內嵌在頁面裡：封鎖 unpkg.com 之後圖示照常顯示
 });
 
 test('圖示：子集以外的圖示仍會補載完整樣式表（匯入 icons 層），而且插在子集前面（子集內的圖示不受影響）', { skip: NO_BROWSER }, async () => {
-  const s = await openApp(browser, { blockUnpkg: true });
+  const s = await openApp({ blockUnpkg: true });
   try {
     const r = await s.page.evaluate(() => {
       const count = () => document.querySelectorAll('style[data-icon-fallback]').length;

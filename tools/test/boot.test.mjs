@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-import { ROOT, DIST } from './helpers.mjs';
+import { ROOT, DIST, browserTests } from './helpers.mjs';
 import { createDevApp } from '../dev-server.mjs';
 
 const CLIENT = path.join(ROOT, 'src', 'client');
@@ -21,9 +21,9 @@ const read = rel => fs.readFileSync(path.join(CLIENT, rel), 'utf8');
 const readDist = name => fs.readFileSync(path.join(DIST, name), 'utf8');
 const FIXED_NOW = Date.UTC(2026, 10, 13, 4, 0, 0);   // 2026-11-13 12:00 台北
 
-let chromium = null;
-try { ({ chromium } = await import('playwright')); } catch (e) { chromium = null; }
-const NO_BROWSER = chromium ? false : '沒有安裝 playwright';
+// 沒有 Chromium 時瀏覽器測試略過（原因會提示安裝方式）；REQUIRE_BROWSER=1 時改為失敗。
+const web = await browserTests();
+const NO_BROWSER = web.skip;
 
 function shiftedDate(startMs) {
   const offset = startMs - Date.now();
@@ -88,7 +88,8 @@ async function startServer() {
   return { url: 'http://127.0.0.1:' + app.server.address().port + '/', close: () => new Promise(r => app.server.close(r)) };
 }
 
-async function newContext(browser, opts) {
+async function newContext(opts) {
+  const browser = await web.browser();
   const o = opts || {};
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'zh-TW', timezoneId: 'Asia/Taipei',
@@ -101,10 +102,6 @@ async function newContext(browser, opts) {
 }
 
 const bootReady = page => page.waitForFunction(() => Boolean(document.documentElement) && document.documentElement.classList.contains('boot-ready'), null, { timeout: 60000 });
-
-let browser = null;
-test.before(async () => { if (chromium) browser = await chromium.launch(); });
-test.after(async () => { if (browser) await browser.close(); });
 
 /* ---------------------------------------------------------------------------
  * 1. 結構
@@ -173,8 +170,9 @@ test('結構：每個無限循環的裝飾動畫在開機期間都被 26-motion-
  * 2. 分段與動畫
  * ------------------------------------------------------------------------- */
 test('分段：載入畫面移除時只畫好首屏；收入面板、完整月份選單在之後；常駐動畫與背景光暈 boot-ready 後才開始', { skip: NO_BROWSER }, async () => {
+  // 先開瀏覽器頁面再開伺服器：瀏覽器啟動失敗時不會留下沒關的伺服器（檔案程序結束不了）
+  const s = await newContext({ holdBoot: true });
   const server = await startServer();
-  const s = await newContext(browser, { holdBoot: true });
   try {
     await s.page.goto(server.url);
     await s.page.waitForFunction(() => window.__bootLog.snapshot && typeof window.__releaseBoot === 'function', null, { timeout: 60000 });
@@ -235,8 +233,9 @@ test('分段：載入畫面移除時只畫好首屏；收入面板、完整月�
  * 3. 網路慢：首屏不等頁面下載完
  * ------------------------------------------------------------------------- */
 test('網路慢：boot-ready 在頁面下載完之前；卡面圖片、延後程式到齊後自動補上，在那之前的切頁會等它', { skip: NO_BROWSER }, async () => {
+  // 先開瀏覽器頁面再開伺服器：瀏覽器啟動失敗時不會留下沒關的伺服器（檔案程序結束不了）
+  const s = await newContext();
   const server = await startServer();
-  const s = await newContext(browser);
   try {
     const cdp = await s.context.newCDPSession(s.page);
     await cdp.send('Network.enable');
@@ -287,8 +286,9 @@ test('網路慢：boot-ready 在頁面下載完之前；卡面圖片、延後程
  * 4. 有本機快取：不等伺服器
  * ------------------------------------------------------------------------- */
 test('有本機快取：伺服器完全不回應也能開機、點項目、按數字鍵；總覽已用快取預先畫好，切過去不用重畫', { skip: NO_BROWSER }, async () => {
+  // 先開瀏覽器頁面再開伺服器：瀏覽器啟動失敗時不會留下沒關的伺服器（檔案程序結束不了）
+  const s = await newContext();
   const server = await startServer();
-  const s = await newContext(browser);
   try {
     // 第一次開啟：讓 LocalCache 存下開機資料、總覽、對帳
     await s.page.goto(server.url);
@@ -347,8 +347,9 @@ test('有本機快取：伺服器完全不回應也能開機、點項目、按�
 });
 
 test('背景分頁：沒有下一幀（rAF 停住）也照常開機，不等使用者切回來', { skip: NO_BROWSER }, async () => {
+  // 先開瀏覽器頁面再開伺服器：瀏覽器啟動失敗時不會留下沒關的伺服器（檔案程序結束不了）
+  const s = await newContext({ background: true });
   const server = await startServer();
-  const s = await newContext(browser, { background: true });
   try {
     await s.page.goto(server.url);
     await bootReady(s.page);

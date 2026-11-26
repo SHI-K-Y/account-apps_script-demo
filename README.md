@@ -33,10 +33,13 @@ Demo 是純前端的沙盒版本，不需要登入、也不會連到任何試算
 
 ```
 npm install
+npx playwright install chromium   # 第一次跑測試前執行：下載瀏覽器測試用的 Chromium
 npm run preview:demo     # 建置 Demo 並開啟 http://localhost:8090
 npm run dev              # 開發模式 http://localhost:8080（存檔自動重新建置，使用內建的測試資料）
 npm test                 # 自動化測試（tools/run-tests.mjs 列出 tools/test/*.test.mjs 交給 node --test）
 ```
+
+沒有 Chromium 時，用瀏覽器的測試會顯示 skipped，其餘照常執行；設定 `REQUIRE_BROWSER=1` 則改為直接失敗。
 
 ## 用在自己的 Google 試算表
 

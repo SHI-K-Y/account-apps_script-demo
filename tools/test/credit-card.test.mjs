@@ -7,8 +7,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-import { ROOT, createBackend, expenseForm, incomeForm } from './helpers.mjs';
+import { ROOT, createBackend, expenseForm, incomeForm, browserTests } from './helpers.mjs';
 import { createDevApp } from '../dev-server.mjs';
+
+// 沒有 Chromium 時瀏覽器測試略過（原因會提示安裝方式）；REQUIRE_BROWSER=1 時改為失敗。
+const web = await browserTests();
+const NO_BROWSER = web.skip;
 
 const MONTH = '2026.11';
 const PAST = '2026.10';
@@ -113,13 +117,6 @@ test('前端合併：對帳頁的清單比後端舊時不硬合併，標成要�
 
 /* -------------------------------- 3. 瀏覽器 -------------------------------- */
 
-let chromium = null;
-try { ({ chromium } = await import('playwright')); } catch (e) { chromium = null; }
-const NO_BROWSER = chromium ? false : '沒有安裝 playwright';
-let browser = null;
-test.before(async () => { if (chromium) browser = await chromium.launch(); });
-test.after(async () => { if (browser) await browser.close(); });
-
 function shiftedDate(startMs) {
   const offset = startMs - Date.now();
   return class TestDate extends Date {
@@ -157,6 +154,7 @@ async function idle(page, extra = 500) {
 }
 
 async function openCreditCard(viewport) {
+  const browser = await web.browser();
   const app = createDevApp({ fixture: true, quiet: true, DateCtor: shiftedDate(FIXED_NOW) });
   await new Promise(r => app.server.listen(0, '127.0.0.1', r));
   const context = await browser.newContext({ viewport: viewport || { width: 390, height: 844 }, locale: 'zh-TW', timezoneId: 'Asia/Taipei' });
