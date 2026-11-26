@@ -61,22 +61,10 @@ function quickComboMenuSummaryHasWarn(combos, selectedId) {
 }
 
 // 標題逐字包一層 span（滑鼠移上去時逐字呼吸，樣式在 20-uiverse-effects.css）；textContent 與原本相同。
-// 用 Intl.Segmenter 切，組合式 emoji 才不會被拆開。
 function quickComboTitleEl(title) {
-  const text = String(title == null ? '' : title);
-  const chars = typeof Intl === 'object' && Intl.Segmenter
-    ? Array.from(new Intl.Segmenter('zh-Hant', { granularity: 'grapheme' }).segment(text), part => part.segment)
-    : Array.from(text);
   const wrap = document.createElement('span');
   wrap.className = 'quick-combo-chip-title';
-  chars.forEach((ch, i) => {
-    const span = document.createElement('span');
-    span.className = 'uv-combo-ch';
-    span.style.setProperty('--n', i);
-    span.textContent = ch;
-    wrap.appendChild(span);
-  });
-  return wrap;
+  return UvFx.fillChars(wrap, title);
 }
 
 function renderQuickComboChips() {

@@ -1430,3 +1430,207 @@
     display: none;
   }
 }
+
+
+/* ==========================================================================
+   記帳頁的選項按鈕與金額鍵盤 → 沿用上面常用組合 .quick-combo-chip 的「虹彩玻璃按鈕」風格
+   範圍：#pageBookkeeping 的項目、總類、支付方式（含轉帳）、是否已繳、金額鍵盤（UvFx.glassChip 加上 .uv-glass-chip）。
+   使用者指定「顏色維持每個按鈕現在的設定」，所以和常用組合的差別只有：
+     - 不畫虹彩底色、不 hue-rotate：按鈕自己的底色、邊框、文字色、選取色全部照舊；
+     - 傾斜的是整顆按鈕（常用組合只傾斜背後的玻璃板），底色才會跟著一起傾斜；
+       用獨立的 rotate 屬性，不和既有的 transform（按壓縮放、Motion.pop）互相覆蓋；
+     - 外框光澤用按鈕自己的文字色（currentColor）和高光混出來，沒有顏色的按鈕（鍵盤、一般選項）只用高光。
+   相同的部分：8 個感應區（.uv-combo-touch，上面的規則直接給兄弟元素 --uv-combo-k 與各個變數）、
+   斜向玻璃高光（::before／::after 的多邊形）、隨感應區滑動的光澤、文字反向傾斜、逐字呼吸、不浮起（--uv-lift: 0）。
+   ========================================================================== */
+.uv-glass-plate { display: none; }
+
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  /* 按鈕傾斜的透視來自容器（常用組合是晶片自己的 perspective 給玻璃板用） */
+  #pageBookkeeping :is(#expenseItemChoices, #incomeItemChoices, #expenseCategoryChoices, #incomeCategoryChoices,
+    #paidChoices, #paymentChoices .pay-group-grid, .keypad) {
+    perspective: 600px;
+  }
+
+  #pageBookkeeping .uv-glass-chip {
+    --uv-lift: 0px;
+    --uv-lift-press: 0px;
+    --uv-combo-move: 500ms var(--ease-out);
+    --uv-glass-step: 3deg;
+    --uv-glass-tone: currentColor;
+    --uv-glass-rim-alpha: 0.85;
+    /* 斜向高光比常用組合淡一點：常用組合的底是淡虹彩，這裡的底色比較飽和（選取的實色更明顯），同強度會洗白 */
+    --uv-glass-shard: calc(var(--combo-iris-glass) * 0.7);
+
+    perspective: 600px;
+    rotate: y var(--uv-glass-tilt, 0deg);
+    transition:
+      background-color var(--lg-dur-press) var(--ease-out),
+      box-shadow var(--lg-dur-press) var(--ease-out),
+      color var(--lg-dur-press) var(--ease-out),
+      border-color var(--lg-dur-press) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out),
+      translate var(--uv-dur, 0.3s) ease,
+      rotate var(--uv-combo-move);
+  }
+  /* 寬按鈕（整列的支付方式、清除金額、長項目名稱）傾斜角度減半左右，透視才不會太誇張 */
+  #pageBookkeeping :is(.key.wide, .choice-span-full, .pay-group-grid > .choice:only-child).uv-glass-chip {
+    --uv-glass-step: 1.6deg;
+  }
+  #pageBookkeeping .uv-glass-chip.selected {
+    --uv-glass-shard: calc(var(--combo-iris-glass) * 0.5);
+  }
+  /* 沒有自己顏色的按鈕：外框光澤只用高光 */
+  #pageBookkeeping :is(.key, .choice:not([data-cat], [data-payment], .selected)).uv-glass-chip {
+    --uv-glass-tone: var(--hl);
+    --uv-glass-rim-alpha: 0.7;
+  }
+  :root[data-theme="dark"] #pageBookkeeping .uv-glass-chip,
+  :root:not([data-theme="light"]) #pageBookkeeping .uv-glass-chip {
+    --uv-glass-rim-alpha: 0.4;
+  }
+
+  /* 常用組合沒有滑鼠移上去／選取時的上移 1px；按壓縮放（:active、實體鍵盤的 .is-kbd-active）照舊 */
+  #pageBookkeeping .uv-glass-chip:is(:hover, .selected):not(:active, .is-kbd-active) {
+    transform: none;
+  }
+
+  /* 文字反向傾斜：inline 元素不能 transform，改成 inline-block */
+  #pageBookkeeping .uv-glass-chip :is(.uv-glass-label, .choice-text) {
+    display: inline-block;
+    rotate: y var(--uv-combo-word, 0deg);
+    transition: rotate 300ms var(--ease-out);
+  }
+
+  /* 玻璃板：疊在按鈕底色上、文字下（按鈕本身 isolation: isolate），蓋住 1px 邊框 */
+  #pageBookkeeping .uv-glass-plate {
+    display: block;
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+  #pageBookkeeping .uv-glass-plate::before,
+  #pageBookkeeping .uv-glass-plate::after,
+  #pageBookkeeping .uv-glass-rim,
+  #pageBookkeeping .uv-glass-rim > span,
+  #pageBookkeeping .uv-glass-sheen {
+    position: absolute;
+    inset: 0;
+  }
+  /* 斜向玻璃高光（同常用組合 .uv-combo-plate::before／::after） */
+  #pageBookkeeping .uv-glass-plate::before,
+  #pageBookkeeping .uv-glass-plate::after {
+    content: "";
+    background: color-mix(in srgb, var(--hl) var(--uv-glass-shard), transparent);
+    transition: transform 250ms var(--ease-out);
+  }
+  #pageBookkeeping .uv-glass-plate::before {
+    clip-path: polygon(81% 100%, 0% 0%, 100% 17%, 100% 40.33%);
+    transform: scaleY(var(--uv-combo-g1, 1));
+    transform-origin: right top;
+  }
+  #pageBookkeeping .uv-glass-plate::after {
+    clip-path: polygon(0% 74.67%, 9.67% 86.67%, 52.33% 0%, 0% 0%);
+    transform: scaleX(var(--uv-combo-g2, 1));
+    transform-origin: left top;
+  }
+  /* 外框光澤：1.5px 環形遮罩（靜態），裡面的漸層層用 scale 跟著感應區放大（同常用組合 .uv-combo-rim） */
+  #pageBookkeeping .uv-glass-rim {
+    box-sizing: border-box;
+    padding: 1.5px;
+    border-radius: inherit;
+    opacity: var(--uv-glass-rim-alpha);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+  #pageBookkeeping .uv-glass-rim > span {
+    background: linear-gradient(-140deg,
+      color-mix(in srgb, var(--uv-glass-tone) 50%, var(--hl)) 0%,
+      color-mix(in srgb, var(--hl) 90%, transparent) 22%,
+      color-mix(in srgb, var(--uv-glass-tone) 40%, transparent) 42%,
+      color-mix(in srgb, var(--hl) 75%, transparent) 62%,
+      color-mix(in srgb, var(--uv-glass-tone) 55%, var(--hl)) 80%,
+      color-mix(in srgb, var(--uv-glass-tone) 50%, var(--hl)) 100%);
+    transform: scale(var(--uv-combo-rim-scale, 1));
+    transition: transform var(--uv-combo-move);
+  }
+  /* 隨感應區滑動的光澤（同常用組合 .uv-combo-inside::before） */
+  #pageBookkeeping .uv-glass-sheen {
+    inset: 0 -30%;
+    background: linear-gradient(112deg,
+      transparent 34%, color-mix(in srgb, var(--hl) calc(var(--combo-iris-glass) * 1.4), transparent) 50%, transparent 66%);
+    opacity: 0;
+    transform: translateX(var(--uv-combo-sheen, 0%));
+    transition: transform var(--uv-combo-move), opacity var(--dur-base) var(--ease-out);
+  }
+
+  /* 感應：上面 .uv-combo-touch 的規則已經把 k 與各變數給了兄弟元素（玻璃板、文字）；按鈕本身的傾斜用 :has 取 k */
+  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:nth-child(1):is(:hover, :active)) { --uv-glass-k: 0; }
+  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:nth-child(2):is(:hover, :active)) { --uv-glass-k: 1; }
+  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:nth-child(3):is(:hover, :active)) { --uv-glass-k: 2; }
+  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:nth-child(4):is(:hover, :active)) { --uv-glass-k: 3; }
+  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:nth-child(5):is(:hover, :active)) { --uv-glass-k: 4; }
+  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:nth-child(6):is(:hover, :active)) { --uv-glass-k: 5; }
+  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:nth-child(7):is(:hover, :active)) { --uv-glass-k: 6; }
+  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:nth-child(8):is(:hover, :active)) { --uv-glass-k: 7; }
+
+  #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:active) {
+    --uv-glass-tilt: calc((var(--uv-glass-k) - 3.5) * var(--uv-glass-step));
+  }
+  #pageBookkeeping .uv-combo-touch:active ~ .uv-glass-plate > .uv-glass-sheen,
+  #pageBookkeeping .uv-glass-chip:focus-visible .uv-glass-sheen {
+    opacity: 1;
+  }
+  @media (hover: hover) {
+    #pageBookkeeping .uv-glass-chip:has(> .uv-combo-touch:hover) {
+      --uv-glass-tilt: calc((var(--uv-glass-k) - 3.5) * var(--uv-glass-step));
+    }
+    #pageBookkeeping .uv-combo-touch:hover ~ .uv-glass-plate > .uv-glass-sheen {
+      opacity: 1;
+    }
+    #pageBookkeeping .uv-glass-chip:hover .uv-combo-ch {
+      animation: ambient-combo-breath 1s calc(var(--n) * 0.1s) infinite alternate-reverse;
+    }
+  }
+
+  /* 減少動態（系統設定）與「動畫效果：精簡／關閉」：不傾斜、不滑動、不呼吸，只留靜態外觀（同常用組合） */
+  @media (prefers-reduced-motion: reduce) {
+    #pageBookkeeping .uv-glass-chip,
+    #pageBookkeeping .uv-glass-chip :is(.uv-glass-label, .choice-text) {
+      rotate: none;
+    }
+    #pageBookkeeping .uv-glass-plate::before,
+    #pageBookkeeping .uv-glass-plate::after,
+    #pageBookkeeping .uv-glass-rim > span,
+    #pageBookkeeping .uv-glass-sheen {
+      transform: none;
+      transition: none;
+    }
+    #pageBookkeeping .uv-glass-chip:hover .uv-combo-ch {
+      animation: none;
+    }
+  }
+  :root:is([data-motion="lite"], [data-motion="off"]) #pageBookkeeping .uv-glass-chip,
+  :root:is([data-motion="lite"], [data-motion="off"]) #pageBookkeeping .uv-glass-chip :is(.uv-glass-label, .choice-text) {
+    rotate: none;
+  }
+  :root:is([data-motion="lite"], [data-motion="off"]) #pageBookkeeping .uv-glass-plate::before,
+  :root:is([data-motion="lite"], [data-motion="off"]) #pageBookkeeping .uv-glass-plate::after,
+  :root:is([data-motion="lite"], [data-motion="off"]) #pageBookkeeping :is(.uv-glass-rim > span, .uv-glass-sheen) {
+    transform: none;
+  }
+  :root:is([data-motion="lite"], [data-motion="off"]) #pageBookkeeping .uv-glass-chip:hover .uv-combo-ch {
+    animation: none;
+  }
+
+  @media (forced-colors: active) {
+    #pageBookkeeping .uv-glass-plate {
+      display: none;
+    }
+  }
+}

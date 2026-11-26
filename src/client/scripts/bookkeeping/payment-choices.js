@@ -207,6 +207,13 @@ function playCardSpin(imgEl) {
 
 // 選項晶片（P06）：點擊委派到容器，選取變化只切換 selected 與 aria-pressed；
 // 只有選項清單本身（含圖示、卡面、自訂顏色等畫得出來的內容）改變時才整組重建。
+// 記帳頁本身的選項套上常用組合同款的玻璃板（UvFx.glassChip，顏色沿用各按鈕原本的設定）；彈窗、搜尋頁等其他地方不套。
+const GLASS_CHOICE_IDS = new Set(['expenseItemChoices', 'incomeItemChoices', 'expenseCategoryChoices', 'incomeCategoryChoices', 'paymentChoices', 'paidChoices']);
+function glassChoice(containerId, button) {
+  if (GLASS_CHOICE_IDS.has(containerId)) UvFx.glassChip(button);
+  return button;
+}
+
 function bindChoiceContainer(container) {
   if (container._choiceBound) return;
   container._choiceBound = true;
@@ -374,7 +381,7 @@ function renderPaymentChoices(containerId, items, selected, setter) {
       textSpan.textContent = item.displayName;
       button.appendChild(textSpan);
 
-      gridEl.appendChild(button);
+      gridEl.appendChild(glassChoice(containerId, button));
     });
 
     groupEl.appendChild(gridEl);
@@ -450,7 +457,7 @@ function renderChoices(containerId, items, selected, setter) {
       button.textContent = value;
     }
 
-    container.appendChild(button);
+    container.appendChild(glassChoice(containerId, button));
   });
 }
 
@@ -488,7 +495,7 @@ function renderPaidChoiceGroup(containerId, getValue, setValue, { includeNotAppl
     button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
     button.textContent = item.label;
     button._choiceValue = item.value;
-    container.appendChild(button);
+    container.appendChild(glassChoice(containerId, button));
   });
 }
 

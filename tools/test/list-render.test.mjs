@@ -192,7 +192,7 @@ async function pickAndSubmitExpense(page) {
   for (const box of ['#expenseCategoryChoices', '#paymentChoices']) {
     if (!(await page.locator(box + ' .choice.selected').count())) await page.locator(box + ' .choice').first().click();
   }
-  await page.locator('#expenseKeypad .key:text-is("7")').click();
+  await page.locator('#expenseKeypad .key[aria-label="7"]').click();
   await page.locator('#expenseSubmit').click();
 }
 

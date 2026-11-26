@@ -429,14 +429,19 @@ function pageInit(cfg) {
   window.__rpcLog = [];
   const realFetch = window.fetch;
   window.fetch = function (input, init) {
+    let entry = null;
     if (String(input && input.url || input).indexOf('/__rpc') !== -1) {
       try {
         const body = JSON.parse(init && init.body);
         const req = body.args && body.args[0];
-        window.__rpcLog.push({ t: performance.now(), action: req && req.action, items: req && req.action === 'batchRead' ? req.args[0].map(r => r.action) : null });
+        entry = { t: performance.now(), done: null, action: req && req.action, items: req && req.action === 'batchRead' ? req.args[0].map(r => r.action) : null };
+        window.__rpcLog.push(entry);
       } catch (e) {}
     }
-    return realFetch.apply(this, arguments);
+    const p = realFetch.apply(this, arguments);
+    // done：回應抵達的時間（計時從「寫入回來」算起，才不會把測試工具本身的延遲算進去）
+    if (entry) p.then(() => { entry.done = performance.now(); }, () => { entry.done = performance.now(); });
+    return p;
   };
 }
 
@@ -534,9 +539,9 @@ test('記一筆後立刻切到總覽：立即顯示舊數字（沒有骨架、�
     for (const box of ['#expenseCategoryChoices', '#paymentChoices']) {
       if (!(await s.page.locator(box + ' .choice.selected').count())) await s.page.locator(box + ' .choice').first().tap();
     }
-    await s.page.locator('#expenseKeypad .key:text-is("5")').tap();
-    await s.page.locator('#expenseKeypad .key:text-is("0")').tap();
-    const t0 = await s.page.evaluate(() => { window.__rpcLog.length = 0; return performance.now(); });
+    await s.page.locator('#expenseKeypad .key[aria-label="5"]').tap();
+    await s.page.locator('#expenseKeypad .key[aria-label="0"]').tap();
+    await s.page.evaluate(() => { window.__rpcLog.length = 0; });
     await s.page.locator('#expenseSubmit').tap();
     await s.page.evaluate(() => { window.__watch(); switchPage('overview'); });
     await s.page.waitForTimeout(100);
@@ -548,10 +553,13 @@ test('記一筆後立刻切到總覽：立即顯示舊數字（沒有骨架、�
     assert.ok(immediate.hero, '立即顯示總覽（舊數字）');
 
     // 寫入（600ms）＋ batchRead（600ms）之後更新成新數字
+    // 在頁面裡記下資料更新的時間點（測試平行跑、機器忙的時候，Playwright 往返可能拖很久）
     await s.page.waitForFunction(old => {
       const ov = LocalCache.getOverview();
-      return ov && ov.totalExpense !== old && Api.pending() === 0;
-    }, oldTotal, { timeout: 5000 });
+      const ok = ov && ov.totalExpense !== old && Api.pending() === 0;
+      if (ok && !window.__updatedAt) window.__updatedAt = performance.now();
+      return ok;
+    }, oldTotal, { timeout: 10000 });
     await s.page.waitForTimeout(900);   // countUp 700ms
     const done = await s.page.evaluate(() => {
       window.__stopWatch = true;
@@ -562,7 +570,7 @@ test('記一筆後立刻切到總覽：立即顯示舊數字（沒有骨架、�
         stale: LocalCache.status('overview').stale,
         seen: window.__seen,
         pillOn: Boolean(document.querySelector('#pageOverview .sync-pill.is-on')),
-        updatedAt: performance.now(),
+        updatedAt: window.__updatedAt,
       };
     });
     const actions = done.log.map(r => r.action);
@@ -575,7 +583,7 @@ test('記一筆後立刻切到總覽：立即顯示舊數字（沒有骨架、�
     assert.equal(done.seen.busy, false, '期間沒有忙碌條');
     assert.equal(done.seen.pill, true, '期間有「更新中」');
     assert.equal(done.pillOn, false, '更新完就收起');
-    assert.ok(done.updatedAt - t0 < 2000 + 1200, '寫入回來後 1–2 秒內更新');
+    assert.ok(done.updatedAt - done.log[0].done < 2000, '寫入回來後 1–2 秒內更新：' + Math.round(done.updatedAt - done.log[0].done) + 'ms');
     assert.deepEqual(s.errors, []);
   } finally { await s.close(); }
 });

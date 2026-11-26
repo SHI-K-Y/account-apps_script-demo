@@ -311,7 +311,7 @@ test('有本機快取：伺服器完全不回應也能開機、點項目、按�
     await s.page.goto(server.url);
     await bootReady(s.page);
     await s.page.locator('#expenseItemChoices .choice').nth(1).tap();
-    await s.page.locator('#expenseKeypad .key:text-is("1")').tap();
+    await s.page.locator('#expenseKeypad .key[aria-label="1"]').tap();
     const r = await s.page.evaluate(() => ({
       item: state.expense.item,
       selected: document.querySelector('#expenseItemChoices .choice.selected') && document.querySelector('#expenseItemChoices .choice.selected').dataset.value,

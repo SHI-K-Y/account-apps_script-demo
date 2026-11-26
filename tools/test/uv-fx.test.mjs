@@ -84,3 +84,54 @@ test('UvFx：helper 重複呼叫不會插入第二個圖層', () => {
   assert.match(UvFx.cardRing, /^<span class="uv-ring" aria-hidden="true"><span><\/span><\/span>$/);
   assert.match(UvFx.btnRing, /^<span class="uv-btn-ring" aria-hidden="true"><span><\/span><\/span>$/);
 });
+
+// 記帳頁的項目、總類、支付方式（含轉帳）、是否已繳、金額鍵盤：套上常用組合同款的玻璃板（UvFx.glassChip），
+// 顏色不變；彈窗與其他頁面的選項不套。
+let chromium = null;
+try { ({ chromium } = await import('playwright')); } catch (e) { chromium = null; }
+
+test('UvFx：記帳頁的選項按鈕與金額鍵盤帶著 8 個感應區＋玻璃板，文字不變；彈窗裡的選項不套', { skip: chromium ? false : '沒有安裝 playwright' }, async () => {
+  const { createDevApp } = await import('../dev-server.mjs');
+  const app = createDevApp({ fixture: true, quiet: true });
+  await new Promise(r => app.server.listen(0, '127.0.0.1', r));
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.goto('http://127.0.0.1:' + app.server.address().port + '/');
+    await page.waitForSelector('#expenseItemChoices .choice');
+    // 選一張信用卡，「是否已繳」才會出現
+    await page.evaluate(() => {
+      const credit = Array.from(document.querySelectorAll('#paymentChoices .choice')).find(b => isCreditCardPayment(b.dataset.value));
+      credit.click();
+    });
+    await page.waitForSelector('#paidChoices .choice');
+    const report = await page.evaluate(() => {
+      const ids = ['expenseItemChoices', 'incomeItemChoices', 'expenseCategoryChoices', 'incomeCategoryChoices', 'paymentChoices', 'paidChoices', 'expenseKeypad', 'incomeKeypad'];
+      const bad = [];
+      const counts = {};
+      ids.forEach(id => {
+        const buttons = document.querySelectorAll('#' + id + ' :is(.choice, .key)');
+        counts[id] = buttons.length;
+        buttons.forEach(b => {
+          const kids = Array.from(b.children);
+          const touch = kids.slice(0, 8).every(k => k.classList.contains('uv-combo-touch'));
+          if (!b.classList.contains('uv-glass-chip') || !touch || !kids[8] || !kids[8].classList.contains('uv-glass-plate')) bad.push(id + ':' + b.textContent);
+          if (b.querySelectorAll('.uv-glass-plate').length !== 1) bad.push(id + ' 重複：' + b.textContent);
+        });
+      });
+      const texts = Array.from(document.querySelectorAll('#paidChoices .choice')).map(b => b.textContent);
+      const keys = Array.from(document.querySelectorAll('#expenseKeypad .key')).map(b => b.getAttribute('aria-label') + '=' + b.textContent);
+      const modal = document.querySelectorAll('#editItemChoices .uv-glass-chip, #comboItemChoices .uv-glass-chip, .date-quick-btns .uv-glass-chip').length;
+      return { bad, counts, texts, keys, modal };
+    });
+    assert.deepEqual(report.bad, []);
+    Object.entries(report.counts).forEach(([id, n]) => assert.ok(n > 0, id + ' 沒有按鈕'));
+    assert.deepEqual(report.texts, ['已繳', '未繳']);
+    assert.deepEqual(report.keys.slice(0, 3), ['1=1', '2=2', '3=3']);
+    assert.ok(report.keys.includes('null=清除金額'));
+    assert.equal(report.modal, 0);
+  } finally {
+    await browser.close();
+    await new Promise(r => app.server.close(r));
+  }
+});

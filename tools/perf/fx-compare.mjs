@@ -58,7 +58,7 @@ const COMPONENTS = [
     prepare: async p => {
       await p.locator('#pageBookkeeping .head .tab[data-tab="expense"]').click();
       await p.waitForTimeout(500);
-      await p.locator('#expenseKeypad .key:text-is("1")').first().click();
+      await p.locator('#expenseKeypad .key[aria-label="1"]').first().click();
       await p.waitForTimeout(500);
     } },
   { key: 'today-card', page: 'bookkeeping', target: '#todayExpenseCard', period: 6000, pad: 4 },

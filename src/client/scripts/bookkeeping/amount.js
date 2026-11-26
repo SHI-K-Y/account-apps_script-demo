@@ -8,12 +8,13 @@ function buildKeypad(containerId, type) {
     if (key === '⌫') button.innerHTML = iconHtml('backspace'); else button.textContent = key;
     button.setAttribute('aria-label', key === '⌫' ? '刪除一位' : key);
     button.addEventListener('click', () => pressKey(type, key));
-    container.appendChild(button);
+    container.appendChild(UvFx.glassChip(button));
   });
   const clear = document.createElement('button');
   clear.type = 'button';
   clear.className = 'key special wide';
   clear.textContent = '清除金額';
+  UvFx.glassChip(clear);
   clear.addEventListener('click', () => {
     const hadValue = Boolean(state[type].amount);
     state[type].amount = '';

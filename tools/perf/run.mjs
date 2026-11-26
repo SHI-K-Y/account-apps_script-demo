@@ -95,7 +95,7 @@ const PAGES = [
 ];
 const ACTIONS = [
   { key: 'selectItem', label: '點支出項目', sel: '#expenseItemChoices .choice' },
-  { key: 'keypadDigit', label: '按數字鍵', sel: '#expenseKeypad .key:text-is("1")', prepare: prepareSubmit },
+  { key: 'keypadDigit', label: '按數字鍵', sel: '#expenseKeypad .key[aria-label="1"]', prepare: prepareSubmit },
   { key: 'submit', label: '按送出', sel: '#expenseSubmit' },
   { key: 'toOverview', label: '切到總覽', sel: '#navOverview', vt: true },
   { key: 'toSettings', label: '切到設定', sel: '#navSettings', vt: true },
@@ -117,7 +117,7 @@ metric('bootWarm.longTaskTotal', '開機（有本機快取）長任務總和', '
 metric('bootWarm.longTaskMax', '開機（有本機快取）最長長任務', 'ms', 'down');
 const BOOT_ACTIONS = [
   { key: 'selectItem', label: '開機後立刻點支出項目', sel: '#expenseItemChoices .choice' },
-  { key: 'keypadDigit', label: '開機後立刻按數字鍵', sel: '#expenseKeypad .key:text-is("1")' },
+  { key: 'keypadDigit', label: '開機後立刻按數字鍵', sel: '#expenseKeypad .key[aria-label="1"]' },
 ];
 BOOT_ACTIONS.forEach(a => metric('bootInput.' + a.key, a.label, 'ms', 'down'));
 const IDLE_VARIANTS = PAGES.map(p => ({ key: p.key, label: p.label }))
@@ -930,7 +930,7 @@ async function measureSubmitCost(browser) {
       await page.locator('#expenseItemChoices .choice').nth(i % 3).tap();
       await sleep(400);
       await prepareSubmit(page);
-      await page.locator('#expenseKeypad .key:text-is("1")').tap();
+      await page.locator('#expenseKeypad .key[aria-label="1"]').tap();
       await sleep(600);
       await browser.startTracing(page, { categories: SUBMIT_CATS });
       await page.evaluate(() => console.timeStamp('perf-submit-start'));
@@ -992,7 +992,7 @@ async function measureLists(browser) {
         await page.locator('#expenseItemChoices .choice').nth(i % 3).tap();
         await sleep(400);
         await prepareSubmit(page);
-        await page.locator('#expenseKeypad .key:text-is("1")').tap();
+        await page.locator('#expenseKeypad .key[aria-label="1"]').tap();
         await sleep(300);
         await page.evaluate(() => { window.__perf.listMs = 0; window.__perf.listCalls = 0; });
         await page.locator('#expenseSubmit').tap();
