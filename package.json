@@ -4,12 +4,15 @@
   "private": true,
   "description": "記帳簿（Google Apps Script + Google 試算表）— 公開原始碼與線上 Demo",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "node tools/build.mjs",
     "build:debug": "node tools/build.mjs --no-minify",
     "dev": "node tools/build.mjs --no-minify --watch --serve",
     "preview": "node tools/build.mjs && node tools/dev-server.mjs",
-    "test": "node tools/build.mjs --no-minify --quiet && node --test tools/test/",
+    "test": "node tools/build.mjs --no-minify --quiet && node tools/run-tests.mjs tools/test",
     "deploy": "node tools/build.mjs && npx @google/clasp push",
     "deploy:inline": "node tools/build.mjs --template inline && npx @google/clasp push",
     "preview:demo": "node tools/demo/build-demo.mjs && node tools/demo/serve.mjs",

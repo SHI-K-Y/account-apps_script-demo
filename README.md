@@ -29,13 +29,13 @@ Demo 是純前端的沙盒版本，不需要登入、也不會連到任何試算
 
 ## 在自己的電腦上執行
 
-需要 Node.js 20 以上。
+需要 Node.js 22 以上（`package.json` 的 `engines`）。
 
 ```
 npm install
 npm run preview:demo     # 建置 Demo 並開啟 http://localhost:8090
 npm run dev              # 開發模式 http://localhost:8080（存檔自動重新建置，使用內建的測試資料）
-npm test                 # 自動化測試
+npm test                 # 自動化測試（tools/run-tests.mjs 列出 tools/test/*.test.mjs 交給 node --test）
 ```
 
 ## 用在自己的 Google 試算表
